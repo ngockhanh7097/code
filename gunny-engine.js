@@ -191,7 +191,7 @@
             const terrainCanvas = document.createElement('canvas');
             terrainCanvas.width = WORLD_WIDTH;
             terrainCanvas.height = canvas.height;
-            const terrainCtx = terrainCanvas.getContext('2d');
+            const terrainCtx = terrainCanvas.getContext('2d', { willReadFrequently: true });
 
             const groundImg = new Image();
             groundImg.crossOrigin = "anonymous";
@@ -320,7 +320,10 @@
 
             function isMyTurn() {
                 if (!isOnlineMode) return true;
-                return isLocalPlayer(getActivePlayer());
+                const myName = (window.currentUser || "").trim().toLowerCase();
+                const activeP = getActivePlayer();
+                if (!activeP || !myName) return false;
+                return (activeP.name || "").trim().toLowerCase() === myName;
             }
 
             function syncPlayerTransform(player) {
@@ -540,8 +543,10 @@
 
             window.onkeydown = function (e) {
                 if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+            
+                // Nếu không phải lượt của mình hoặc đang bắn -> Khóa toàn bộ thao tác
                 if (!isMyTurn() || isFiring || isGameOver) return;
-
+            
                 keys[e.code] = true;
                 if (e.code === 'Space' && !e.repeat) {
                     isCharging = true;
