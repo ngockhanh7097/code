@@ -1,5 +1,5 @@
 /* =========================================================
-   GUNNY ENGINE - BẢN CẬP NHẬT RỚT HỐ TỬ TRẬN & NỀN ĐỎ BẠO KÍCH
+   GUNNY ENGINE - BẢN ĐỒNG BỘ REALTIME & LOCKSTEP TOÀN DIỆN
    ========================================================= */
 
 (function () {
@@ -117,7 +117,7 @@
         </div>`;
     }
 
-    // Hàm vẽ hình sao nổ tia nhọn màu đỏ phía sau sát thương bạo kích
+    // Hàm vẽ tia sao nổ màu đỏ khi bạo kích
     function drawGunnyBurst(ctx, cx, cy, spikes, outerRadius, innerRadius) {
         let rot = (Math.PI / 2) * 3;
         let x = cx;
@@ -152,6 +152,11 @@
             turnCountdownInterval = null;
         }
 
+        // Đồng bộ danh tính toàn cục từ App 1
+        if (matchData && matchData.currentUserName) {
+            window.currentUser = matchData.currentUserName;
+        }
+
         injectGunnyUI();
 
         setTimeout(() => {
@@ -165,7 +170,7 @@
             const BARREL_LEN = 35;
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
-            const CRIT_MULTIPLIER = 1.5; // Mốc bạo kích: đạt từ 150% sát thương cơ bản
+            const CRIT_MULTIPLIER = 1.5;
 
             const roomId = matchData ? matchData.roomId : null;
             const isOnlineMode = !!(roomId && window.database);
@@ -217,7 +222,6 @@
             }
             initTerrain();
 
-            // Dò độ cao mặt đất: Nếu đất bị đào thủng thì trả về ngoài map để nhân vật rơi và chết
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
                 const start = Math.max(0, Math.floor(startY));
@@ -298,6 +302,7 @@
             let chargeSpeed = 0.35;
             let chargeDir = 1;
             let turnTimeLeft = 15;
+            let lastSyncTime = 0;
 
             let bullets = [];
             let explosions = [];
@@ -306,9 +311,33 @@
 
             function getActivePlayer() { return gamePlayers[currentPlayerIndex]; }
 
+            function isLocalPlayer(player) {
+                if (!isOnlineMode) return true;
+                const currentName = (window.currentUser || "").trim().toLowerCase();
+                return player && (player.name || "").trim().toLowerCase() === currentName;
+            }
+
             function isMyTurn() {
                 if (!isOnlineMode) return true;
-                return getActivePlayer().name === (window.currentUser || "");
+                return isLocalPlayer(getActivePlayer());
+            }
+
+            function syncPlayerTransform(player) {
+                if (!isOnlineMode || !roomRef) return;
+                const now = Date.now();
+                if (now - lastSyncTime > 40) {
+                    lastSyncTime = now;
+                    roomRef.child('turn_action').set({
+                        type: 'SYNC_MOVE',
+                        name: player.name,
+                        x: player.x,
+                        y: player.y,
+                        angle: player.angle,
+                        facing: player.facing,
+                        stamina: player.stamina,
+                        timestamp: now
+                    });
+                }
             }
 
             function calculateVector(player, angleDeg) {
@@ -358,7 +387,21 @@
                     const act = snapshot.val();
                     if (!act) return;
 
-                    if (act.type === 'FIRE') {
+                    // 1. Nhận gói tin đồng bộ di chuyển & góc ngắm từ đối thủ
+                    if (act.type === 'SYNC_MOVE') {
+                        if (act.name !== (window.currentUser || "")) {
+                            const targetPlayer = gamePlayers.find(p => p.name === act.name);
+                            if (targetPlayer) {
+                                targetPlayer.x = act.x;
+                                targetPlayer.y = act.y;
+                                targetPlayer.angle = act.angle;
+                                targetPlayer.facing = act.facing;
+                                targetPlayer.stamina = act.stamina;
+                            }
+                        }
+                    } 
+                    // 2. Nhận lệnh bắn
+                    else if (act.type === 'FIRE') {
                         const shooter = gamePlayers.find(p => p.name === act.shooterName);
                         if (shooter) {
                             shooter.x = act.x;
@@ -370,15 +413,21 @@
                             shooter.isDoubleShotActive = act.isDouble;
                             executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
                         }
-                    } else if (act.type === 'PLAYER_SURRENDER') {
+                    } 
+                    // 3. Xử lý đầu hàng/thoát game
+                    else if (act.type === 'PLAYER_SURRENDER') {
                         const leaver = gamePlayers.find(p => p.name === act.leaverName);
                         if (leaver) {
                             leaver.hp = 0;
                             checkGameOver();
                         }
-                    } else if (act.type === 'PASS') {
+                    } 
+                    // 4. Bỏ lượt
+                    else if (act.type === 'PASS') {
                         if (isHost) triggerNextTurn();
-                    } else if (act.type === 'NEXT_TURN') {
+                    } 
+                    // 5. Chuyển lượt
+                    else if (act.type === 'NEXT_TURN') {
                         currentPlayerIndex = act.nextIndex;
                         wind = act.wind;
                         resetTurnState();
@@ -553,39 +602,39 @@
                     let myPlayer = gamePlayers.find(p => p.name === (window.currentUser || ""));
                     let isUserWin = myPlayer ? (myPlayer.team === winningTeam) : (winningTeam === 1);
 
-                     setTimeout(() => {
-                    let rewardMsg = "";
-                    if (window.currentUser && isOnlineMode) {
-                        let rewardCoin = isUserWin ? 100 : 20;
-                        let rewardKiemkhi = isUserWin ? 15 : 5;
-                        if (typeof userStats !== "undefined") {
-                            userStats.coin = (userStats.coin || 0) + rewardCoin;
-                            if (!userStats.inventory) userStats.inventory = {};
-                            userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
+                    setTimeout(() => {
+                        let rewardMsg = "";
+                        if (window.currentUser && isOnlineMode) {
+                            let rewardCoin = isUserWin ? 100 : 20;
+                            let rewardKiemkhi = isUserWin ? 15 : 5;
+                            if (typeof userStats !== "undefined") {
+                                userStats.coin = (userStats.coin || 0) + rewardCoin;
+                                if (!userStats.inventory) userStats.inventory = {};
+                                userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
 
-                            if (typeof pushSecureUserData === "function") {
-                                pushSecureUserData(window.currentUser).then(() => {
-                                    if (typeof refreshUIFields === "function") refreshUIFields();
-                                });
+                                if (typeof pushSecureUserData === "function") {
+                                    pushSecureUserData(window.currentUser).then(() => {
+                                        if (typeof refreshUIFields === "function") refreshUIFields();
+                                    });
+                                }
                             }
+                            rewardMsg = `\n🎁 Thu hoạch: +${rewardCoin} Linh Thạch | +${rewardKiemkhi} Kiếm Khí.`;
                         }
-                        rewardMsg = `\n🎁 Thu hoạch: +${rewardCoin} Linh Thạch | +${rewardKiemkhi} Kiếm Khí.`;
-                    }
 
-                    alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
+                        alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
 
-                    // Đóng modal Game Canvas
-                    if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                        // Đóng modal Game Canvas
+                        if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
 
-                    // Host chuyển trạng thái phòng về WAITING để mọi người tự về sảnh
-                    if (isOnlineMode && isHost) {
-                        roomRef.update({
-                            status: "WAITING",
-                            matchData: null
-                        });
-                        roomRef.child('turn_action').remove();
-                       }
-                   }, 500);
+                        // Host chuyển trạng thái phòng về WAITING để toàn bộ người chơi cùng về sảnh
+                        if (isOnlineMode && isHost) {
+                            roomRef.update({
+                                status: "WAITING",
+                                matchData: null
+                            });
+                            roomRef.child('turn_action').remove();
+                        }
+                    }, 500);
                 }
             }
 
@@ -593,8 +642,9 @@
                 const p = getActivePlayer();
 
                 if (isMyTurn() && !isFiring && !isCharging && !isGameOver && p.hp > 0) {
-                    if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) p.angle += 1;
-                    if ((keys['ArrowDown'] || keys['KeyS']) && p.angle > 1) p.angle -= 1;
+                    let hasMoved = false;
+                    if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) { p.angle += 1; hasMoved = true; }
+                    if ((keys['ArrowDown'] || keys['KeyS']) && p.angle > 1) { p.angle -= 1; hasMoved = true; }
 
                     const MOVE_COST = 1;
                     if (keys['ArrowLeft'] || keys['KeyA']) {
@@ -602,6 +652,7 @@
                         if (p.stamina >= MOVE_COST) {
                             p.x = Math.max(p.radius, p.x - MOVE_SPEED);
                             p.stamina -= MOVE_COST;
+                            hasMoved = true;
                         }
                     }
                     if (keys['ArrowRight'] || keys['KeyD']) {
@@ -609,7 +660,12 @@
                         if (p.stamina >= MOVE_COST) {
                             p.x = Math.min(WORLD_WIDTH - p.radius, p.x + MOVE_SPEED);
                             p.stamina -= MOVE_COST;
+                            hasMoved = true;
                         }
+                    }
+
+                    if (hasMoved) {
+                        syncPlayerTransform(p);
                     }
                 }
 
@@ -919,7 +975,6 @@
                     ctx.restore();
                 });
 
-                // Vẽ số sát thương: Có hình sao nổ đỏ khi bạo kích (isCrit)
                 damageTexts.forEach(dt => {
                     ctx.save();
                     ctx.globalAlpha = Math.max(0, dt.alpha);
