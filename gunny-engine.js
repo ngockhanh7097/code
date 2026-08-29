@@ -173,8 +173,9 @@
             const CRIT_MULTIPLIER = 1.5;
 
             const roomId = matchData ? matchData.roomId : null;
-            const isOnlineMode = !!(roomId && window.database);
-            const roomRef = isOnlineMode ? database.ref('pvp_rooms/' + roomId) : null;
+            const dbInstance = window.database || (typeof database !== "undefined" ? database : null);
+            const isOnlineMode = !!(roomId && dbInstance);
+            const roomRef = isOnlineMode ? dbInstance.ref('pvp_rooms/' + roomId) : null;
 
             if (isOnlineMode && roomRef) {
                 roomRef.child('turn_action').off();
