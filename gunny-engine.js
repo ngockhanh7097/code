@@ -553,30 +553,39 @@
                     let myPlayer = gamePlayers.find(p => p.name === (window.currentUser || ""));
                     let isUserWin = myPlayer ? (myPlayer.team === winningTeam) : (winningTeam === 1);
 
-                    setTimeout(() => {
-                        let rewardMsg = "";
-                        if (window.currentUser && isOnlineMode) {
-                            let rewardCoin = isUserWin ? 100 : 20;
-                            let rewardKiemkhi = isUserWin ? 15 : 5;
-                            if (typeof userStats !== "undefined") {
-                                userStats.coin = (userStats.coin || 0) + rewardCoin;
-                                if (!userStats.inventory) userStats.inventory = {};
-                                userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
+                     setTimeout(() => {
+                    let rewardMsg = "";
+                    if (window.currentUser && isOnlineMode) {
+                        let rewardCoin = isUserWin ? 100 : 20;
+                        let rewardKiemkhi = isUserWin ? 15 : 5;
+                        if (typeof userStats !== "undefined") {
+                            userStats.coin = (userStats.coin || 0) + rewardCoin;
+                            if (!userStats.inventory) userStats.inventory = {};
+                            userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
 
-                                if (typeof pushSecureUserData === "function") {
-                                    pushSecureUserData(window.currentUser).then(() => {
-                                        if (typeof refreshUIFields === "function") refreshUIFields();
-                                    });
-                                }
+                            if (typeof pushSecureUserData === "function") {
+                                pushSecureUserData(window.currentUser).then(() => {
+                                    if (typeof refreshUIFields === "function") refreshUIFields();
+                                });
                             }
-                            rewardMsg = `\n🎁 Thu hoạch: +${rewardCoin} Linh Thạch | +${rewardKiemkhi} Kiếm Khí.`;
                         }
+                        rewardMsg = `\n🎁 Thu hoạch: +${rewardCoin} Linh Thạch | +${rewardKiemkhi} Kiếm Khí.`;
+                    }
 
-                        alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
+                    alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
 
-                        if (isOnlineMode && isHost) roomRef.remove();
-                        if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
-                    }, 500);
+                    // Đóng modal Game Canvas
+                    if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+
+                    // Host chuyển trạng thái phòng về WAITING để mọi người tự về sảnh
+                    if (isOnlineMode && isHost) {
+                        roomRef.update({
+                            status: "WAITING",
+                            matchData: null
+                        });
+                        roomRef.child('turn_action').remove();
+                       }
+                   }, 500);
                 }
             }
 
