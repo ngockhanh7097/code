@@ -1,5 +1,5 @@
 /* =========================================================
-   GUNNY ENGINE - MODULE TỰ ĐỘNG CHÈN UI & KHỞI CHẠY CANVAS
+   GUNNY ENGINE - BẢN CẬP NHẬT RỚT HỐ TỬ TRẬN & NỀN ĐỎ BẠO KÍCH
    ========================================================= */
 
 (function () {
@@ -117,6 +117,30 @@
         </div>`;
     }
 
+    // Hàm vẽ hình sao nổ tia nhọn màu đỏ phía sau sát thương bạo kích
+    function drawGunnyBurst(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+        let rot = (Math.PI / 2) * 3;
+        let x = cx;
+        let y = cy;
+        let step = Math.PI / spikes;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - outerRadius);
+        for (let i = 0; i < spikes; i++) {
+            x = cx + Math.cos(rot) * outerRadius;
+            y = cy + Math.sin(rot) * outerRadius;
+            ctx.lineTo(x, y);
+            rot += step;
+
+            x = cx + Math.cos(rot) * innerRadius;
+            y = cy + Math.sin(rot) * innerRadius;
+            ctx.lineTo(x, y);
+            rot += step;
+        }
+        ctx.lineTo(cx, cy - outerRadius);
+        ctx.closePath();
+    }
+
     // 2. Hàm khởi tạo Game Canvas
     window.initGunnyGame = function (matchData) {
         if (gunnyAnimationLoopId) {
@@ -141,6 +165,7 @@
             const BARREL_LEN = 35;
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
+            const CRIT_MULTIPLIER = 1.5; // Mốc bạo kích: đạt từ 150% sát thương cơ bản
 
             const roomId = matchData ? matchData.roomId : null;
             const isOnlineMode = !!(roomId && window.database);
@@ -192,6 +217,7 @@
             }
             initTerrain();
 
+            // Dò độ cao mặt đất: Nếu đất bị đào thủng thì trả về ngoài map để nhân vật rơi và chết
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
                 const start = Math.max(0, Math.floor(startY));
@@ -200,10 +226,8 @@
                     for (let y = 0; y < canvas.height - start; y++) {
                         if (imgData[y * 4 + 3] > 50) return start + y;
                     }
-                } catch (e) {
-                    return GROUND_Y;
-                }
-                return GROUND_Y;
+                } catch (e) {}
+                return canvas.height + 100;
             }
 
             function digHole(x, y, radius) {
@@ -580,15 +604,18 @@
                     }
                 }
 
+                // Xử lý rơi xuống vực: nếu đất dưới chân bị đào nát thì rơi xuống và chết ngay
                 gamePlayers.forEach(player => {
                     if (player.hp <= 0) return;
                     const groundUnder = getGroundYAt(player.x, player.y);
                     const targetY = groundUnder - player.radius;
+
                     if (player.y < targetY) {
                         player.y = Math.min(player.y + 4, targetY);
                     } else if (player.y > targetY && groundUnder <= canvas.height) {
                         player.y = targetY;
                     }
+
                     if (player.y >= canvas.height - player.radius) {
                         player.hp = 0;
                         checkGameOver();
@@ -652,13 +679,16 @@
                                 player.hp = Math.max(0, player.hp - actualDmg);
                                 player.pow = Math.min(100, player.pow + actualDmg * 1.5);
 
+                                // Kiểm tra bạo kích: đạt 150% sát thương gốc hoặc khi POW
+                                const isCrit = b.isPow || actualDmg >= (b.ownerDmg * CRIT_MULTIPLIER);
+
                                 damageTexts.push({
                                     x: player.x,
                                     y: player.y - player.radius - 20,
                                     text: actualDmg.toString(),
-                                    isCrit: b.isPow || actualDmg > b.ownerDmg * 1.5,
+                                    isCrit: isCrit,
                                     scale: 0.2,
-                                    targetScale: b.isPow ? 1.3 : 1.0,
+                                    targetScale: 1.0,
                                     alpha: 1.0,
                                     life: 60
                                 });
@@ -880,26 +910,43 @@
                     ctx.restore();
                 });
 
+                // Vẽ số sát thương: Có hình sao nổ đỏ khi bạo kích (isCrit)
                 damageTexts.forEach(dt => {
                     ctx.save();
                     ctx.globalAlpha = Math.max(0, dt.alpha);
                     ctx.translate(dt.x, dt.y);
                     ctx.scale(dt.scale, dt.scale);
 
-                    ctx.font = '900 34px "Arial Black", Impact, sans-serif';
+                    if (dt.isCrit) {
+                        ctx.save();
+                        drawGunnyBurst(ctx, 0, 0, 10, 38, 19);
+                        ctx.fillStyle = '#ff1a1a';
+                        ctx.fill();
+                        ctx.lineWidth = 4;
+                        ctx.strokeStyle = '#5a0000';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    const fontSize = 34;
+                    ctx.font = '900 ' + fontSize + 'px "Arial Black", Impact, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
+
+                    ctx.lineJoin = 'miter';
+                    ctx.miterLimit = 2;
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = 7;
                     ctx.strokeText(dt.text, 0, 0);
 
-                    const textGrad = ctx.createLinearGradient(0, -17, 0, 17);
+                    const textGrad = ctx.createLinearGradient(0, -fontSize / 2, 0, fontSize / 2);
                     textGrad.addColorStop(0, '#ffffff');
                     textGrad.addColorStop(0.25, '#ffe600');
                     textGrad.addColorStop(0.75, '#ff8c00');
                     textGrad.addColorStop(1, '#ff3700');
                     ctx.fillStyle = textGrad;
                     ctx.fillText(dt.text, 0, 0);
+
                     ctx.restore();
                 });
 
