@@ -1,5 +1,5 @@
 /* =========================================================
-   GUNNY ENGINE - BẢN ĐỒNG BỘ REALTIME & LOCKSTEP TOÀN DIỆN (FIXED)
+   GUNNY ENGINE - BẢN ĐỒNG BỘ REALTIME & LOCKSTEP TOÀN DIỆN (STABLE)
    ========================================================= */
 
 (function () {
@@ -154,7 +154,15 @@
         }
         if (activeRoomRef) {
             activeRoomRef.child('turn_action').off();
+            activeRoomRef.child('sync_positions').off();
             activeRoomRef = null;
+        }
+
+        // Tự động nhận diện danh tính nếu window.currentUser chưa có
+        if (!window.currentUser && typeof currentUser !== "undefined") {
+            window.currentUser = currentUser;
+        } else if (!window.currentUser && localStorage.getItem("tutiên_username")) {
+            window.currentUser = localStorage.getItem("tutiên_username");
         }
 
         injectGunnyUI();
@@ -180,6 +188,7 @@
 
             if (isOnlineMode && roomRef) {
                 roomRef.child('turn_action').off();
+                roomRef.child('sync_positions').off();
                 roomRef.child('turn_action').onDisconnect().set({
                     type: 'PLAYER_SURRENDER',
                     leaverName: window.currentUser || "",
@@ -329,21 +338,21 @@
             }
 
             function syncPlayerTransform(player) {
-    if (!isOnlineMode || !roomRef) return;
-    const now = Date.now();
-    if (now - lastSyncTime > 50) {
-        lastSyncTime = now;
-        roomRef.child('sync_positions/' + player.slotIndex).set({
-            name: player.name,
-            x: player.x,
-            y: player.y,
-            angle: player.angle,
-            facing: player.facing,
-            stamina: player.stamina,
-            timestamp: now
-        });
-    }
-}
+                if (!isOnlineMode || !roomRef) return;
+                const now = Date.now();
+                if (now - lastSyncTime > 50) {
+                    lastSyncTime = now;
+                    roomRef.child('sync_positions/' + player.slotIndex).set({
+                        name: player.name,
+                        x: player.x,
+                        y: player.y,
+                        angle: player.angle,
+                        facing: player.facing,
+                        stamina: player.stamina,
+                        timestamp: now
+                    });
+                }
+            }
 
             function calculateVector(player, angleDeg) {
                 const rad = (angleDeg * Math.PI) / 180;
@@ -387,111 +396,106 @@
                 }
             }
 
-           
-              if (isOnlineMode) {
-    // 1. Kênh riêng: Đồng bộ di chuyển & góc ngắm (Không gây giật lag / không bị echo)
-    roomRef.child('sync_positions').on('value', snapshot => {
-        const slotsData = snapshot.val();
-        if (!slotsData) return;
-        const myName = (window.currentUser || "").trim().toLowerCase();
+            if (isOnlineMode) {
+                // Kênh 1: Đồng bộ vị trí
+                roomRef.child('sync_positions').on('value', snapshot => {
+                    const slotsData = snapshot.val();
+                    if (!slotsData) return;
+                    const myName = (window.currentUser || "").trim().toLowerCase();
 
-        Object.keys(slotsData).forEach(slotKey => {
-            const act = slotsData[slotKey];
-            if (act && (act.name || "").trim().toLowerCase() !== myName) {
-                const targetPlayer = gamePlayers.find(p => p.name === act.name);
-                if (targetPlayer) {
-                    targetPlayer.x = act.x;
-                    targetPlayer.y = act.y;
-                    targetPlayer.angle = act.angle;
-                    targetPlayer.facing = act.facing;
-                    targetPlayer.stamina = act.stamina;
-                }
-            }
-        });
-    });
-
-    // 2. Kênh riêng: Các sự kiện trận đấu (Bắn, Nổ, Chuyển Lượt)
-    roomRef.child('turn_action').on('value', snapshot => {
-        const act = snapshot.val();
-        if (!act) return;
-        const myName = (window.currentUser || "").trim().toLowerCase();
-
-        // Nhận lệnh Bắn từ đối thủ
-        if (act.type === 'FIRE') {
-            if ((act.shooterName || "").trim().toLowerCase() !== myName) {
-                const shooter = gamePlayers.find(p => p.name === act.shooterName);
-                if (shooter) {
-                    shooter.x = act.x;
-                    shooter.y = act.y;
-                    shooter.angle = act.angle;
-                    shooter.facing = act.facing;
-                    wind = act.wind;
-                    shooter.isPowActive = act.isPow;
-                    shooter.isDoubleShotActive = act.isDouble;
-                    executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
-                }
-            }
-        } 
-        // Nhận kết quả Đạn Nổ & Trừ Máu từ đối thủ
-        else if (act.type === 'EXPLOSION_SYNC') {
-            if ((act.shooterName || "").trim().toLowerCase() !== myName) {
-                explosions.push({
-                    x: act.expX,
-                    y: act.expY,
-                    radius: 6,
-                    maxRadius: act.isPow ? 65 : 42,
-                    alpha: 1,
-                    color: act.isPow ? '#ff0055' : '#ffd369'
-                });
-                digHole(act.expX, act.expY, act.holeRadius);
-
-                if (act.updatedPlayers && Array.isArray(act.updatedPlayers)) {
-                    act.updatedPlayers.forEach(up => {
-                        const p = gamePlayers.find(pl => pl.name === up.name);
-                        if (p) {
-                            p.hp = up.hp;
-                            p.pow = up.pow;
+                    Object.keys(slotsData).forEach(slotKey => {
+                        const act = slotsData[slotKey];
+                        if (act && (act.name || "").trim().toLowerCase() !== myName) {
+                            const targetPlayer = gamePlayers.find(p => p.name === act.name);
+                            if (targetPlayer) {
+                                targetPlayer.x = act.x;
+                                targetPlayer.y = act.y;
+                                targetPlayer.angle = act.angle;
+                                targetPlayer.facing = act.facing;
+                                targetPlayer.stamina = act.stamina;
+                            }
                         }
                     });
-                }
+                });
 
-                if (act.damageList && Array.isArray(act.damageList)) {
-                    act.damageList.forEach(dt => {
-                        damageTexts.push({
-                            x: dt.x,
-                            y: dt.y,
-                            text: dt.text,
-                            isCrit: dt.isCrit,
-                            scale: 0.2,
-                            targetScale: 1.0,
-                            alpha: 1.0,
-                            life: 60
-                        });
-                    });
-                }
-                checkGameOver();
+                // Kênh 2: Sự kiện lượt trận
+                roomRef.child('turn_action').on('value', snapshot => {
+                    const act = snapshot.val();
+                    if (!act) return;
+                    const myName = (window.currentUser || "").trim().toLowerCase();
+
+                    if (act.type === 'FIRE') {
+                        if ((act.shooterName || "").trim().toLowerCase() !== myName) {
+                            const shooter = gamePlayers.find(p => p.name === act.shooterName);
+                            if (shooter) {
+                                shooter.x = act.x;
+                                shooter.y = act.y;
+                                shooter.angle = act.angle;
+                                shooter.facing = act.facing;
+                                wind = act.wind;
+                                shooter.isPowActive = act.isPow;
+                                shooter.isDoubleShotActive = act.isDouble;
+                                executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
+                            }
+                        }
+                    } 
+                    else if (act.type === 'EXPLOSION_SYNC') {
+                        if ((act.shooterName || "").trim().toLowerCase() !== myName) {
+                            explosions.push({
+                                x: act.expX,
+                                y: act.expY,
+                                radius: 6,
+                                maxRadius: act.isPow ? 65 : 42,
+                                alpha: 1,
+                                color: act.isPow ? '#ff0055' : '#ffd369'
+                            });
+                            digHole(act.expX, act.expY, act.holeRadius);
+
+                            if (act.updatedPlayers && Array.isArray(act.updatedPlayers)) {
+                                act.updatedPlayers.forEach(up => {
+                                    const p = gamePlayers.find(pl => pl.name === up.name);
+                                    if (p) {
+                                        p.hp = up.hp;
+                                        p.pow = up.pow;
+                                    }
+                                });
+                            }
+
+                            if (act.damageList && Array.isArray(act.damageList)) {
+                                act.damageList.forEach(dt => {
+                                    damageTexts.push({
+                                        x: dt.x,
+                                        y: dt.y,
+                                        text: dt.text,
+                                        isCrit: dt.isCrit,
+                                        scale: 0.2,
+                                        targetScale: 1.0,
+                                        alpha: 1.0,
+                                        life: 60
+                                    });
+                                });
+                            }
+                            checkGameOver();
+                        }
+                    }
+                    else if (act.type === 'PLAYER_SURRENDER') {
+                        const leaver = gamePlayers.find(p => p.name === act.leaverName);
+                        if (leaver) {
+                            leaver.hp = 0;
+                            checkGameOver();
+                        }
+                    } 
+                    else if (act.type === 'PASS') {
+                        if (isHost) triggerNextTurn();
+                    } 
+                    else if (act.type === 'NEXT_TURN') {
+                        currentPlayerIndex = act.nextIndex;
+                        wind = act.wind;
+                        resetTurnState();
+                    }
+                });
             }
-        }
-        // Xử lý Đầu hàng
-        else if (act.type === 'PLAYER_SURRENDER') {
-            const leaver = gamePlayers.find(p => p.name === act.leaverName);
-            if (leaver) {
-                leaver.hp = 0;
-                checkGameOver();
-            }
-        } 
-        // Bỏ lượt
-        else if (act.type === 'PASS') {
-            if (isHost) triggerNextTurn();
-        } 
-        // Chuyển lượt
-        else if (act.type === 'NEXT_TURN') {
-            currentPlayerIndex = act.nextIndex;
-            wind = act.wind;
-            resetTurnState();
-        }
-    });
-}
+
             function executeVisualShot(shooter, angleDeg, power, isPow, isDouble) {
                 isFiring = true;
                 shooter.isDoubleShotActive = false;
@@ -524,79 +528,81 @@
                 });
             }
 
-           function startShooting(lockedPower) {
-    if (isGameOver || isFiring || !isMyTurn()) return;
-    const shooter = getActivePlayer();
-    const fixedAngle = shooter.angle;
-    const isDouble = shooter.isDoubleShotActive;
-    const isPow = shooter.isPowActive;
+            function startShooting(lockedPower) {
+                if (isGameOver || isFiring || !isMyTurn()) return;
+                const shooter = getActivePlayer();
+                const fixedAngle = shooter.angle;
+                const isDouble = shooter.isDoubleShotActive;
+                const isPow = shooter.isPowActive;
 
-    if (isOnlineMode) {
-        roomRef.child('turn_action').set({
-            type: 'FIRE',
-            shooterName: shooter.name,
-            x: shooter.x, 
-            y: shooter.y,
-            angle: fixedAngle, 
-            facing: shooter.facing,
-            power: lockedPower, 
-            wind: wind,
-            isPow: isPow, 
-            isDouble: isDouble,
-            timestamp: Date.now()
-        });
-    } else {
-        executeVisualShot(shooter, fixedAngle, lockedPower, isPow, isDouble);
-    }
-}
-           function triggerNextTurn() {
-    if (isTurnTransitioning) return;
-    isTurnTransitioning = true;
+                if (isOnlineMode) {
+                    roomRef.child('turn_action').set({
+                        type: 'FIRE',
+                        shooterName: shooter.name,
+                        x: shooter.x, 
+                        y: shooter.y,
+                        angle: fixedAngle, 
+                        facing: shooter.facing,
+                        power: lockedPower, 
+                        wind: wind,
+                        isPow: isPow, 
+                        isDouble: isDouble,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    executeVisualShot(shooter, fixedAngle, lockedPower, isPow, isDouble);
+                }
+            }
 
-    let currentTeam = getActivePlayer().team;
-    let nextTeam = currentTeam === 1 ? 2 : 1;
-    let nextIdx = -1;
+            function triggerNextTurn() {
+                if (isTurnTransitioning) return;
+                isTurnTransitioning = true;
 
-    for (let i = 0; i < gamePlayers.length; i++) {
-        let idx = (currentPlayerIndex + 1 + i) % gamePlayers.length;
-        if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
-            nextIdx = idx;
-            break;
-        }
-    }
+                let currentTeam = getActivePlayer().team;
+                let nextTeam = currentTeam === 1 ? 2 : 1;
+                let nextIdx = -1;
 
-    if (nextIdx === -1) {
-        checkGameOver();
-        return;
-    }
+                for (let i = 0; i < gamePlayers.length; i++) {
+                    let idx = (currentPlayerIndex + 1 + i) % gamePlayers.length;
+                    if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
+                        nextIdx = idx;
+                        break;
+                    }
+                }
 
-    let newWind = (Math.random() * 0.06 - 0.03);
+                if (nextIdx === -1) {
+                    checkGameOver();
+                    return;
+                }
 
-    if (isOnlineMode) {
-        roomRef.child('turn_action').set({
-            type: 'NEXT_TURN',
-            nextIndex: nextIdx,
-            wind: newWind,
-            timestamp: Date.now()
-        });
-    } else {
-        currentPlayerIndex = nextIdx;
-        wind = newWind;
-        resetTurnState();
-    }
-}
-           function resetTurnState() {
-    isFiring = false;
-    isCharging = false;
-    isTurnTransitioning = false;
-    chargePower = 0;
-    chargeDir = 1;
-    const activeP = getActivePlayer();
-    activeP.stamina = activeP.maxStamina;
-    activeP.isDoubleShotActive = false;
-    updateUI();
-    startTurnTimer();
-}
+                let newWind = (Math.random() * 0.06 - 0.03);
+
+                if (isOnlineMode) {
+                    roomRef.child('turn_action').set({
+                        type: 'NEXT_TURN',
+                        nextIndex: nextIdx,
+                        wind: newWind,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    currentPlayerIndex = nextIdx;
+                    wind = newWind;
+                    resetTurnState();
+                }
+            }
+
+            function resetTurnState() {
+                isFiring = false;
+                isCharging = false;
+                isTurnTransitioning = false;
+                chargePower = 0;
+                chargeDir = 1;
+                const activeP = getActivePlayer();
+                activeP.stamina = activeP.maxStamina;
+                activeP.isDoubleShotActive = false;
+                updateUI();
+                startTurnTimer();
+            }
 
             window.onkeydown = function (e) {
                 if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -650,15 +656,15 @@
                 };
             }
 
-           function cleanupGameListeners() {
-    window.onkeydown = null;
-    window.onkeyup = null;
-    if (activeRoomRef) {
-        activeRoomRef.child('turn_action').off();
-        activeRoomRef.child('sync_positions').off();
-        activeRoomRef = null;
-    }
-}
+            function cleanupGameListeners() {
+                window.onkeydown = null;
+                window.onkeyup = null;
+                if (activeRoomRef) {
+                    activeRoomRef.child('turn_action').off();
+                    activeRoomRef.child('sync_positions').off();
+                    activeRoomRef = null;
+                }
+            }
 
             function checkGameOver() {
                 if (isGameOver) return;
@@ -800,7 +806,6 @@
                         const curExpRadius = b.isPow ? 75 : EXPLOSION_RADIUS;
                         const holeRadius = b.isPow ? 60 : 40;
 
-                        // Chỉ máy người bắn mới chủ trì tính nổ & trừ máu
                         const isBulletOwner = !isOnlineMode || (b.ownerName === (window.currentUser || ""));
 
                         if (isBulletOwner) {
@@ -873,17 +878,17 @@
                     if (dt.life < 20) dt.alpha = dt.life / 20;
                     if (dt.life <= 0) damageTexts.splice(i, 1);
                 }
-               if (isFiring && bullets.length === 0 && explosions.length === 0 && !isTurnTransitioning) {
-                   isFiring = false;
-                   isCharging = false;
-                   chargePower = 0;
-                   chargeDir = 1;
-               
-                   // Chỉ máy người vừa thực hiện lượt bắn hoặc máy Host mới được gửi lệnh chuyển lượt
-                   if (!isOnlineMode || isMyTurn() || isHost) {
-                       triggerNextTurn();
-                   }
-               }
+
+                if (isFiring && bullets.length === 0 && explosions.length === 0 && !isTurnTransitioning) {
+                    isFiring = false;
+                    isCharging = false;
+                    chargePower = 0;
+                    chargeDir = 1;
+
+                    if (!isOnlineMode || isMyTurn() || isHost) {
+                        triggerNextTurn();
+                    }
+                }
 
                 updateUIStats();
             }
