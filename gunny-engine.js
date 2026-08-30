@@ -498,14 +498,14 @@
                 });
             }
 
-            function startShooting(lockedPower) {
+           function startShooting(lockedPower) {
                 if (isGameOver || isFiring || !isMyTurn()) return;
                 const shooter = getActivePlayer();
                 const fixedAngle = shooter.angle;
                 const isDouble = shooter.isDoubleShotActive;
                 const isPow = shooter.isPowActive;
-
-                if (socket) {
+            
+                if (socket && socket.connected) {
                     socket.emit('player_fire', {
                         shooterName: shooter.name,
                         x: shooter.x, 
@@ -518,6 +518,7 @@
                         isDouble: isDouble
                     });
                 }
+                // Chỉ kích hoạt bắn cục bộ
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, isDouble);
             }
 
@@ -705,20 +706,20 @@
                         }
                     }
 
-                    if (hasMoved && socket) {
-                        let now = Date.now();
-                        if (now - lastMoveEmitTime > 30) {
-                            lastMoveEmitTime = now;
-                            socket.emit('player_move', {
-                                name: p.name,
-                                x: p.x,
-                                y: p.y,
-                                angle: p.angle,
-                                facing: p.facing,
-                                stamina: p.stamina
-                            });
-                        }
-                    }
+                     if (hasMoved && socket && socket.connected) {
+                         let now = Date.now();
+                         if (now - lastMoveEmitTime > 30) {
+                             lastMoveEmitTime = now;
+                             socket.emit('player_move', {
+                                 name: p.name,
+                                 x: p.x,
+                                 y: p.y,
+                                 angle: p.angle,
+                                 facing: p.facing,
+                                 stamina: p.stamina
+                             });
+                         }
+                     }
                 }
 
                 // Trọng lực rơi
@@ -784,7 +785,7 @@
                         const curExpRadius = b.isPow ? 75 : EXPLOSION_RADIUS;
                         const holeRadius = b.isPow ? 60 : 40;
 
-                        const isBulletOwner = !socket || (b.ownerName === (window.currentUser || ""));
+                        const isBulletOwner = (b.ownerName === (window.currentUser || ""));
 
                         if (isBulletOwner) {
                             explosions.push({ x: expX, y: expY, radius: 6, maxRadius: b.isPow ? 65 : 42, alpha: 1, color: b.isPow ? '#ff0055' : '#ffd369' });
