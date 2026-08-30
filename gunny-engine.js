@@ -1,5 +1,5 @@
 /* =========================================================================
-   GUNNY ENGINE - SOCKET.IO REALTIME (MOBILE RESPONSIVE & FULLSCREEN LANDSCAPE)
+   GUNNY ENGINE - SOCKET.IO REALTIME (SERVER-AUTHORITATIVE TURN ENGINE)
    ========================================================================= */
 
 (function () {
@@ -7,7 +7,7 @@
     let turnCountdownInterval = null;
     let socket = null;
 
-    // Link Server Socket.io Render của bạn
+    // Link Server Socket.io Render
     const SOCKET_SERVER_URL = "https://severgunny.onrender.com";
 
     // Link ảnh chibi chuẩn theo giới tính
@@ -16,7 +16,6 @@
         female: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp'
     };
 
-    // Vũ khí mặc định
     const DEFAULT_WEAPON_IMG = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemsat.webp';
 
     function loadSocketIO(callback) {
@@ -51,7 +50,6 @@
                 }
                 #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; }
                 
-                /* GIAO DIỆN BẢNG ĐIỀU KHIỂN */
                 #gunny-game-wrapper .ui-panel {
                     position: absolute; bottom: 6px; left: 10px; right: 10px; display: flex; justify-content: space-between;
                     align-items: flex-end; background: transparent !important; border: none !important; box-shadow: none !important;
@@ -119,7 +117,7 @@
                 #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: translateX(-50%) scale(1.05); }
                 #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
 
-                /* NÚT FULL MÀN HÌNH NGANG ĐIỆN THOẠI */
+                /* NÚT FULL MÀN HÌNH NGANG CHO MOBILE */
                 #gunny-game-wrapper .btn-fullscreen-toggle {
                     position: absolute; top: 8px; left: 10px; z-index: 20;
                     background: rgba(0, 255, 204, 0.2); border: 1.5px solid #00ffcc; color: #00ffcc;
@@ -127,7 +125,7 @@
                     cursor: pointer; backdrop-filter: blur(4px); box-shadow: 0 2px 6px rgba(0,0,0,0.6);
                 }
 
-                /* CỤM PHÍM CẢM ỨNG ẢO CHO ĐIỆN THOẠI */
+                /* CỤM PHÍM CẢM ỨNG ẢO CHO MOBILE */
                 #gunny-touch-controls {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                     pointer-events: none; z-index: 18; display: none;
@@ -155,7 +153,6 @@
                 }
                 .touch-fire-btn:active { transform: scale(0.95); box-shadow: 0 0 25px #ffd369; }
 
-                /* CSS XOAY NGANG FULL TOÀN BỘ TRÊN MOBILE */
                 .gunny-mobile-landscape-mode {
                     position: fixed !important; top: 0 !important; left: 0 !important;
                     width: 100vw !important; height: 100vh !important; z-index: 999999 !important;
@@ -169,13 +166,9 @@
             <div id="game-container">
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
                 
-                <!-- NÚT XOAY NGANG FULL MÀN HÌNH -->
                 <button id="btn-fullscreen-landscape" class="btn-fullscreen-toggle" type="button">⛶ Xoay Ngang</button>
-
-                <!-- NÚT BỎ LƯỢT DƯỚI GIÓ -->
                 <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
 
-                <!-- CỤM PHÍM CẢM ỨNG ĐIỆN THOẠI -->
                 <div id="gunny-touch-controls">
                     <div class="touch-dpad-left">
                         <div></div>
@@ -388,33 +381,15 @@
                         color: teamNum === 1 ? '#ff4b2b' : '#38ef7d'
                     });
                 });
-            } else {
-                const p1Img = new Image(); p1Img.src = CHIBI_AVATARS.male; playerImages["Player 1"] = p1Img;
-                const p2Img = new Image(); p2Img.src = CHIBI_AVATARS.female; playerImages["Player 2"] = p2Img;
-                const defWp = new Image(); defWp.src = DEFAULT_WEAPON_IMG;
-                weaponImages["Player 1"] = defWp; weaponImages["Player 2"] = defWp;
-
-                gamePlayers = [
-                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, x: 120, y: 350, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
-                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, x: 780, y: 350, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
-                ];
             }
 
-            // 🌟 SET TURN BAN ĐẦU: LEVEL THẤP NHẤT ĐƯỢC BẮN TRƯỚC
-            let lowestLevelIdx = 0;
-            let lowestLv = 99999;
-            gamePlayers.forEach((pl, idx) => {
-                if (pl.level < lowestLv) {
-                    lowestLv = pl.level;
-                    lowestLevelIdx = idx;
-                }
-            });
-            let currentPlayerIndex = lowestLevelIdx;
+            let currentTurnPlayerName = gamePlayers[0] ? gamePlayers[0].name : "Player";
+            let currentTurnId = 1;
 
             let cameraX = 0;
             let wind = 0;
             let isFiring = false;
-            let hasFiredThisTurn = false; // Cờ khóa bắn nhiều lần
+            let hasFiredThisTurn = false;
             let isGameOver = false;
             let isCharging = false;
             let chargePower = 0;
@@ -428,13 +403,13 @@
             let damageTexts = [];
             const keys = {};
 
-            function getActivePlayer() { return gamePlayers[currentPlayerIndex]; }
+            function getActivePlayer() {
+                return gamePlayers.find(p => p.name === currentTurnPlayerName) || gamePlayers[0];
+            }
 
             function isMyTurn() {
                 const myName = (window.currentUser || "").trim().toLowerCase();
-                const activeP = getActivePlayer();
-                if (!activeP || !myName) return false;
-                return (activeP.name || "").trim().toLowerCase() === myName;
+                return currentTurnPlayerName.trim().toLowerCase() === myName;
             }
 
             function calculateVector(player, angleDeg) {
@@ -448,7 +423,7 @@
                 updateTimerUI();
 
                 turnCountdownInterval = setInterval(() => {
-                    if (isFiring || isGameOver) return;
+                    if (isFiring || hasFiredThisTurn || isGameOver) return;
                     turnTimeLeft--;
                     updateTimerUI();
 
@@ -476,7 +451,11 @@
             function passTurnAction() {
                 if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
                 hasFiredThisTurn = true;
-                triggerNextTurnServer();
+                if (socket) {
+                    socket.emit('request_pass_turn', {
+                        turnId: currentTurnId
+                    });
+                }
             }
 
             const btnPassTop = document.getElementById("btn-top-pass-turn");
@@ -487,7 +466,7 @@
             }
 
             // ==========================================
-            // XỬ LÝ FULL MÀN HÌNH & CẢM ỨNG DI ĐỘNG
+            // XỬ LÝ CẢM ỨNG DI ĐỘNG & FULLSCREEN NGANG
             // ==========================================
             const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             const touchControls = document.getElementById("gunny-touch-controls");
@@ -556,17 +535,38 @@
             }
 
             // ==========================================
-            // KẾT NỐI VÀ LẮNG NGHE WEBSOCKET REALTIME
+            // KẾT NỐI SERVER-AUTHORITATIVE SOCKET.IO
             // ==========================================
             if (roomId) {
                 socket = io(SOCKET_SERVER_URL, { transports: ['websocket'] });
 
-                socket.emit('join_room', {
-                    roomId: roomId,
-                    playerName: window.currentUser || "Player",
-                    playerData: { host: isHost }
+                if (isHost) {
+                    socket.emit('init_match_server', {
+                        roomId: roomId,
+                        hostName: window.currentUser || "Player 1",
+                        playersList: gamePlayers.map(p => ({
+                            name: p.name,
+                            level: p.level,
+                            team: p.team,
+                            hp: p.hp
+                        }))
+                    });
+                } else {
+                    socket.emit('join_match_socket', {
+                        roomId: roomId,
+                        playerName: window.currentUser || "Player"
+                    });
+                }
+
+                // 1. Nhận thông tin khởi tạo lượt đầu tiên
+                socket.on('match_initialized', (data) => {
+                    currentTurnPlayerName = data.currentTurnName;
+                    currentTurnId = data.turnId;
+                    wind = data.wind;
+                    resetTurnState();
                 });
 
+                // 2. Nhận tọa độ di chuyển đối thủ
                 socket.on('opponent_moved', (data) => {
                     const targetPlayer = gamePlayers.find(p => p.name === data.name);
                     if (targetPlayer && targetPlayer.name !== (window.currentUser || "")) {
@@ -578,6 +578,7 @@
                     }
                 });
 
+                // 3. Nhận đạn bắn
                 socket.on('bullet_fired', (act) => {
                     if (act.shooterName !== (window.currentUser || "")) {
                         const shooter = gamePlayers.find(p => p.name === act.shooterName);
@@ -594,6 +595,7 @@
                     }
                 });
 
+                // 4. Nhận nổ đạn & trừ máu đồng bộ
                 socket.on('explosion_sync', (act) => {
                     if (act.shooterName !== (window.currentUser || "")) {
                         explosions.push({
@@ -634,12 +636,15 @@
                     }
                 });
 
+                // 5. Nhận sự kiện chuyển lượt duy nhất từ Server
                 socket.on('turn_changed', (data) => {
-                    currentPlayerIndex = data.nextIndex;
+                    currentTurnPlayerName = data.currentTurnName;
+                    currentTurnId = data.turnId;
                     wind = data.wind;
                     resetTurnState();
                 });
 
+                // 6. Đối thủ thoát trận
                 socket.on('player_left', (data) => {
                     const leaver = gamePlayers.find(p => p.name === data.leaverName);
                     if (leaver) {
@@ -692,6 +697,7 @@
 
                 if (socket) {
                     socket.emit('player_fire', {
+                        turnId: currentTurnId,
                         shooterName: shooter.name,
                         x: shooter.x, 
                         y: shooter.y,
@@ -704,50 +710,6 @@
                     });
                 }
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
-            }
-
-            function triggerNextTurnServer() {
-                let currentTeam = getActivePlayer().team;
-                let nextTeam = currentTeam === 1 ? 2 : 1;
-                let nextIdx = -1;
-
-                // 1. Tìm thành viên còn sống của đội đối phương
-                for (let i = 1; i <= gamePlayers.length; i++) {
-                    let idx = (currentPlayerIndex + i) % gamePlayers.length;
-                    if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
-                        nextIdx = idx;
-                        break;
-                    }
-                }
-
-                // 2. Nếu đối phương hết người, tìm thành viên cùng đội còn sống
-                if (nextIdx === -1) {
-                    for (let i = 1; i <= gamePlayers.length; i++) {
-                        let idx = (currentPlayerIndex + i) % gamePlayers.length;
-                        if (gamePlayers[idx].hp > 0) {
-                            nextIdx = idx;
-                            break;
-                        }
-                    }
-                }
-
-                if (nextIdx === -1) {
-                    checkGameOver();
-                    return;
-                }
-
-                let newWind = (Math.random() * 0.06 - 0.03);
-
-                if (socket) {
-                    socket.emit('request_next_turn', {
-                        nextIndex: nextIdx,
-                        nextWind: newWind
-                    });
-                } else {
-                    currentPlayerIndex = nextIdx;
-                    wind = newWind;
-                    resetTurnState();
-                }
             }
 
             function resetTurnState() {
@@ -839,7 +801,7 @@
                     setTimeout(() => {
                         let rewardMsg = "";
                         if (window.currentUser) {
-                            let rewardKiemkhi = isUserWin ? 30 : 15; // Thắng: 30, Thua: 15 (Bỏ linh thạch)
+                            let rewardKiemkhi = isUserWin ? 30 : 15; // Thắng: 30, Thua: 15 (Bỏ hoàn toàn linh thạch)
                             if (typeof userStats !== "undefined") {
                                 if (!userStats.inventory) userStats.inventory = {};
                                 userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
@@ -1013,6 +975,7 @@
 
                             if (socket) {
                                 socket.emit('bullet_exploded', {
+                                    turnId: currentTurnId,
                                     shooterName: b.ownerName,
                                     expX: expX,
                                     expY: expY,
@@ -1048,10 +1011,6 @@
                     isCharging = false;
                     chargePower = 0;
                     chargeDir = 1;
-
-                    if (isMyTurn() || isHost) {
-                        triggerNextTurnServer();
-                    }
                 }
 
                 updateUIStats();
@@ -1093,9 +1052,9 @@
                 if (bgImg.complete && bgImg.naturalWidth !== 0) ctx.drawImage(bgImg, 0, 0, WORLD_WIDTH, canvas.height);
                 ctx.drawImage(terrainCanvas, 0, 0);
 
-                gamePlayers.forEach((pl, idx) => {
+                gamePlayers.forEach((pl) => {
                     if (pl.hp <= 0) return;
-                    const isTurn = (idx === currentPlayerIndex);
+                    const isTurn = (pl.name === currentTurnPlayerName);
                     const vec = calculateVector(pl, pl.angle);
 
                     ctx.save();
@@ -1310,7 +1269,7 @@
 
                 nameElem.innerText = `${p.name} (Đội ${p.team})`;
                 nameElem.style.color = p.team === 1 ? '#ff5470' : '#4ecca3';
-                turnElem.innerText = `LƯỢT: ${p.name.toUpperCase()}`;
+                turnElem.innerText = `LƯỢT: ${currentTurnPlayerName.toUpperCase()}`;
                 turnElem.style.color = p.team === 1 ? '#ff5470' : '#4ecca3';
                 hpBar.className = `hp-bar ${p.team === 1 ? 'p1-hp' : 'p2-hp'}`;
                 hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
