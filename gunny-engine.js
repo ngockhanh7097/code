@@ -1,5 +1,5 @@
 /* =========================================================================
-   GUNNY ENGINE - SOCKET.IO REALTIME (BẢN HỖ TRỢ 4 NGƯỜI 2V2 FULL TÍNH NĂNG)
+   GUNNY ENGINE - SOCKET.IO REALTIME (MOBILE RESPONSIVE & FULLSCREEN LANDSCAPE)
    ========================================================================= */
 
 (function () {
@@ -16,7 +16,7 @@
         female: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp'
     };
 
-    // Vũ khí mặc định khi người chơi chưa trang bị
+    // Vũ khí mặc định
     const DEFAULT_WEAPON_IMG = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemsat.webp';
 
     function loadSocketIO(callback) {
@@ -41,6 +41,7 @@
                     all: initial; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     display: flex; flex-direction: column; align-items: center; justify-content: center;
                     width: 100%; margin: 0 auto; color: #fff; user-select: none; -webkit-user-select: none;
+                    position: relative;
                 }
                 #gunny-game-wrapper * { box-sizing: border-box; margin: 0; padding: 0; }
                 #gunny-game-wrapper #game-container {
@@ -49,6 +50,8 @@
                     width: 900px; max-width: 100%; overflow: hidden;
                 }
                 #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; }
+                
+                /* GIAO DIỆN BẢNG ĐIỀU KHIỂN */
                 #gunny-game-wrapper .ui-panel {
                     position: absolute; bottom: 6px; left: 10px; right: 10px; display: flex; justify-content: space-between;
                     align-items: flex-end; background: transparent !important; border: none !important; box-shadow: none !important;
@@ -105,7 +108,7 @@
                 #gunny-game-wrapper .action-btn:disabled { background: #444; cursor: not-allowed; opacity: 0.5; }
                 #gunny-game-wrapper .action-btn.active { background: #ffd369; color: #111; box-shadow: 0 0 12px #ffd369; }
                 
-                /* Nút bỏ lượt dưới khung gió */
+                /* NÚT BỎ LƯỢT */
                 #gunny-game-wrapper .btn-pass-turn {
                     position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
                     background: rgba(233, 69, 96, 0.85); border: 1.5px solid #ff5470; color: #fff;
@@ -116,14 +119,79 @@
                 #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: translateX(-50%) scale(1.05); }
                 #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
 
+                /* NÚT FULL MÀN HÌNH NGANG ĐIỆN THOẠI */
+                #gunny-game-wrapper .btn-fullscreen-toggle {
+                    position: absolute; top: 8px; left: 10px; z-index: 20;
+                    background: rgba(0, 255, 204, 0.2); border: 1.5px solid #00ffcc; color: #00ffcc;
+                    padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 6px;
+                    cursor: pointer; backdrop-filter: blur(4px); box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+                }
+
+                /* CỤM PHÍM CẢM ỨNG ẢO CHO ĐIỆN THOẠI */
+                #gunny-touch-controls {
+                    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                    pointer-events: none; z-index: 18; display: none;
+                }
+                .touch-dpad-left {
+                    position: absolute; bottom: 85px; left: 15px; width: 120px; height: 120px;
+                    pointer-events: auto; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 4px;
+                }
+                .touch-dpad-btn {
+                    background: rgba(0, 0, 0, 0.6); border: 1.5px solid rgba(255, 255, 255, 0.4);
+                    color: #fff; font-size: 18px; font-weight: bold; border-radius: 8px;
+                    display: flex; align-items: center; justify-content: center; touch-action: none;
+                }
+                .touch-dpad-btn:active { background: #ffcc00; color: #000; border-color: #ffcc00; }
+                
+                .touch-btn-fire-wrap {
+                    position: absolute; bottom: 85px; right: 15px; pointer-events: auto;
+                }
+                .touch-fire-btn {
+                    width: 80px; height: 80px; border-radius: 50%;
+                    background: linear-gradient(135deg, #ff0055 0%, #ff5500 100%);
+                    border: 3px solid #ffd369; color: #fff; font-size: 16px; font-weight: 900;
+                    display: flex; align-items: center; justify-content: center;
+                    box-shadow: 0 0 15px rgba(255, 85, 0, 0.8); touch-action: none;
+                }
+                .touch-fire-btn:active { transform: scale(0.95); box-shadow: 0 0 25px #ffd369; }
+
+                /* CSS XOAY NGANG FULL TOÀN BỘ TRÊN MOBILE */
+                .gunny-mobile-landscape-mode {
+                    position: fixed !important; top: 0 !important; left: 0 !important;
+                    width: 100vw !important; height: 100vh !important; z-index: 999999 !important;
+                    border-radius: 0 !important; max-width: none !important;
+                }
+                .gunny-mobile-landscape-mode canvas { height: 100vh !important; border-radius: 0 !important; }
+
                 #gunny-game-wrapper .guide { margin-top: 8px; font-size: 12px; color: #bbb; text-align: center; }
             </style>
 
             <div id="game-container">
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
                 
+                <!-- NÚT XOAY NGANG FULL MÀN HÌNH -->
+                <button id="btn-fullscreen-landscape" class="btn-fullscreen-toggle" type="button">⛶ Xoay Ngang</button>
+
                 <!-- NÚT BỎ LƯỢT DƯỚI GIÓ -->
                 <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
+
+                <!-- CỤM PHÍM CẢM ỨNG ĐIỆN THOẠI -->
+                <div id="gunny-touch-controls">
+                    <div class="touch-dpad-left">
+                        <div></div>
+                        <button id="touch-btn-up" class="touch-dpad-btn" type="button">▲</button>
+                        <div></div>
+                        <button id="touch-btn-left" class="touch-dpad-btn" type="button">◀</button>
+                        <div></div>
+                        <button id="touch-btn-right" class="touch-dpad-btn" type="button">▶</button>
+                        <div></div>
+                        <button id="touch-btn-down" class="touch-dpad-btn" type="button">▼</button>
+                        <div></div>
+                    </div>
+                    <div class="touch-btn-fire-wrap">
+                        <button id="touch-btn-fire" class="touch-fire-btn" type="button">BẮN</button>
+                    </div>
+                </div>
 
                 <div class="ui-panel">
                     <div id="active-player-panel" class="player-info">
@@ -150,7 +218,7 @@
                     </div>
                 </div>
                 <div class="guide">
-                    <strong>Cách chơi:</strong> <strong>[A / D]</strong>: Di chuyển | <strong>[W / S]</strong>: Chỉnh góc | Giữ <strong>[SPACE]</strong>: Tích lực &amp; thả để bắn.
+                    <strong>Cách chơi:</strong> <strong>[A / D]</strong>: Di chuyển | <strong>[W / S]</strong>: Chỉnh góc | Giữ <strong>[SPACE] / Nút BẮN</strong>: Tích lực &amp; thả để bắn.
                 </div>
             </div>
         </div>`;
@@ -219,7 +287,7 @@
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
             const CRIT_MULTIPLIER = 1.5;
-            const EXTRA_SHOT_COST = 50; // -50 TL mỗi lần +1 đạn
+            const EXTRA_SHOT_COST = 50;
 
             const roomId = matchData ? matchData.roomId : null;
             const isHost = matchData ? (matchData.host === (window.currentUser || "Player 1")) : true;
@@ -332,10 +400,21 @@
                 ];
             }
 
-            let currentPlayerIndex = 0;
+            // 🌟 SET TURN BAN ĐẦU: LEVEL THẤP NHẤT ĐƯỢC BẮN TRƯỚC
+            let lowestLevelIdx = 0;
+            let lowestLv = 99999;
+            gamePlayers.forEach((pl, idx) => {
+                if (pl.level < lowestLv) {
+                    lowestLv = pl.level;
+                    lowestLevelIdx = idx;
+                }
+            });
+            let currentPlayerIndex = lowestLevelIdx;
+
             let cameraX = 0;
             let wind = 0;
             let isFiring = false;
+            let hasFiredThisTurn = false; // Cờ khóa bắn nhiều lần
             let isGameOver = false;
             let isCharging = false;
             let chargePower = 0;
@@ -390,12 +469,13 @@
                 }
 
                 if (btnPass) {
-                    btnPass.disabled = !isMyTurn() || isFiring || isGameOver;
+                    btnPass.disabled = !isMyTurn() || isFiring || hasFiredThisTurn || isGameOver;
                 }
             }
 
             function passTurnAction() {
-                if (!isMyTurn() || isFiring || isGameOver) return;
+                if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
+                hasFiredThisTurn = true;
                 triggerNextTurnServer();
             }
 
@@ -404,6 +484,75 @@
                 btnPassTop.onclick = function () {
                     passTurnAction();
                 };
+            }
+
+            // ==========================================
+            // XỬ LÝ FULL MÀN HÌNH & CẢM ỨNG DI ĐỘNG
+            // ==========================================
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const touchControls = document.getElementById("gunny-touch-controls");
+            if (isTouchDevice && touchControls) {
+                touchControls.style.display = "block";
+            }
+
+            const btnFs = document.getElementById("btn-fullscreen-landscape");
+            if (btnFs) {
+                btnFs.onclick = function () {
+                    const container = document.getElementById("game-container");
+                    if (!document.fullscreenElement) {
+                        if (container.requestFullscreen) container.requestFullscreen();
+                        else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+                        
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape').catch(() => {});
+                        }
+                        container.classList.add("gunny-mobile-landscape-mode");
+                        btnFs.innerText = "⛶ Thu Nhỏ";
+                    } else {
+                        if (document.exitFullscreen) document.exitFullscreen();
+                        container.classList.remove("gunny-mobile-landscape-mode");
+                        btnFs.innerText = "⛶ Xoay Ngang";
+                    }
+                };
+            }
+
+            function bindTouchKey(elemId, keyCode) {
+                const el = document.getElementById(elemId);
+                if (!el) return;
+                el.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
+                    keys[keyCode] = true;
+                }, { passive: false });
+
+                el.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    keys[keyCode] = false;
+                }, { passive: false });
+            }
+
+            bindTouchKey('touch-btn-left', 'KeyA');
+            bindTouchKey('touch-btn-right', 'KeyD');
+            bindTouchKey('touch-btn-up', 'KeyW');
+            bindTouchKey('touch-btn-down', 'KeyS');
+
+            const touchFireBtn = document.getElementById('touch-btn-fire');
+            if (touchFireBtn) {
+                touchFireBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
+                    isCharging = true;
+                    chargePower = 0;
+                    chargeDir = 1;
+                }, { passive: false });
+
+                touchFireBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    if (!isMyTurn() || isGameOver || !isCharging) return;
+                    isCharging = false;
+                    const lockedPower = Math.max(chargePower, 5);
+                    setTimeout(() => startShooting(lockedPower), 60);
+                }, { passive: false });
             }
 
             // ==========================================
@@ -533,7 +682,9 @@
             }
 
             function startShooting(lockedPower) {
-                if (isGameOver || isFiring || !isMyTurn()) return;
+                if (isGameOver || isFiring || hasFiredThisTurn || !isMyTurn()) return;
+                hasFiredThisTurn = true; // Khóa cứng ngay lập tức không cho bắn phát 2
+
                 const shooter = getActivePlayer();
                 const fixedAngle = shooter.angle;
                 const extraCount = shooter.extraBulletsCount || 0;
@@ -555,13 +706,12 @@
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
-            // Logic chuyển lượt thông minh cho 4 người (Đan xen giữa 2 đội)
             function triggerNextTurnServer() {
                 let currentTeam = getActivePlayer().team;
                 let nextTeam = currentTeam === 1 ? 2 : 1;
                 let nextIdx = -1;
 
-                // 1. Ưu tiên tìm thành viên còn sống ở đội đối phương
+                // 1. Tìm thành viên còn sống của đội đối phương
                 for (let i = 1; i <= gamePlayers.length; i++) {
                     let idx = (currentPlayerIndex + i) % gamePlayers.length;
                     if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
@@ -570,7 +720,7 @@
                     }
                 }
 
-                // 2. Nếu đội đối phương đã hết người, chuyển tới thành viên cùng đội còn sống
+                // 2. Nếu đối phương hết người, tìm thành viên cùng đội còn sống
                 if (nextIdx === -1) {
                     for (let i = 1; i <= gamePlayers.length; i++) {
                         let idx = (currentPlayerIndex + i) % gamePlayers.length;
@@ -602,6 +752,7 @@
 
             function resetTurnState() {
                 isFiring = false;
+                hasFiredThisTurn = false; // Mở khóa cho lượt mới
                 isCharging = false;
                 chargePower = 0;
                 chargeDir = 1;
@@ -614,7 +765,7 @@
 
             window.onkeydown = function (e) {
                 if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-                if (!isMyTurn() || isFiring || isGameOver) return;
+                if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
                 
                 keys[e.code] = true;
                 if (e.code === 'Space' && !e.repeat) {
@@ -626,7 +777,7 @@
 
             window.onkeyup = function (e) {
                 if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
-                if (!isMyTurn() || isGameOver) return;
+                if (!isMyTurn() || isGameOver || !isCharging) return;
 
                 keys[e.code] = false;
                 if (e.code === 'Space' && isCharging) {
@@ -639,7 +790,7 @@
             const skillBtn = document.getElementById('active-skill-btn');
             if (skillBtn) {
                 skillBtn.onclick = function () {
-                    if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isCharging || isGameOver) return;
                     const p = getActivePlayer();
                     
                     if (p.stamina >= EXTRA_SHOT_COST) {
@@ -653,7 +804,7 @@
             const powBtn = document.getElementById('active-pow-btn');
             if (powBtn) {
                 powBtn.onclick = function () {
-                    if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isCharging || isGameOver) return;
                     const p = getActivePlayer();
                     if (p.pow >= 100) {
                         p.isPowActive = !p.isPowActive;
@@ -688,10 +839,8 @@
                     setTimeout(() => {
                         let rewardMsg = "";
                         if (window.currentUser) {
-                            let rewardCoin = isUserWin ? 100 : 20;
-                            let rewardKiemkhi = isUserWin ? 30 : 15; // Thắng: 30, Thua: 15
+                            let rewardKiemkhi = isUserWin ? 30 : 15; // Thắng: 30, Thua: 15 (Bỏ linh thạch)
                             if (typeof userStats !== "undefined") {
-                                userStats.coin = (userStats.coin || 0) + rewardCoin;
                                 if (!userStats.inventory) userStats.inventory = {};
                                 userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
 
@@ -701,7 +850,7 @@
                                     });
                                 }
                             }
-                            rewardMsg = `\n🎁 Thu hoạch: +${rewardCoin} Linh Thạch | +${rewardKiemkhi} Kiếm Khí.`;
+                            rewardMsg = `\n🎁 Thu hoạch: +${rewardKiemkhi} Kiếm Khí.`;
                         }
 
                         alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
@@ -721,10 +870,10 @@
             function update() {
                 const p = getActivePlayer();
 
-                if (isMyTurn() && !isFiring && !isCharging && !isGameOver && p.hp > 0) {
+                if (isMyTurn() && !isFiring && !hasFiredThisTurn && !isCharging && !isGameOver && p.hp > 0) {
                     let hasMoved = false;
-                    if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) { p.angle += 1; hasMoved = true; }
-                    if ((keys['ArrowDown'] || keys['KeyS']) && p.angle > 1) { p.angle -= 1; hasMoved = true; }
+                    if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) { p.angle += 1; }
+                    if ((keys['ArrowDown'] || keys['KeyS']) && p.angle > 1) { p.angle -= 1; }
 
                     const MOVE_COST = 1;
                     if (keys['ArrowLeft'] || keys['KeyA']) {
@@ -1168,12 +1317,12 @@
 
                 let extraBullets = p.extraBulletsCount || 0;
                 btnSkill.innerText = extraBullets > 0 ? `+${extraBullets} Đạn (Bật tiếp)` : `+1 Đạn (-50 TL)`;
-                btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || !isMyTurn();
+                btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || hasFiredThisTurn || !isMyTurn();
                 btnSkill.classList.toggle('active', extraBullets > 0);
 
                 const isPowReady = p.pow >= 100;
                 btnPow.innerText = p.isPowActive ? 'POW (BẬT)' : (`POW (${Math.floor(p.pow)}%)`);
-                btnPow.disabled = (!p.isPowActive && !isPowReady) || isFiring || !isMyTurn();
+                btnPow.disabled = (!p.isPowActive && !isPowReady) || isFiring || hasFiredThisTurn || !isMyTurn();
                 btnPow.classList.toggle('ready', isPowReady);
                 btnPow.classList.toggle('active', p.isPowActive);
             }
