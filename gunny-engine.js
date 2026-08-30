@@ -329,22 +329,21 @@
             }
 
             function syncPlayerTransform(player) {
-                if (!isOnlineMode || !roomRef) return;
-                const now = Date.now();
-                if (now - lastSyncTime > 40) {
-                    lastSyncTime = now;
-                    roomRef.child('turn_action').set({
-                        type: 'SYNC_MOVE',
-                        name: player.name,
-                        x: player.x,
-                        y: player.y,
-                        angle: player.angle,
-                        facing: player.facing,
-                        stamina: player.stamina,
-                        timestamp: now
-                    });
-                }
-            }
+    if (!isOnlineMode || !roomRef) return;
+    const now = Date.now();
+    if (now - lastSyncTime > 50) {
+        lastSyncTime = now;
+        roomRef.child('sync_positions/' + player.slotIndex).set({
+            name: player.name,
+            x: player.x,
+            y: player.y,
+            angle: player.angle,
+            facing: player.facing,
+            stamina: player.stamina,
+            timestamp: now
+        });
+    }
+}
 
             function calculateVector(player, angleDeg) {
                 const rad = (angleDeg * Math.PI) / 180;
@@ -388,15 +387,17 @@
                 }
             }
 
-            if (isOnlineMode) {
-                if (isOnlineMode) {
-    roomRef.child('turn_action').on('value', snapshot => {
-        const act = snapshot.val();
-        if (!act) return;
+           
+              if (isOnlineMode) {
+    // 1. Kênh riêng: Đồng bộ di chuyển & góc ngắm (Không gây giật lag / không bị echo)
+    roomRef.child('sync_positions').on('value', snapshot => {
+        const slotsData = snapshot.val();
+        if (!slotsData) return;
+        const myName = (window.currentUser || "").trim().toLowerCase();
 
-        // 1. Nhận gói tin đồng bộ di chuyển & góc ngắm từ đối thủ
-        if (act.type === 'SYNC_MOVE') {
-            if (act.name !== (window.currentUser || "")) {
+        Object.keys(slotsData).forEach(slotKey => {
+            const act = slotsData[slotKey];
+            if (act && (act.name || "").trim().toLowerCase() !== myName) {
                 const targetPlayer = gamePlayers.find(p => p.name === act.name);
                 if (targetPlayer) {
                     targetPlayer.x = act.x;
@@ -406,24 +407,34 @@
                     targetPlayer.stamina = act.stamina;
                 }
             }
-        } 
-        // 2. Nhận lệnh bắn
-        else if (act.type === 'FIRE') {
-            const shooter = gamePlayers.find(p => p.name === act.shooterName);
-            if (shooter) {
-                shooter.x = act.x;
-                shooter.y = act.y;
-                shooter.angle = act.angle;
-                shooter.facing = act.facing;
-                wind = act.wind;
-                shooter.isPowActive = act.isPow;
-                shooter.isDoubleShotActive = act.isDouble;
-                executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
+        });
+    });
+
+    // 2. Kênh riêng: Các sự kiện trận đấu (Bắn, Nổ, Chuyển Lượt)
+    roomRef.child('turn_action').on('value', snapshot => {
+        const act = snapshot.val();
+        if (!act) return;
+        const myName = (window.currentUser || "").trim().toLowerCase();
+
+        // Nhận lệnh Bắn từ đối thủ
+        if (act.type === 'FIRE') {
+            if ((act.shooterName || "").trim().toLowerCase() !== myName) {
+                const shooter = gamePlayers.find(p => p.name === act.shooterName);
+                if (shooter) {
+                    shooter.x = act.x;
+                    shooter.y = act.y;
+                    shooter.angle = act.angle;
+                    shooter.facing = act.facing;
+                    wind = act.wind;
+                    shooter.isPowActive = act.isPow;
+                    shooter.isDoubleShotActive = act.isDouble;
+                    executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
+                }
             }
         } 
-        // 3. Nhận gói tin đồng bộ nổ & máu
+        // Nhận kết quả Đạn Nổ & Trừ Máu từ đối thủ
         else if (act.type === 'EXPLOSION_SYNC') {
-            if (act.shooterName !== (window.currentUser || "")) {
+            if ((act.shooterName || "").trim().toLowerCase() !== myName) {
                 explosions.push({
                     x: act.expX,
                     y: act.expY,
@@ -461,7 +472,7 @@
                 checkGameOver();
             }
         }
-        // 4. Xử lý đầu hàng
+        // Xử lý Đầu hàng
         else if (act.type === 'PLAYER_SURRENDER') {
             const leaver = gamePlayers.find(p => p.name === act.leaverName);
             if (leaver) {
@@ -469,11 +480,11 @@
                 checkGameOver();
             }
         } 
-        // 5. Bỏ lượt
+        // Bỏ lượt
         else if (act.type === 'PASS') {
             if (isHost) triggerNextTurn();
         } 
-        // 6. Chuyển lượt
+        // Chuyển lượt
         else if (act.type === 'NEXT_TURN') {
             currentPlayerIndex = act.nextIndex;
             wind = act.wind;
@@ -481,7 +492,6 @@
         }
     });
 }
-
             function executeVisualShot(shooter, angleDeg, power, isPow, isDouble) {
                 isFiring = true;
                 shooter.isDoubleShotActive = false;
@@ -640,14 +650,15 @@
                 };
             }
 
-            function cleanupGameListeners() {
-                window.onkeydown = null;
-                window.onkeyup = null;
-                if (activeRoomRef) {
-                    activeRoomRef.child('turn_action').off();
-                    activeRoomRef = null;
-                }
-            }
+           function cleanupGameListeners() {
+    window.onkeydown = null;
+    window.onkeyup = null;
+    if (activeRoomRef) {
+        activeRoomRef.child('turn_action').off();
+        activeRoomRef.child('sync_positions').off();
+        activeRoomRef = null;
+    }
+}
 
             function checkGameOver() {
                 if (isGameOver) return;
@@ -692,6 +703,7 @@
                                 matchData: null
                             });
                             roomRef.child('turn_action').remove();
+                            roomRef.child('sync_positions').remove();
                         }
                     }, 500);
                 }
