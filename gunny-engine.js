@@ -1,5 +1,5 @@
 /* =========================================================================
-   GUNNY ENGINE - BẢN SOCKET.IO ENGINE REALTIME (60 FPS MƯỢT MÀ)
+   GUNNY ENGINE - SOCKET.IO REALTIME (BẢN CẬP NHẬT: +1 ĐẠN, BỎ LƯỢT, CHIBI AVATAR)
    ========================================================================= */
 
 (function () {
@@ -7,8 +7,14 @@
     let turnCountdownInterval = null;
     let socket = null;
 
-    // 🔴 HÃY ĐIỀN LINK RENDER CỦA BẠN VÀO ĐÂY:
+    // 🔴 HÃY ĐIỀN CHÍNH XÁC LINK SERVER RENDER CỦA BẠN VÀO ĐÂY:
     const SOCKET_SERVER_URL = "https://severgunny.onrender.com";
+
+    // Link ảnh chibi chuẩn theo giới tính
+    const CHIBI_AVATARS = {
+        male: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp',
+        female: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp'
+    };
 
     function loadSocketIO(callback) {
         if (typeof io !== "undefined") {
@@ -95,11 +101,27 @@
                 #gunny-game-wrapper .action-btn:hover:not(:disabled) { background: #ff5470; transform: scale(1.04); }
                 #gunny-game-wrapper .action-btn:disabled { background: #444; cursor: not-allowed; opacity: 0.5; }
                 #gunny-game-wrapper .action-btn.active { background: #ffd369; color: #111; box-shadow: 0 0 12px #ffd369; }
+                
+                /* Nút bỏ lượt dưới khung gió */
+                #gunny-game-wrapper .btn-pass-turn {
+                    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
+                    background: rgba(233, 69, 96, 0.85); border: 1.5px solid #ff5470; color: #fff;
+                    padding: 3px 12px; font-size: 11px; font-weight: bold; border-radius: 12px;
+                    cursor: pointer; z-index: 15; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+                    transition: 0.2s; pointer-events: auto;
+                }
+                #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: translateX(-50%) scale(1.05); }
+                #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
+
                 #gunny-game-wrapper .guide { margin-top: 8px; font-size: 12px; color: #bbb; text-align: center; }
             </style>
 
             <div id="game-container">
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
+                
+                <!-- NÚT BỎ LƯỢT DƯỚI GIÓ -->
+                <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
+
                 <div class="ui-panel">
                     <div id="active-player-panel" class="player-info">
                         <strong id="active-player-name" style="color: #ff5470; font-size: 15px;">Player 1</strong>
@@ -108,7 +130,7 @@
                         <div class="pow-bar-bg"><div id="active-pow-bar" class="pow-bar"></div></div>
                         <div class="detail-info" id="active-stats" style="font-size: 12px; font-weight: bold;">HP: 100/100 | Góc: 45° | TL: 100</div>
                         <div class="btn-group">
-                            <button id="active-skill-btn" class="action-btn" style="flex: 1;" type="button">Bắn x2 (-50 TL)</button>
+                            <button id="active-skill-btn" class="action-btn" style="flex: 1;" type="button">+1 Đạn (-40 TL)</button>
                             <button id="active-pow-btn" class="pow-btn" type="button">POW (0%)</button>
                         </div>
                     </div>
@@ -194,6 +216,7 @@
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
             const CRIT_MULTIPLIER = 1.5;
+            const EXTRA_SHOT_COST = 40; // Tiêu hao thể lực mỗi lần bấm +1 đạn
 
             const roomId = matchData ? matchData.roomId : null;
             const isHost = matchData ? (matchData.host === (window.currentUser || "Player 1")) : true;
@@ -262,7 +285,9 @@
             if (matchData && matchData.players && matchData.players.length > 0) {
                 matchData.players.forEach(p => {
                     let pImg = new Image();
-                    pImg.src = typeof getSkinImgUrl === "function" ? getSkinImgUrl(p.gender, p.skin) : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp';
+                    // Lấy cố định chibi theo giới tính
+                    let genderKey = (p.gender === "female") ? "female" : "male";
+                    pImg.src = CHIBI_AVATARS[genderKey];
                     playerImages[p.name] = pImg;
 
                     let wImg = new Image();
@@ -282,7 +307,7 @@
                         maxStamina: p.energy || 100,
                         pow: 0,
                         isPowActive: false,
-                        isDoubleShotActive: false,
+                        extraBulletsCount: 0, // Số lượng đạn cộng thêm (+1, +2...)
                         x: SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750),
                         y: 350,
                         radius: 28,
@@ -292,14 +317,14 @@
                     });
                 });
             } else {
-                const p1Img = new Image(); p1Img.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp'; playerImages["Player 1"] = p1Img;
-                const p2Img = new Image(); p2Img.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp'; playerImages["Player 2"] = p2Img;
+                const p1Img = new Image(); p1Img.src = CHIBI_AVATARS.male; playerImages["Player 1"] = p1Img;
+                const p2Img = new Image(); p2Img.src = CHIBI_AVATARS.female; playerImages["Player 2"] = p2Img;
                 const defWp = new Image(); defWp.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
                 weaponImages["Player 1"] = defWp; weaponImages["Player 2"] = defWp;
 
                 gamePlayers = [
-                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, isDoubleShotActive: false, x: 120, y: 350, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
-                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, isDoubleShotActive: false, x: 780, y: 350, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
+                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, x: 120, y: 350, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
+                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, x: 780, y: 350, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
                 ];
             }
 
@@ -353,18 +378,29 @@
 
             function updateTimerUI() {
                 const timerEl = document.getElementById("turn-timer-text");
+                const btnPass = document.getElementById("btn-top-pass-turn");
+
                 if (timerEl) {
                     timerEl.innerText = `Thời gian lượt: ${turnTimeLeft}s | [SPACE] để bắn`;
                     timerEl.style.color = turnTimeLeft <= 5 ? '#ff4d4d' : '#ffd369';
                 }
+
+                if (btnPass) {
+                    btnPass.disabled = !isMyTurn() || isFiring || isGameOver;
+                }
             }
 
             function passTurnAction() {
-                if (socket) {
-                    triggerNextTurnServer();
-                } else {
-                    triggerNextTurnLocal();
-                }
+                if (!isMyTurn() || isFiring || isGameOver) return;
+                triggerNextTurnServer();
+            }
+
+            // Gắn sự kiện nút Bỏ Lượt dưới khung gió
+            const btnPassTop = document.getElementById("btn-top-pass-turn");
+            if (btnPassTop) {
+                btnPassTop.onclick = function () {
+                    passTurnAction();
+                };
             }
 
             // ==========================================
@@ -379,7 +415,7 @@
                     playerData: { host: isHost }
                 });
 
-                // 1. Nhận tọa độ di chuyển mượt mà từ đối thủ (60 FPS)
+                // 1. Nhận tọa độ di chuyển từ đối thủ
                 socket.on('opponent_moved', (data) => {
                     const targetPlayer = gamePlayers.find(p => p.name === data.name);
                     if (targetPlayer && targetPlayer.name !== (window.currentUser || "")) {
@@ -402,8 +438,8 @@
                             shooter.facing = act.facing;
                             wind = act.wind;
                             shooter.isPowActive = act.isPow;
-                            shooter.isDoubleShotActive = act.isDouble;
-                            executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
+                            shooter.extraBulletsCount = act.extraBullets || 0;
+                            executeVisualShot(shooter, act.angle, act.power, act.isPow, shooter.extraBulletsCount);
                         }
                     }
                 });
@@ -466,16 +502,17 @@
                 });
             }
 
-            function executeVisualShot(shooter, angleDeg, power, isPow, isDouble) {
+            // Thực hiện chuỗi bắn đạn liên hoàn (+1, +2, +3...)
+            function executeVisualShot(shooter, angleDeg, power, isPow, extraCount) {
                 isFiring = true;
-                shooter.isDoubleShotActive = false;
+                let totalBullets = 1 + (extraCount || 0);
+                shooter.extraBulletsCount = 0; // Đã bắn xong thì reset đạn buff
                 if (isPow) { shooter.pow = 0; shooter.isPowActive = false; }
 
-                spawnBullet(shooter, angleDeg, power, isPow);
-                if (isDouble) {
+                for (let i = 0; i < totalBullets; i++) {
                     setTimeout(() => {
                         if (!isGameOver) spawnBullet(shooter, angleDeg, power, isPow);
-                    }, 350);
+                    }, i * 320); // Mỗi viên bắn cách nhau 320ms
                 }
             }
 
@@ -498,14 +535,14 @@
                 });
             }
 
-           function startShooting(lockedPower) {
+            function startShooting(lockedPower) {
                 if (isGameOver || isFiring || !isMyTurn()) return;
                 const shooter = getActivePlayer();
                 const fixedAngle = shooter.angle;
-                const isDouble = shooter.isDoubleShotActive;
+                const extraCount = shooter.extraBulletsCount || 0;
                 const isPow = shooter.isPowActive;
-            
-                if (socket && socket.connected) {
+
+                if (socket) {
                     socket.emit('player_fire', {
                         shooterName: shooter.name,
                         x: shooter.x, 
@@ -515,11 +552,10 @@
                         power: lockedPower, 
                         wind: wind,
                         isPow: isPow, 
-                        isDouble: isDouble
+                        extraBullets: extraCount
                     });
                 }
-                // Chỉ kích hoạt bắn cục bộ
-                executeVisualShot(shooter, fixedAngle, lockedPower, isPow, isDouble);
+                executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
             function triggerNextTurnServer() {
@@ -554,10 +590,6 @@
                 }
             }
 
-            function triggerNextTurnLocal() {
-                triggerNextTurnServer();
-            }
-
             function resetTurnState() {
                 isFiring = false;
                 isCharging = false;
@@ -565,7 +597,7 @@
                 chargeDir = 1;
                 const activeP = getActivePlayer();
                 activeP.stamina = activeP.maxStamina;
-                activeP.isDoubleShotActive = false;
+                activeP.extraBulletsCount = 0;
                 updateUI();
                 startTurnTimer();
             }
@@ -594,17 +626,16 @@
                 }
             };
 
+            // Nút bấm +1 Đạn (Bấm nhiều lần nếu đủ thể lực)
             const skillBtn = document.getElementById('active-skill-btn');
             if (skillBtn) {
                 skillBtn.onclick = function () {
                     if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
                     const p = getActivePlayer();
-                    if (!p.isDoubleShotActive && p.stamina >= 50) {
-                        p.isDoubleShotActive = true;
-                        p.stamina -= 50;
-                    } else if (p.isDoubleShotActive) {
-                        p.isDoubleShotActive = false;
-                        p.stamina = Math.min(p.maxStamina, p.stamina + 50);
+                    
+                    if (p.stamina >= EXTRA_SHOT_COST) {
+                        p.stamina -= EXTRA_SHOT_COST;
+                        p.extraBulletsCount = (p.extraBulletsCount || 0) + 1;
                     }
                     updateUI();
                 };
@@ -668,7 +699,6 @@
 
                         if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
 
-                        // Trả phòng về WAITING trên Firebase
                         if (window.database && roomId && isHost) {
                             window.database.ref('pvp_rooms/' + roomId).update({
                                 status: "WAITING",
@@ -682,7 +712,6 @@
             function update() {
                 const p = getActivePlayer();
 
-                // Di chuyển mượt mà & bắn tín hiệu Socket
                 if (isMyTurn() && !isFiring && !isCharging && !isGameOver && p.hp > 0) {
                     let hasMoved = false;
                     if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) { p.angle += 1; hasMoved = true; }
@@ -706,20 +735,20 @@
                         }
                     }
 
-                     if (hasMoved && socket && socket.connected) {
-                         let now = Date.now();
-                         if (now - lastMoveEmitTime > 30) {
-                             lastMoveEmitTime = now;
-                             socket.emit('player_move', {
-                                 name: p.name,
-                                 x: p.x,
-                                 y: p.y,
-                                 angle: p.angle,
-                                 facing: p.facing,
-                                 stamina: p.stamina
-                             });
-                         }
-                     }
+                    if (hasMoved && socket) {
+                        let now = Date.now();
+                        if (now - lastMoveEmitTime > 30) {
+                            lastMoveEmitTime = now;
+                            socket.emit('player_move', {
+                                name: p.name,
+                                x: p.x,
+                                y: p.y,
+                                angle: p.angle,
+                                facing: p.facing,
+                                stamina: p.stamina
+                            });
+                        }
+                    }
                 }
 
                 // Trọng lực rơi
@@ -785,7 +814,7 @@
                         const curExpRadius = b.isPow ? 75 : EXPLOSION_RADIUS;
                         const holeRadius = b.isPow ? 60 : 40;
 
-                        const isBulletOwner = (b.ownerName === (window.currentUser || ""));
+                        const isBulletOwner = !socket || (b.ownerName === (window.currentUser || ""));
 
                         if (isBulletOwner) {
                             explosions.push({ x: expX, y: expY, radius: 6, maxRadius: b.isPow ? 65 : 42, alpha: 1, color: b.isPow ? '#ff0055' : '#ffd369' });
@@ -1128,9 +1157,11 @@
                 hpBar.className = `hp-bar ${p.team === 1 ? 'p1-hp' : 'p2-hp'}`;
                 hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
 
-                btnSkill.innerText = p.isDoubleShotActive ? 'Đang bật x2' : 'Bắn x2 (-50 TL)';
-                btnSkill.disabled = (!p.isDoubleShotActive && p.stamina < 50) || isFiring || !isMyTurn();
-                btnSkill.classList.toggle('active', p.isDoubleShotActive);
+                // Cập nhật text hiển thị số đạn cộng dồn
+                let extraBullets = p.extraBulletsCount || 0;
+                btnSkill.innerText = extraBullets > 0 ? `+${extraBullets} Đạn (Bật tiếp)` : `+1 Đạn (-40 TL)`;
+                btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || !isMyTurn();
+                btnSkill.classList.toggle('active', extraBullets > 0);
 
                 const isPowReady = p.pow >= 100;
                 btnPow.innerText = p.isPowActive ? 'POW (BẬT)' : (`POW (${Math.floor(p.pow)}%)`);
