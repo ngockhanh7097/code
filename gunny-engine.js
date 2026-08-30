@@ -305,6 +305,7 @@
             let chargeDir = 1;
             let turnTimeLeft = 15;
             let lastSyncTime = 0;
+            let isTurnTransitioning = false;
 
             let bullets = [];
             let explosions = [];
@@ -388,97 +389,98 @@
             }
 
             if (isOnlineMode) {
-                roomRef.child('turn_action').on('value', snapshot => {
-                    const act = snapshot.val();
-                    if (!act) return;
+                if (isOnlineMode) {
+    roomRef.child('turn_action').on('value', snapshot => {
+        const act = snapshot.val();
+        if (!act) return;
 
-                    // 1. Nhận gói tin đồng bộ di chuyển & góc ngắm từ đối thủ
-                    if (act.type === 'SYNC_MOVE') {
-                        if (act.name !== (window.currentUser || "")) {
-                            const targetPlayer = gamePlayers.find(p => p.name === act.name);
-                            if (targetPlayer) {
-                                targetPlayer.x = act.x;
-                                targetPlayer.y = act.y;
-                                targetPlayer.angle = act.angle;
-                                targetPlayer.facing = act.facing;
-                                targetPlayer.stamina = act.stamina;
-                            }
-                        }
-                    } 
-                    // 2. Nhận lệnh bắn
-                    else if (act.type === 'FIRE') {
-                        const shooter = gamePlayers.find(p => p.name === act.shooterName);
-                        if (shooter) {
-                            shooter.x = act.x;
-                            shooter.y = act.y;
-                            shooter.angle = act.angle;
-                            shooter.facing = act.facing;
-                            wind = act.wind;
-                            shooter.isPowActive = act.isPow;
-                            shooter.isDoubleShotActive = act.isDouble;
-                            executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
-                        }
-                    } 
-                    // 3. Nhận gói tin đồng bộ nổ, đào đất & máu (Khắc phục lệch địa hình và HP)
-                    else if (act.type === 'EXPLOSION_SYNC') {
-                        if (act.shooterName !== (window.currentUser || "")) {
-                            explosions.push({
-                                x: act.expX,
-                                y: act.expY,
-                                radius: 6,
-                                maxRadius: act.isPow ? 65 : 42,
-                                alpha: 1,
-                                color: act.isPow ? '#ff0055' : '#ffd369'
-                            });
-                            digHole(act.expX, act.expY, act.holeRadius);
-
-                            if (act.updatedPlayers && Array.isArray(act.updatedPlayers)) {
-                                act.updatedPlayers.forEach(up => {
-                                    const p = gamePlayers.find(pl => pl.name === up.name);
-                                    if (p) {
-                                        p.hp = up.hp;
-                                        p.pow = up.pow;
-                                    }
-                                });
-                            }
-
-                            if (act.damageList && Array.isArray(act.damageList)) {
-                                act.damageList.forEach(dt => {
-                                    damageTexts.push({
-                                        x: dt.x,
-                                        y: dt.y,
-                                        text: dt.text,
-                                        isCrit: dt.isCrit,
-                                        scale: 0.2,
-                                        targetScale: 1.0,
-                                        alpha: 1.0,
-                                        life: 60
-                                    });
-                                });
-                            }
-                            checkGameOver();
-                        }
-                    }
-                    // 4. Xử lý đầu hàng/thoát game
-                    else if (act.type === 'PLAYER_SURRENDER') {
-                        const leaver = gamePlayers.find(p => p.name === act.leaverName);
-                        if (leaver) {
-                            leaver.hp = 0;
-                            checkGameOver();
-                        }
-                    } 
-                    // 5. Bỏ lượt
-                    else if (act.type === 'PASS') {
-                        if (isHost) triggerNextTurn();
-                    } 
-                    // 6. Chuyển lượt
-                    else if (act.type === 'NEXT_TURN') {
-                        currentPlayerIndex = act.nextIndex;
-                        wind = act.wind;
-                        resetTurnState();
-                    }
-                });
+        // 1. Nhận gói tin đồng bộ di chuyển & góc ngắm từ đối thủ
+        if (act.type === 'SYNC_MOVE') {
+            if (act.name !== (window.currentUser || "")) {
+                const targetPlayer = gamePlayers.find(p => p.name === act.name);
+                if (targetPlayer) {
+                    targetPlayer.x = act.x;
+                    targetPlayer.y = act.y;
+                    targetPlayer.angle = act.angle;
+                    targetPlayer.facing = act.facing;
+                    targetPlayer.stamina = act.stamina;
+                }
             }
+        } 
+        // 2. Nhận lệnh bắn
+        else if (act.type === 'FIRE') {
+            const shooter = gamePlayers.find(p => p.name === act.shooterName);
+            if (shooter) {
+                shooter.x = act.x;
+                shooter.y = act.y;
+                shooter.angle = act.angle;
+                shooter.facing = act.facing;
+                wind = act.wind;
+                shooter.isPowActive = act.isPow;
+                shooter.isDoubleShotActive = act.isDouble;
+                executeVisualShot(shooter, act.angle, act.power, act.isPow, act.isDouble);
+            }
+        } 
+        // 3. Nhận gói tin đồng bộ nổ & máu
+        else if (act.type === 'EXPLOSION_SYNC') {
+            if (act.shooterName !== (window.currentUser || "")) {
+                explosions.push({
+                    x: act.expX,
+                    y: act.expY,
+                    radius: 6,
+                    maxRadius: act.isPow ? 65 : 42,
+                    alpha: 1,
+                    color: act.isPow ? '#ff0055' : '#ffd369'
+                });
+                digHole(act.expX, act.expY, act.holeRadius);
+
+                if (act.updatedPlayers && Array.isArray(act.updatedPlayers)) {
+                    act.updatedPlayers.forEach(up => {
+                        const p = gamePlayers.find(pl => pl.name === up.name);
+                        if (p) {
+                            p.hp = up.hp;
+                            p.pow = up.pow;
+                        }
+                    });
+                }
+
+                if (act.damageList && Array.isArray(act.damageList)) {
+                    act.damageList.forEach(dt => {
+                        damageTexts.push({
+                            x: dt.x,
+                            y: dt.y,
+                            text: dt.text,
+                            isCrit: dt.isCrit,
+                            scale: 0.2,
+                            targetScale: 1.0,
+                            alpha: 1.0,
+                            life: 60
+                        });
+                    });
+                }
+                checkGameOver();
+            }
+        }
+        // 4. Xử lý đầu hàng
+        else if (act.type === 'PLAYER_SURRENDER') {
+            const leaver = gamePlayers.find(p => p.name === act.leaverName);
+            if (leaver) {
+                leaver.hp = 0;
+                checkGameOver();
+            }
+        } 
+        // 5. Bỏ lượt
+        else if (act.type === 'PASS') {
+            if (isHost) triggerNextTurn();
+        } 
+        // 6. Chuyển lượt
+        else if (act.type === 'NEXT_TURN') {
+            currentPlayerIndex = act.nextIndex;
+            wind = act.wind;
+            resetTurnState();
+        }
+    });
+}
 
             function executeVisualShot(shooter, angleDeg, power, isPow, isDouble) {
                 isFiring = true;
@@ -512,75 +514,79 @@
                 });
             }
 
-            function startShooting(lockedPower) {
-                if (isGameOver || !isMyTurn()) return;
-                const shooter = getActivePlayer();
-                const fixedAngle = shooter.angle;
-                const isDouble = shooter.isDoubleShotActive;
-                const isPow = shooter.isPowActive;
+           function startShooting(lockedPower) {
+    if (isGameOver || isFiring || !isMyTurn()) return;
+    const shooter = getActivePlayer();
+    const fixedAngle = shooter.angle;
+    const isDouble = shooter.isDoubleShotActive;
+    const isPow = shooter.isPowActive;
 
-                if (isOnlineMode) {
-                    roomRef.child('turn_action').set({
-                        type: 'FIRE',
-                        shooterName: shooter.name,
-                        x: shooter.x, y: shooter.y,
-                        angle: fixedAngle, facing: shooter.facing,
-                        power: lockedPower, wind: wind,
-                        isPow: isPow, isDouble: isDouble,
-                        timestamp: Date.now()
-                    });
-                } else {
-                    executeVisualShot(shooter, fixedAngle, lockedPower, isPow, isDouble);
-                }
-            }
+    if (isOnlineMode) {
+        roomRef.child('turn_action').set({
+            type: 'FIRE',
+            shooterName: shooter.name,
+            x: shooter.x, 
+            y: shooter.y,
+            angle: fixedAngle, 
+            facing: shooter.facing,
+            power: lockedPower, 
+            wind: wind,
+            isPow: isPow, 
+            isDouble: isDouble,
+            timestamp: Date.now()
+        });
+    } else {
+        executeVisualShot(shooter, fixedAngle, lockedPower, isPow, isDouble);
+    }
+}
+           function triggerNextTurn() {
+    if (isTurnTransitioning) return;
+    isTurnTransitioning = true;
 
-            function triggerNextTurn() {
-                if (isOnlineMode && !isHost) return;
+    let currentTeam = getActivePlayer().team;
+    let nextTeam = currentTeam === 1 ? 2 : 1;
+    let nextIdx = -1;
 
-                let currentTeam = getActivePlayer().team;
-                let nextTeam = currentTeam === 1 ? 2 : 1;
-                let nextIdx = -1;
+    for (let i = 0; i < gamePlayers.length; i++) {
+        let idx = (currentPlayerIndex + 1 + i) % gamePlayers.length;
+        if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
+            nextIdx = idx;
+            break;
+        }
+    }
 
-                for (let i = 0; i < gamePlayers.length; i++) {
-                    let idx = (currentPlayerIndex + 1 + i) % gamePlayers.length;
-                    if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
-                        nextIdx = idx;
-                        break;
-                    }
-                }
+    if (nextIdx === -1) {
+        checkGameOver();
+        return;
+    }
 
-                if (nextIdx === -1) {
-                    checkGameOver();
-                    return;
-                }
+    let newWind = (Math.random() * 0.06 - 0.03);
 
-                let newWind = (Math.random() * 0.06 - 0.03);
-
-                if (isOnlineMode) {
-                    roomRef.child('turn_action').set({
-                        type: 'NEXT_TURN',
-                        nextIndex: nextIdx,
-                        wind: newWind,
-                        timestamp: Date.now()
-                    });
-                } else {
-                    currentPlayerIndex = nextIdx;
-                    wind = newWind;
-                    resetTurnState();
-                }
-            }
-
-            function resetTurnState() {
-                isFiring = false;
-                isCharging = false;
-                chargePower = 0;
-                chargeDir = 1;
-                const activeP = getActivePlayer();
-                activeP.stamina = activeP.maxStamina;
-                activeP.isDoubleShotActive = false;
-                updateUI();
-                startTurnTimer();
-            }
+    if (isOnlineMode) {
+        roomRef.child('turn_action').set({
+            type: 'NEXT_TURN',
+            nextIndex: nextIdx,
+            wind: newWind,
+            timestamp: Date.now()
+        });
+    } else {
+        currentPlayerIndex = nextIdx;
+        wind = newWind;
+        resetTurnState();
+    }
+}
+           function resetTurnState() {
+    isFiring = false;
+    isCharging = false;
+    isTurnTransitioning = false;
+    chargePower = 0;
+    chargeDir = 1;
+    const activeP = getActivePlayer();
+    activeP.stamina = activeP.maxStamina;
+    activeP.isDoubleShotActive = false;
+    updateUI();
+    startTurnTimer();
+}
 
             window.onkeydown = function (e) {
                 if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -855,18 +861,17 @@
                     if (dt.life < 20) dt.alpha = dt.life / 20;
                     if (dt.life <= 0) damageTexts.splice(i, 1);
                 }
-
-                if (isFiring && bullets.length === 0 && explosions.length === 0) {
-                    isFiring = false;
-                    isCharging = false;
-                    chargePower = 0;
-                    chargeDir = 1;
-                    
-                    // Chỉ máy đang tới lượt hoặc Host mới gửi lệnh chuyển lượt
-                    if (!isOnlineMode || isMyTurn() || isHost) {
-                        triggerNextTurn();
-                    }
-                }
+               if (isFiring && bullets.length === 0 && explosions.length === 0 && !isTurnTransitioning) {
+                   isFiring = false;
+                   isCharging = false;
+                   chargePower = 0;
+                   chargeDir = 1;
+               
+                   // Chỉ máy người vừa thực hiện lượt bắn hoặc máy Host mới được gửi lệnh chuyển lượt
+                   if (!isOnlineMode || isMyTurn() || isHost) {
+                       triggerNextTurn();
+                   }
+               }
 
                 updateUIStats();
             }
