@@ -282,10 +282,12 @@
             let playerImages = {};
             let weaponImages = {};
 
-            if (matchData && matchData.players && matchData.players.length > 0) {
-                matchData.players.forEach(p => {
+           if (matchData && matchData.players && matchData.players.length > 0) {
+                // SẮP XẾP: Level thấp xếp trước, Level cao xếp sau
+                const sortedPlayers = [...matchData.players].sort((a, b) => (a.level || 1) - (b.level || 1));
+
+                sortedPlayers.forEach(p => {
                     let pImg = new Image();
-                    // Lấy cố định chibi theo giới tính
                     let genderKey = (p.gender === "female") ? "female" : "male";
                     pImg.src = CHIBI_AVATARS[genderKey];
                     playerImages[p.name] = pImg;
@@ -307,7 +309,7 @@
                         maxStamina: p.energy || 100,
                         pow: 0,
                         isPowActive: false,
-                        extraBulletsCount: 0, // Số lượng đạn cộng thêm (+1, +2...)
+                        extraBulletsCount: 0,
                         x: SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750),
                         y: 350,
                         radius: 28,
@@ -558,16 +560,36 @@
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
-            function triggerNextTurnServer() {
-                let currentTeam = getActivePlayer().team;
-                let nextTeam = currentTeam === 1 ? 2 : 1;
-                let nextIdx = -1;
+           function triggerNextTurnServer() {
+                // Kiểm tra điều kiện kết thúc trận trước khi chuyển lượt
+                let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
+                let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
+                if (!team1Alive || !team2Alive) {
+                    checkGameOver();
+                    return;
+                }
 
-                for (let i = 0; i < gamePlayers.length; i++) {
-                    let idx = (currentPlayerIndex + 1 + i) % gamePlayers.length;
-                    if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
+                let nextIdx = -1;
+                let currentTeam = getActivePlayer().team;
+                let targetTeam = currentTeam === 1 ? 2 : 1;
+
+                // 1. Ưu tiên tìm người còn sống của Team đối thủ tiếp theo
+                for (let i = 1; i <= gamePlayers.length; i++) {
+                    let idx = (currentPlayerIndex + i) % gamePlayers.length;
+                    if (gamePlayers[idx].team === targetTeam && gamePlayers[idx].hp > 0) {
                         nextIdx = idx;
                         break;
+                    }
+                }
+
+                // 2. Nếu Team đối phương không còn ai hợp lệ, lấy người kế tiếp còn sống bất kỳ
+                if (nextIdx === -1) {
+                    for (let i = 1; i <= gamePlayers.length; i++) {
+                        let idx = (currentPlayerIndex + i) % gamePlayers.length;
+                        if (gamePlayers[idx].hp > 0) {
+                            nextIdx = idx;
+                            break;
+                        }
                     }
                 }
 
