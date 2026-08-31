@@ -1,5 +1,5 @@
 /* =========================================================================
-   GUNNY ENGINE - BẢN FIX 100% LƯỢT ĐẤU & RÚT LUI CHIA THƯỞNG
+   GUNNY ENGINE - SOCKET.IO REALTIME (STABLE TURN ENGINE - FIX HOÀN TOÀN)
    ========================================================================= */
 
 (function () {
@@ -458,7 +458,7 @@
                 if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
                 hasFiredThisTurn = true;
                 if (socket) {
-                    socket.emit('request_pass_turn');
+                    socket.emit('request_next_turn');
                 }
             }
 
@@ -622,14 +622,12 @@
                     }
                 });
 
-                // Server tự động chuyển lượt chuẩn xác
                 socket.on('turn_changed', (data) => {
                     currentPlayerIndex = data.nextIndex;
                     wind = data.wind;
                     resetTurnState();
                 });
 
-                // Xử lý khi có người rút lui (Đội còn người thì chơi tiếp)
                 socket.on('player_left', (data) => {
                     const leaver = gamePlayers.find(p => p.name === data.leaverName);
                     if (leaver) {
@@ -638,7 +636,6 @@
                     }
                 });
 
-                // Trận đấu kết thúc hoàn toàn (Chia thưởng)
                 socket.on('match_finished', ({ winningTeam }) => {
                     triggerEndGameReward(winningTeam);
                 });
@@ -713,8 +710,10 @@
                 inputState.down = false;
 
                 const activeP = getActivePlayer();
-                activeP.stamina = activeP.maxStamina;
-                activeP.extraBulletsCount = 0;
+                if (activeP) {
+                    activeP.stamina = activeP.maxStamina;
+                    activeP.extraBulletsCount = 0;
+                }
                 updateUI();
                 startTurnTimer();
             }
@@ -902,7 +901,7 @@
                     if (screenX > canvas.width - margin) cameraX += (screenX - (canvas.width - margin)) * 0.08;
                     else if (screenX < margin) cameraX -= (margin - screenX) * 0.08;
                     cameraX = Math.max(0, Math.min(cameraX, WORLD_WIDTH - canvas.width));
-                } else if (!isFiring && p.hp > 0) {
+                } else if (!isFiring && p && p.hp > 0) {
                     let targetCamX = p.x - canvas.width / 2;
                     targetCamX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - canvas.width));
                     cameraX += (targetCamX - cameraX) * 0.04;
@@ -1010,11 +1009,16 @@
                     if (dt.life <= 0) damageTexts.splice(i, 1);
                 }
 
+                // Khi đợt bắn hoàn tất -> Gửi yêu cầu chuyển lượt
                 if (isFiring && bullets.length === 0 && explosions.length === 0) {
                     isFiring = false;
                     isCharging = false;
                     chargePower = 0;
                     chargeDir = 1;
+
+                    if (isMyTurn() && socket) {
+                        socket.emit('request_next_turn');
+                    }
                 }
 
                 updateUIStats();
@@ -1269,7 +1273,7 @@
                 const btnSkill = document.getElementById('active-skill-btn');
                 const btnPow = document.getElementById('active-pow-btn');
 
-                if (!nameElem || !turnElem || !hpBar || !btnSkill || !btnPow) return;
+                if (!nameElem || !turnElem || !hpBar || !btnSkill || !btnPow || !p) return;
 
                 nameElem.innerText = `${p.name} (Đội ${p.team})`;
                 nameElem.style.color = p.team === 1 ? '#ff5470' : '#4ecca3';
@@ -1298,7 +1302,7 @@
                 const powerFill = document.getElementById('power-bar-fill');
                 const powerText = document.getElementById('power-text');
 
-                if (!staBar || !powBar || !statsEl || !powerFill || !powerText) return;
+                if (!staBar || !powBar || !statsEl || !powerFill || !powerText || !p) return;
 
                 staBar.style.width = Math.max(0, (p.stamina / p.maxStamina) * 100) + '%';
                 powBar.style.width = Math.max(0, p.pow) + '%';
