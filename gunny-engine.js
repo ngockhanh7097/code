@@ -432,6 +432,7 @@
                         if (isMyTurn()) passTurnAction();
                     }
                 }, 1000);
+                window.turnCountdownInterval = turnCountdownInterval;
             }
 
             function updateTimerUI() {
@@ -539,6 +540,7 @@
             // ==========================================
             if (roomId) {
                 socket = io(SOCKET_SERVER_URL, { transports: ['websocket'] });
+                window.gunnyActiveSocket = socket;
 
                 if (isHost) {
                     socket.emit('init_match_server', {
@@ -1313,6 +1315,7 @@
                 update();
                 render();
                 gunnyAnimationLoopId = requestAnimationFrame(gameLoop);
+                window.gunnyAnimationLoopId = gunnyAnimationLoopId;
             }
             gameLoop();
         }, 80);
