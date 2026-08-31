@@ -8,7 +8,7 @@
     let socket = null;
 
     // 🔴 HÃY ĐIỀN CHÍNH XÁC LINK SERVER RENDER CỦA BẠN VÀO ĐÂY:
-    const SOCKET_SERVER_URL = "https://your-gunny-server.onrender.com";
+    const SOCKET_SERVER_URL = "https://severgunny.onrender.com";
 
     // Link ảnh chibi chuẩn theo giới tính
     const CHIBI_AVATARS = {
