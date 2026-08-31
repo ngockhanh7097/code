@@ -1,5 +1,5 @@
 /* =========================================================================
-   GUNNY ENGINE - SOCKET.IO REALTIME (BẢN ĐỆM 1.5S TRIỆT TIÊU LỖI TURN)
+   GUNNY ENGINE - SOCKET.IO REALTIME (BẢN CHUẨN ĐIỀU KHIỂN & ĐẠN MƯỢT 60 FPS)
    ========================================================================= */
 
 (function () {
@@ -394,7 +394,6 @@
             let cameraX = 0;
             let wind = 0;
             let isFiring = false;
-            let isBufferingTurn = false; // Cờ khóa phòng khi đệm 1.5s
             let hasFiredThisTurn = false;
             let isGameOver = false;
             let isCharging = false;
@@ -404,10 +403,10 @@
             let turnTimeLeft = 15;
             let lastMoveEmitTime = 0;
 
-            const inputState = { left: false, right: false, up: false, down: false };
             let bullets = [];
             let explosions = [];
             let damageTexts = [];
+            const keys = {};
 
             function getActivePlayer() { return gamePlayers[currentPlayerIndex]; }
 
@@ -429,7 +428,7 @@
                 updateTimerUI();
 
                 turnCountdownInterval = setInterval(() => {
-                    if (isFiring || isBufferingTurn || hasFiredThisTurn || isGameOver) return;
+                    if (isFiring || isGameOver) return;
                     turnTimeLeft--;
                     updateTimerUI();
 
@@ -445,29 +444,19 @@
                 const btnPass = document.getElementById("btn-top-pass-turn");
 
                 if (timerEl) {
-                    if (isBufferingTurn) {
-                        timerEl.innerText = `Đang tổng kết sát thương & đổi lượt...`;
-                        timerEl.style.color = '#ff9f43';
-                    } else if (isMyTurn()) {
-                        timerEl.innerText = `Thời gian lượt: ${turnTimeLeft}s | [SPACE] để bắn`;
-                        timerEl.style.color = turnTimeLeft <= 5 ? '#ff4d4d' : '#ffd369';
-                    } else {
-                        timerEl.innerText = `Đang chờ ${getActivePlayer() ? getActivePlayer().name : "đối thủ"}... (${turnTimeLeft}s)`;
-                        timerEl.style.color = '#38ef7d';
-                    }
+                    timerEl.innerText = `Thời gian lượt: ${turnTimeLeft}s | [SPACE] để bắn`;
+                    timerEl.style.color = turnTimeLeft <= 5 ? '#ff4d4d' : '#ffd369';
                 }
 
                 if (btnPass) {
-                    btnPass.disabled = !isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isGameOver;
+                    btnPass.disabled = !isMyTurn() || isFiring || hasFiredThisTurn || isGameOver;
                 }
             }
 
             function passTurnAction() {
-                if (!isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isGameOver) return;
+                if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
                 hasFiredThisTurn = true;
-                if (socket) {
-                    socket.emit('request_next_turn');
-                }
+                triggerNextTurnServer();
             }
 
             const btnPassTop = document.getElementById("btn-top-pass-turn");
@@ -477,9 +466,6 @@
                 };
             }
 
-            // ==========================================
-            // XỬ LÝ CẢM ỨNG DI ĐỘNG & FULLSCREEN
-            // ==========================================
             const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             const touchControls = document.getElementById("gunny-touch-controls");
             if (isTouchDevice && touchControls) {
@@ -507,31 +493,31 @@
                 };
             }
 
-            function bindTouchKey(elemId, actionKey) {
+            function bindTouchKey(elemId, keyCode) {
                 const el = document.getElementById(elemId);
                 if (!el) return;
                 el.addEventListener('touchstart', (e) => {
                     e.preventDefault();
-                    if (!isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isGameOver) return;
-                    inputState[actionKey] = true;
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
+                    keys[keyCode] = true;
                 }, { passive: false });
 
                 el.addEventListener('touchend', (e) => {
                     e.preventDefault();
-                    inputState[actionKey] = false;
+                    keys[keyCode] = false;
                 }, { passive: false });
             }
 
-            bindTouchKey('touch-btn-left', 'left');
-            bindTouchKey('touch-btn-right', 'right');
-            bindTouchKey('touch-btn-up', 'up');
-            bindTouchKey('touch-btn-down', 'down');
+            bindTouchKey('touch-btn-left', 'KeyA');
+            bindTouchKey('touch-btn-right', 'KeyD');
+            bindTouchKey('touch-btn-up', 'KeyW');
+            bindTouchKey('touch-btn-down', 'KeyS');
 
             const touchFireBtn = document.getElementById('touch-btn-fire');
             if (touchFireBtn) {
                 touchFireBtn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
-                    if (!isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isGameOver) return;
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
                     isCharging = true;
                     chargePower = 0;
                     chargeDir = 1;
@@ -546,9 +532,6 @@
                 }, { passive: false });
             }
 
-            // ==========================================
-            // KẾT NỐI WEBSOCKET REALTIME
-            // ==========================================
             if (roomId) {
                 socket = io(SOCKET_SERVER_URL, { transports: ['websocket'] });
 
@@ -630,16 +613,7 @@
                     }
                 });
 
-                // Nhận tín hiệu Server đang đệm 1.5s
-                socket.on('turn_buffering', () => {
-                    isBufferingTurn = true;
-                    isFiring = false;
-                    updateTimerUI();
-                });
-
-                // Nhận lượt mới chính thức
                 socket.on('turn_changed', (data) => {
-                    isBufferingTurn = false;
                     currentPlayerIndex = data.nextIndex;
                     wind = data.wind;
                     resetTurnState();
@@ -691,7 +665,7 @@
             }
 
             function startShooting(lockedPower) {
-                if (isGameOver || isFiring || isBufferingTurn || hasFiredThisTurn || !isMyTurn()) return;
+                if (isGameOver || isFiring || hasFiredThisTurn || !isMyTurn()) return;
                 hasFiredThisTurn = true;
 
                 const shooter = getActivePlayer();
@@ -715,17 +689,54 @@
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
+            function triggerNextTurnServer() {
+                let currentTeam = getActivePlayer().team;
+                let nextTeam = currentTeam === 1 ? 2 : 1;
+                let nextIdx = -1;
+
+                for (let i = 1; i <= gamePlayers.length; i++) {
+                    let idx = (currentPlayerIndex + i) % gamePlayers.length;
+                    if (gamePlayers[idx].team === nextTeam && gamePlayers[idx].hp > 0) {
+                        nextIdx = idx;
+                        break;
+                    }
+                }
+
+                if (nextIdx === -1) {
+                    for (let i = 1; i <= gamePlayers.length; i++) {
+                        let idx = (currentPlayerIndex + i) % gamePlayers.length;
+                        if (gamePlayers[idx].hp > 0) {
+                            nextIdx = idx;
+                            break;
+                        }
+                    }
+                }
+
+                if (nextIdx === -1) {
+                    checkGameOver();
+                    return;
+                }
+
+                let newWind = (Math.random() * 0.06 - 0.03);
+
+                if (socket) {
+                    socket.emit('request_next_turn', {
+                        nextIndex: nextIdx,
+                        nextWind: newWind
+                    });
+                } else {
+                    currentPlayerIndex = nextIdx;
+                    wind = newWind;
+                    resetTurnState();
+                }
+            }
+
             function resetTurnState() {
                 isFiring = false;
                 hasFiredThisTurn = false;
                 isCharging = false;
                 chargePower = 0;
                 chargeDir = 1;
-                inputState.left = false;
-                inputState.right = false;
-                inputState.up = false;
-                inputState.down = false;
-
                 const activeP = getActivePlayer();
                 if (activeP) {
                     activeP.stamina = activeP.maxStamina;
@@ -736,16 +747,10 @@
             }
 
             window.onkeydown = function (e) {
-                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(e.code)) {
-                    e.preventDefault();
-                }
-                if (!isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isGameOver) return;
+                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+                if (!isMyTurn() || isFiring || hasFiredThisTurn || isGameOver) return;
                 
-                if (e.code === 'ArrowLeft' || e.code === 'KeyA') inputState.left = true;
-                if (e.code === 'ArrowRight' || e.code === 'KeyD') inputState.right = true;
-                if (e.code === 'ArrowUp' || e.code === 'KeyW') inputState.up = true;
-                if (e.code === 'ArrowDown' || e.code === 'KeyS') inputState.down = true;
-
+                keys[e.code] = true;
                 if (e.code === 'Space' && !e.repeat) {
                     isCharging = true;
                     chargePower = 0;
@@ -754,14 +759,10 @@
             };
 
             window.onkeyup = function (e) {
-                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(e.code)) {
-                    e.preventDefault();
-                }
-                if (e.code === 'ArrowLeft' || e.code === 'KeyA') inputState.left = false;
-                if (e.code === 'ArrowRight' || e.code === 'KeyD') inputState.right = false;
-                if (e.code === 'ArrowUp' || e.code === 'KeyW') inputState.up = false;
-                if (e.code === 'ArrowDown' || e.code === 'KeyS') inputState.down = false;
+                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+                if (!isMyTurn() || isGameOver) return;
 
+                keys[e.code] = false;
                 if (e.code === 'Space' && isCharging) {
                     isCharging = false;
                     const lockedPower = Math.max(chargePower, 5);
@@ -772,7 +773,7 @@
             const skillBtn = document.getElementById('active-skill-btn');
             if (skillBtn) {
                 skillBtn.onclick = function () {
-                    if (!isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isCharging || isGameOver) return;
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isCharging || isGameOver) return;
                     const p = getActivePlayer();
                     
                     if (p.stamina >= EXTRA_SHOT_COST) {
@@ -786,7 +787,7 @@
             const powBtn = document.getElementById('active-pow-btn');
             if (powBtn) {
                 powBtn.onclick = function () {
-                    if (!isMyTurn() || isFiring || isBufferingTurn || hasFiredThisTurn || isCharging || isGameOver) return;
+                    if (!isMyTurn() || isFiring || hasFiredThisTurn || isCharging || isGameOver) return;
                     const p = getActivePlayer();
                     if (p.pow >= 100) {
                         p.isPowActive = !p.isPowActive;
@@ -853,13 +854,13 @@
             function update() {
                 const p = getActivePlayer();
 
-                if (isMyTurn() && !isFiring && !isBufferingTurn && !hasFiredThisTurn && !isCharging && !isGameOver && p && p.hp > 0) {
+                if (isMyTurn() && !isFiring && !hasFiredThisTurn && !isCharging && !isGameOver && p && p.hp > 0) {
                     let hasMoved = false;
-                    if (inputState.up && p.angle < 89) { p.angle += 1; }
-                    if (inputState.down && p.angle > 1) { p.angle -= 1; }
+                    if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) { p.angle += 1; }
+                    if ((keys['ArrowDown'] || keys['KeyS']) && p.angle > 1) { p.angle -= 1; }
 
                     const MOVE_COST = 1;
-                    if (inputState.left) {
+                    if (keys['ArrowLeft'] || keys['KeyA']) {
                         p.facing = -1;
                         if (p.stamina >= MOVE_COST) {
                             p.x = Math.max(p.radius, p.x - MOVE_SPEED);
@@ -867,7 +868,7 @@
                             hasMoved = true;
                         }
                     }
-                    if (inputState.right) {
+                    if (keys['ArrowRight'] || keys['KeyD']) {
                         p.facing = 1;
                         if (p.stamina >= MOVE_COST) {
                             p.x = Math.min(WORLD_WIDTH - p.radius, p.x + MOVE_SPEED);
@@ -892,7 +893,6 @@
                     }
                 }
 
-                // Trọng lực rơi
                 gamePlayers.forEach(player => {
                     if (player.hp <= 0) return;
                     const groundUnder = getGroundYAt(player.x, player.y);
@@ -910,7 +910,6 @@
                     }
                 });
 
-                // Camera theo đạn
                 if (bullets.length > 0) {
                     const b = bullets[0];
                     const screenX = b.x - cameraX;
@@ -924,14 +923,12 @@
                     cameraX += (targetCamX - cameraX) * 0.04;
                 }
 
-                // Tích lực
                 if (isCharging) {
                     chargePower += chargeSpeed * chargeDir * 2.2;
                     if (chargePower >= 100) { chargePower = 100; chargeDir = -1; }
                     else if (chargePower <= 0) { chargePower = 0; chargeDir = 1; }
                 }
 
-                // Vật lý đạn bay & va chạm
                 const EXPLOSION_RADIUS = 50;
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     const b = bullets[i];
@@ -1026,15 +1023,14 @@
                     if (dt.life <= 0) damageTexts.splice(i, 1);
                 }
 
-                // Khi toàn bộ đạn đã nổ xong -> Gửi lệnh sang bước đệm đổi lượt
                 if (isFiring && bullets.length === 0 && explosions.length === 0) {
                     isFiring = false;
                     isCharging = false;
                     chargePower = 0;
                     chargeDir = 1;
 
-                    if (isMyTurn() && socket) {
-                        socket.emit('request_next_turn');
+                    if (isMyTurn() || isHost) {
+                        triggerNextTurnServer();
                     }
                 }
 
@@ -1109,7 +1105,7 @@
                     ctx.fillText(pl.name, pl.x, pl.y - pl.radius - 40);
                     ctx.restore();
 
-                    if (isTurn && !isFiring && !isBufferingTurn) {
+                    if (isTurn && !isFiring) {
                         ctx.save();
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
                         ctx.setLineDash([5, 5]);
@@ -1150,7 +1146,7 @@
                     }
                     ctx.restore();
 
-                    if (isTurn && !isFiring && !isBufferingTurn) {
+                    if (isTurn && !isFiring) {
                         ctx.fillStyle = '#ffd369';
                         ctx.beginPath();
                         ctx.moveTo(pl.x, pl.y - pl.radius - 18);
@@ -1301,12 +1297,12 @@
 
                 let extraBullets = p.extraBulletsCount || 0;
                 btnSkill.innerText = extraBullets > 0 ? `+${extraBullets} Đạn (Bật tiếp)` : `+1 Đạn (-50 TL)`;
-                btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || isBufferingTurn || hasFiredThisTurn || !isMyTurn();
+                btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || hasFiredThisTurn || !isMyTurn();
                 btnSkill.classList.toggle('active', extraBullets > 0);
 
                 const isPowReady = p.pow >= 100;
                 btnPow.innerText = p.isPowActive ? 'POW (BẬT)' : (`POW (${Math.floor(p.pow)}%)`);
-                btnPow.disabled = (!p.isPowActive && !isPowReady) || isFiring || isBufferingTurn || hasFiredThisTurn || !isMyTurn();
+                btnPow.disabled = (!p.isPowActive && !isPowReady) || isFiring || hasFiredThisTurn || !isMyTurn();
                 btnPow.classList.toggle('ready', isPowReady);
                 btnPow.classList.toggle('active', p.isPowActive);
             }
