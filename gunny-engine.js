@@ -431,20 +431,20 @@
 
                 // 2. Nhận lệnh bắn
                 socket.on('bullet_fired', (act) => {
-                    if (act.shooterName !== (window.currentUser || "")) {
-                        const shooter = gamePlayers.find(p => p.name === act.shooterName);
-                        if (shooter) {
-                            shooter.x = act.x;
-                            shooter.y = act.y;
-                            shooter.angle = act.angle;
-                            shooter.facing = act.facing;
-                            wind = act.wind;
-                            shooter.isPowActive = act.isPow;
-                            shooter.extraBulletsCount = act.extraBullets || 0;
-                            executeVisualShot(shooter, act.angle, act.power, act.isPow, shooter.extraBulletsCount);
-                        }
-                    }
-                });
+                   if (act.shooterName !== (window.currentUser || "")) {
+                       const shooter = gamePlayers.find(p => p.name === act.shooterName);
+                       if (shooter) {
+                           shooter.x = act.x;
+                           shooter.y = act.y;
+                           shooter.angle = act.angle;
+                           shooter.facing = act.facing;
+                           wind = act.wind;
+                           shooter.isPowActive = act.isPow;
+                           shooter.extraBulletsCount = act.extraBullets || 0;
+                           executeVisualShot(shooter, act.angle, act.power, act.isPow, shooter.extraBulletsCount);
+                       }
+                   }
+               });
 
                 // 3. Nhận kết quả nổ đạn và trừ máu
                 socket.on('explosion_sync', (act) => {
@@ -560,47 +560,33 @@
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
-           function triggerNextTurnServer() {
-                // Kiểm tra điều kiện kết thúc trận trước khi chuyển lượt
+          function triggerNextTurnServer() {
                 let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
                 let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
+                
                 if (!team1Alive || !team2Alive) {
                     checkGameOver();
                     return;
                 }
-
+            
                 let nextIdx = -1;
-                let currentTeam = getActivePlayer().team;
-                let targetTeam = currentTeam === 1 ? 2 : 1;
-
-                // 1. Ưu tiên tìm người còn sống của Team đối thủ tiếp theo
+                // Tìm người tiếp theo còn sống theo vòng tròn 1 -> 2 -> 3 -> 4 -> 1
                 for (let i = 1; i <= gamePlayers.length; i++) {
-                    let idx = (currentPlayerIndex + i) % gamePlayers.length;
-                    if (gamePlayers[idx].team === targetTeam && gamePlayers[idx].hp > 0) {
-                        nextIdx = idx;
+                    let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
+                    if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
+                        nextIdx = candidateIdx;
                         break;
                     }
                 }
-
-                // 2. Nếu Team đối phương không còn ai hợp lệ, lấy người kế tiếp còn sống bất kỳ
-                if (nextIdx === -1) {
-                    for (let i = 1; i <= gamePlayers.length; i++) {
-                        let idx = (currentPlayerIndex + i) % gamePlayers.length;
-                        if (gamePlayers[idx].hp > 0) {
-                            nextIdx = idx;
-                            break;
-                        }
-                    }
-                }
-
+            
                 if (nextIdx === -1) {
                     checkGameOver();
                     return;
                 }
-
+            
                 let newWind = (Math.random() * 0.06 - 0.03);
-
-                if (socket) {
+            
+                if (socket && socket.connected) {
                     socket.emit('request_next_turn', {
                         nextIndex: nextIdx,
                         nextWind: newWind
@@ -907,16 +893,19 @@
                     if (dt.life <= 0) damageTexts.splice(i, 1);
                 }
 
-                if (isFiring && bullets.length === 0 && explosions.length === 0) {
-                    isFiring = false;
-                    isCharging = false;
-                    chargePower = 0;
-                    chargeDir = 1;
-
-                    if (isMyTurn() || isHost) {
-                        triggerNextTurnServer();
-                    }
-                }
+               if (isFiring && bullets.length === 0 && explosions.length === 0) {
+                   isFiring = false;
+                   isCharging = false;
+                   chargePower = 0;
+                   chargeDir = 1;
+               
+                   // Chỉ người đang trong lượt bắn mới có quyền phát lệnh chuyển turn
+                   if (isMyTurn()) {
+                       setTimeout(() => {
+                           triggerNextTurnServer();
+                       }, 400);
+                   }
+               }
 
                 updateUIStats();
             }
