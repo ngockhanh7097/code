@@ -27,7 +27,7 @@
         document.head.appendChild(script);
     }
 
-    function injectGunnyUI() {
+   function injectGunnyUI() {
         const mountPoint = document.getElementById('gunny-game-mount-point');
         if (!mountPoint) return;
 
@@ -66,8 +66,8 @@
                 #gunny-game-wrapper .pow-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff7675, #d63031, #e84393); transition: width 0.2s ease-out; }
                 #gunny-game-wrapper .btn-group { display: flex; gap: 6px; width: 100%; margin-top: 2px; }
                 #gunny-game-wrapper .pow-btn {
-                    background: linear-gradient(180deg, #fdcb6e, #e17055); color: #fff; border: none; padding: 4px 8px;
-                    font-size: 11px; font-weight: 900; border-radius: 5px; cursor: pointer; flex: 1; text-shadow: 0 1px 2px #000;
+                    background: linear-gradient(180deg, #fdcb6e, #e17055); color: #fff; border: none; padding: 5px 8px;
+                    font-size: 11px; font-weight: 900; border-radius: 5px; cursor: pointer; width: 100%; text-shadow: 0 1px 2px #000;
                 }
                 #gunny-game-wrapper .pow-btn:disabled { background: #444; cursor: not-allowed; opacity: 0.5; }
                 #gunny-game-wrapper .pow-btn.ready { background: linear-gradient(180deg, #ff0055, #ff5500); animation: powPulse 0.6s infinite alternate; }
@@ -97,14 +97,20 @@
                     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 11px;
                     letter-spacing: 1px; color: #fff; text-shadow: 0 1px 4px #000, 0 -1px 4px #000, 1px 0 4px #000, -1px 0 4px #000; z-index: 3;
                 }
-                #gunny-game-wrapper .action-btn { background: #e94560; color: #fff; border: none; padding: 4px 10px; font-size: 12px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; }
-                #gunny-game-wrapper .action-btn:hover:not(:disabled) { background: #ff5470; transform: scale(1.04); }
-                #gunny-game-wrapper .action-btn:disabled { background: #444; cursor: not-allowed; opacity: 0.5; }
-                #gunny-game-wrapper .action-btn.active { background: #ffd369; color: #111; box-shadow: 0 0 12px #ffd369; }
-                
-                /* Nút bỏ lượt dưới khung gió */
+
+                /* 🕒 SỐ ĐẾM NGƯỢC THỜI GIAN TO RÕ MÀU DAME */
+                #gunny-game-wrapper #top-turn-timer {
+                    position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
+                    font-family: 'Arial Black', Impact, sans-serif; font-size: 26px; font-weight: 900;
+                    letter-spacing: 1px; line-height: 1; z-index: 15; pointer-events: none;
+                    background: linear-gradient(180deg, #ffffff 0%, #ffe600 30%, #ff8c00 70%, #ff3700 100%);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    filter: drop-shadow(0 0 6px rgba(0,0,0,0.9)) drop-shadow(0 2px 4px #000);
+                }
+
+                /* NÚT BỎ LƯỢT ĐẶT DƯỚI SỐ THỜI GIAN */
                 #gunny-game-wrapper .btn-pass-turn {
-                    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
+                    position: absolute; top: 82px; left: 50%; transform: translateX(-50%);
                     background: rgba(233, 69, 96, 0.85); border: 1.5px solid #ff5470; color: #fff;
                     padding: 3px 12px; font-size: 11px; font-weight: bold; border-radius: 12px;
                     cursor: pointer; z-index: 15; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.6);
@@ -113,14 +119,67 @@
                 #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: translateX(-50%) scale(1.05); }
                 #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
 
+                /* 🎯 CỘT 4 NÚT SKILL DỌC SÁT MÉP PHẢI */
+                #gunny-game-wrapper .right-skill-column {
+                    position: absolute; top: 65px; right: 12px;
+                    display: flex; flex-direction: column; gap: 8px;
+                    z-index: 20; pointer-events: auto;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn {
+                    position: relative; width: 44px; height: 44px;
+                    background: rgba(0, 0, 0, 0.55); border: 1.5px solid rgba(255, 211, 105, 0.6);
+                    border-radius: 8px; cursor: pointer; padding: 2px; display: flex;
+                    align-items: center; justify-content: center; backdrop-filter: blur(4px);
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn:hover:not(:disabled) {
+                    transform: scale(1.1); border-color: #ffd369; box-shadow: 0 0 12px #ffd369;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn:disabled {
+                    opacity: 0.35; cursor: not-allowed; filter: grayscale(100%);
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn.active {
+                    border-color: #00ffcc !important; box-shadow: 0 0 15px #00ffcc !important;
+                    background: rgba(0, 255, 204, 0.25) !important;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn img {
+                    width: 100%; height: 100%; object-fit: contain; pointer-events: none;
+                }
+                #gunny-game-wrapper .skill-badge-count {
+                    position: absolute; bottom: -2px; right: -2px;
+                    background: #ff0055; color: #fff; font-size: 10px; font-weight: 900;
+                    border-radius: 10px; padding: 0 4px; border: 1px solid #fff;
+                    display: none;
+                }
+
                 #gunny-game-wrapper .guide { margin-top: 8px; font-size: 12px; color: #bbb; text-align: center; }
             </style>
 
             <div id="game-container">
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
                 
-                <!-- NÚT BỎ LƯỢT DƯỚI GIÓ -->
+                <!-- 🕒 THỜI GIAN ĐẾM NGƯỢC NẰM GIỮA GIÓ VÀ NÚT BỎ LƯỢT -->
+                <div id="top-turn-timer">15</div>
+
+                <!-- ⏭️ NÚT BỎ LƯỢT -->
                 <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
+
+                <!-- 🎯 CỘT 4 NÚT SKILL SÁT MÉP PHẢI -->
+                <div class="right-skill-column">
+                    <button id="btn-skill-add1" class="gunny-skill-icon-btn" title="+1 Đạn (-40 TL)">
+                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-add1.webp" alt="+1 Đạn" />
+                        <span id="badge-add1-count" class="skill-badge-count">1</span>
+                    </button>
+                    <button id="btn-skill-dame50" class="gunny-skill-icon-btn" title="+50% Sát Thương (Sắp mở)">
+                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-50.webp" alt="+50% Dame" />
+                    </button>
+                    <button id="btn-skill-dame20" class="gunny-skill-icon-btn" title="+20% Sát Thương (Sắp mở)">
+                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-20.webp" alt="+20% Dame" />
+                    </button>
+                    <button id="btn-skill-dame10" class="gunny-skill-icon-btn" title="+10% Sát Thương (Sắp mở)">
+                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-10.webp" alt="+10% Dame" />
+                    </button>
+                </div>
 
                 <div class="ui-panel">
                     <div id="active-player-panel" class="player-info">
@@ -130,7 +189,6 @@
                         <div class="pow-bar-bg"><div id="active-pow-bar" class="pow-bar"></div></div>
                         <div class="detail-info" id="active-stats" style="font-size: 12px; font-weight: bold;">HP: 100/100 | Góc: 45° | TL: 100</div>
                         <div class="btn-group">
-                            <button id="active-skill-btn" class="action-btn" style="flex: 1;" type="button">+1 Đạn (-40 TL)</button>
                             <button id="active-pow-btn" class="pow-btn" type="button">POW (0%)</button>
                         </div>
                     </div>
@@ -142,7 +200,6 @@
                                 <div id="ruler-ticks" class="ruler-ticks"></div>
                                 <div id="power-text" class="power-text">LỰC: 0%</div>
                             </div>
-                            <div id="turn-timer-text" style="font-size: 11px; color: #ffd369; text-shadow: 0 1px 3px #000; font-weight: bold;">Thời gian lượt: 15s | [SPACE] để bắn</div>
                         </div>
                     </div>
                 </div>
@@ -379,12 +436,11 @@
             }
 
             function updateTimerUI() {
-                const timerEl = document.getElementById("turn-timer-text");
+                const timerEl = document.getElementById("top-turn-timer");
                 const btnPass = document.getElementById("btn-top-pass-turn");
 
                 if (timerEl) {
-                    timerEl.innerText = `Thời gian lượt: ${turnTimeLeft}s | [SPACE] để bắn`;
-                    timerEl.style.color = turnTimeLeft <= 5 ? '#ff4d4d' : '#ffd369';
+                    timerEl.innerText = turnTimeLeft;
                 }
 
                 if (btnPass) {
@@ -635,7 +691,7 @@
             };
 
             // Nút bấm +1 Đạn (Bấm nhiều lần nếu đủ thể lực)
-            const skillBtn = document.getElementById('active-skill-btn');
+            const skillBtn = document.getElementById('btn-skill-add1');
             if (skillBtn) {
                 skillBtn.onclick = function () {
                     if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
@@ -1175,10 +1231,22 @@
                 hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
 
                 // Cập nhật text hiển thị số đạn cộng dồn
+                const btnSkill = document.getElementById('btn-skill-add1');
+                const badgeAdd1 = document.getElementById('badge-add1-count');
+
                 let extraBullets = p.extraBulletsCount || 0;
-                btnSkill.innerText = extraBullets > 0 ? `+${extraBullets} Đạn (Bật tiếp)` : `+1 Đạn (-40 TL)`;
-                btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || !isMyTurn();
-                btnSkill.classList.toggle('active', extraBullets > 0);
+                if (btnSkill) {
+                    btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || !isMyTurn();
+                    btnSkill.classList.toggle('active', extraBullets > 0);
+                }
+                if (badgeAdd1) {
+                    if (extraBullets > 0) {
+                        badgeAdd1.innerText = `+${extraBullets}`;
+                        badgeAdd1.style.display = 'block';
+                    } else {
+                        badgeAdd1.style.display = 'none';
+                    }
+                }
 
                 const isPowReady = p.pow >= 100;
                 btnPow.innerText = p.isPowActive ? 'POW (BẬT)' : (`POW (${Math.floor(p.pow)}%)`);
