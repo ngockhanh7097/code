@@ -687,12 +687,15 @@
                     setTimeout(() => {
                         let rewardMsg = "";
                         if (window.currentUser) {
-                            let rewardCoin = isUserWin ? 100 : 20;
-                            let rewardKiemkhi = isUserWin ? 15 : 5;
+                            // Cập nhật quy tắc thưởng mới: Thắng +30 Kiếm khí, Thua +0 Kiếm khí
+                            let rewardKiemkhi = isUserWin ? 30 : 0;
+
                             if (typeof userStats !== "undefined") {
-                                userStats.coin = (userStats.coin || 0) + rewardCoin;
                                 if (!userStats.inventory) userStats.inventory = {};
-                                userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
+                                
+                                if (rewardKiemkhi > 0) {
+                                    userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
+                                }
 
                                 if (typeof pushSecureUserData === "function") {
                                     pushSecureUserData(window.currentUser).then(() => {
@@ -700,7 +703,10 @@
                                     });
                                 }
                             }
-                            rewardMsg = `\n🎁 Thu hoạch: +${rewardCoin} Linh Thạch | +${rewardKiemkhi} Kiếm Khí.`;
+                            
+                            rewardMsg = isUserWin 
+                                ? `\n🎁 Thu hoạch chiến thắng: +${rewardKiemkhi} ⚔️ Kiếm Khí.`
+                                : `\n💀 Thất bại: Không nhận được chiến lợi phẩm.`;
                         }
 
                         alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
