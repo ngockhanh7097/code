@@ -274,7 +274,24 @@
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
             const CRIT_MULTIPLIER = 1.5;
-            const EXTRA_SHOT_COST = 40; // Tiêu hao thể lực mỗi lần bấm +1 đạn
+            const BUFF_COSTS = {
+                add1: 90,   // +1 Đạn: 90 Thể lực
+                dame50: 50, // +50% Dame: 50 Thể lực
+                dame20: 20, // +20% Dame: 20 Thể lực
+                dame10: 10  // +10% Dame: 10 Thể lực
+            };
+
+            // Ảnh icon hiển thị trên đầu nhân vật
+            const BUFF_ICONS = {
+                add1: new Image(),
+                dame50: new Image(),
+                dame20: new Image(),
+                dame10: new Image()
+            };
+            BUFF_ICONS.add1.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-add1.webp';
+            BUFF_ICONS.dame50.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-50.webp';
+            BUFF_ICONS.dame20.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-20.webp';
+            BUFF_ICONS.dame10.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-10.webp';
 
             const roomId = matchData ? matchData.roomId : null;
             const isHost = matchData ? (matchData.host === (window.currentUser || "Player 1")) : true;
@@ -368,6 +385,8 @@
                         pow: 0,
                         isPowActive: false,
                         extraBulletsCount: 0,
+                        damageBonusPercent: 0, // 👉 Thêm dòng này
+                        activeBuffs: [],       // 👉 Thêm dòng này
                         x: SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750),
                         y: 350,
                         radius: 28,
@@ -383,8 +402,8 @@
                 weaponImages["Player 1"] = defWp; weaponImages["Player 2"] = defWp;
 
                 gamePlayers = [
-                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, x: 120, y: 350, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
-                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, x: 780, y: 350, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
+                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, damageBonusPercent: 0, activeBuffs: [], x: 120, y: 350, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
+                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, damageBonusPercent: 0, activeBuffs: [], x: 780, y: 350, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
                 ];
             }
 
@@ -476,6 +495,7 @@
                 });
 
                 // 1. Nhận tọa độ di chuyển từ đối thủ
+                // 1. Nhận tọa độ di chuyển từ đối thủ
                 socket.on('opponent_moved', (data) => {
                     const targetPlayer = gamePlayers.find(p => p.name === data.name);
                     if (targetPlayer && targetPlayer.name !== (window.currentUser || "")) {
@@ -484,6 +504,9 @@
                         targetPlayer.angle = data.angle;
                         targetPlayer.facing = data.facing;
                         targetPlayer.stamina = data.stamina;
+
+                        // 👉 THÊM DÒNG NÀY VÀO ĐÂY:
+                        if (data.activeBuffs) targetPlayer.activeBuffs = data.activeBuffs;
                     }
                 });
 
@@ -583,6 +606,10 @@
                 const startX = shooter.x + vec.dx * (BARREL_LEN * 0.8);
                 const startY = shooter.y + vec.dy * (BARREL_LEN * 0.8);
 
+                // Tính toán tổng Sát thương gốc + % Dame từ buff (50%, 20%, 10%)
+                const bonusRate = 1 + ((shooter.damageBonusPercent || 0) / 100);
+                const finalDamage = Math.round(shooter.damageStat * bonusRate);
+
                 bullets.push({
                     x: startX, y: startY,
                     vx: vec.dx * speed, vy: vec.dy * speed,
@@ -590,7 +617,7 @@
                     rotation: 0,
                     isPow: isPow || false,
                     ownerName: shooter.name,
-                    ownerDmg: shooter.damageStat,
+                    ownerDmg: finalDamage,
                     ownerTeam: shooter.team
                 });
             }
@@ -674,6 +701,8 @@
                 const activeP = getActivePlayer();
                 activeP.stamina = activeP.maxStamina;
                 activeP.extraBulletsCount = 0;
+                activeP.damageBonusPercent = 0;
+                activeP.activeBuffs = []; // Xóa icon buff trên đầu khi sang turn mới
                 updateUI();
                 startTurnTimer();
             }
@@ -702,21 +731,52 @@
                 }
             };
 
-            // Nút bấm +1 Đạn (Bấm nhiều lần nếu đủ thể lực)
-            const skillBtn = document.getElementById('btn-skill-add1');
-            if (skillBtn) {
-                skillBtn.onclick = function () {
-                    if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
-                    const p = getActivePlayer();
-                    
-                    if (p.stamina >= EXTRA_SHOT_COST) {
-                        p.stamina -= EXTRA_SHOT_COST;
-                        p.extraBulletsCount = (p.extraBulletsCount || 0) + 1;
-                    }
-                    updateUI();
-                };
+// --- HÀM XỬ LÝ DÙNG BUFF KỸ NĂNG VÀ ĐỒNG BỘ ---
+            function applySkillBuff(buffType, cost, extraDmgPercent, isExtraShot) {
+                if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
+                const p = getActivePlayer();
+                if (p.stamina < cost) return;
+
+                p.stamina -= cost;
+                if (!p.activeBuffs) p.activeBuffs = [];
+                p.activeBuffs.push(buffType);
+
+                if (isExtraShot) {
+                    p.extraBulletsCount = (p.extraBulletsCount || 0) + 1;
+                }
+                if (extraDmgPercent > 0) {
+                    p.damageBonusPercent = (p.damageBonusPercent || 0) + extraDmgPercent;
+                }
+
+                // Đồng bộ danh sách Buff lên đầu nhân vật cho đối thủ thấy
+                if (socket) {
+                    socket.emit('player_move', {
+                        name: p.name,
+                        x: p.x,
+                        y: p.y,
+                        angle: p.angle,
+                        facing: p.facing,
+                        stamina: p.stamina,
+                        activeBuffs: p.activeBuffs
+                    });
+                }
+                updateUI();
             }
 
+            // Gán sự kiện cho 4 nút kỹ năng bên phải
+            const btnAdd1 = document.getElementById('btn-skill-add1');
+            if (btnAdd1) btnAdd1.onclick = () => applySkillBuff('add1', BUFF_COSTS.add1, 0, true);
+
+            const btnDame50 = document.getElementById('btn-skill-dame50');
+            if (btnDame50) btnDame50.onclick = () => applySkillBuff('dame50', BUFF_COSTS.dame50, 50, false);
+
+            const btnDame20 = document.getElementById('btn-skill-dame20');
+            if (btnDame20) btnDame20.onclick = () => applySkillBuff('dame20', BUFF_COSTS.dame20, 20, false);
+
+            const btnDame10 = document.getElementById('btn-skill-dame10');
+            if (btnDame10) btnDame10.onclick = () => applySkillBuff('dame10', BUFF_COSTS.dame10, 10, false);
+
+            // --- GIỮ LẠI NÚT POW NÀY ---
             const powBtn = document.getElementById('active-pow-btn');
             if (powBtn) {
                 powBtn.onclick = function () {
@@ -1056,6 +1116,28 @@
                     ctx.fillText(pl.name, pl.x, pl.y - pl.radius - 40);
                     ctx.restore();
 
+                    // 🎯 1. VẼ CÁC ICON BUFF TRÊN ĐẦU NHÂN VẬT (CẢ PHÒNG ĐỀU THẤY)
+                    if (pl.activeBuffs && pl.activeBuffs.length > 0) {
+                        const iconSize = 24;
+                        const gap = 4;
+                        const totalW = pl.activeBuffs.length * iconSize + (pl.activeBuffs.length - 1) * gap;
+                        const startIconX = pl.x - totalW / 2;
+                        const startIconY = pl.y - pl.radius - 68; // Đặt cách xa đỉnh đầu
+
+                        pl.activeBuffs.forEach((buffKey, bIdx) => {
+                            const iconImg = BUFF_ICONS[buffKey];
+                            if (iconImg && iconImg.complete && iconImg.naturalWidth !== 0) {
+                                const curX = startIconX + bIdx * (iconSize + gap);
+                                ctx.save();
+                                ctx.shadowColor = '#000';
+                                ctx.shadowBlur = 6;
+                                ctx.drawImage(iconImg, curX, startIconY, iconSize, iconSize);
+                                ctx.restore();
+                            }
+                        });
+                    }
+
+                    // 🎯 2. VẼ ĐƯỜNG NGẮM BẮN
                     if (isTurn && !isFiring) {
                         ctx.save();
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
@@ -1065,29 +1147,6 @@
                         ctx.moveTo(pl.x + vec.dx * BARREL_LEN, pl.y + vec.dy * BARREL_LEN);
                         ctx.lineTo(pl.x + vec.dx * (BARREL_LEN + 75), pl.y + vec.dy * (BARREL_LEN + 75));
                         ctx.stroke();
-
-                        // 🎯 CHỈ NGƯỜI ĐANG TRONG LƯỢT BẮN MỚI NHÌN THẤY SỐ ĐỘ TO RÕ
-                        if (isMyTurn()) {
-                            ctx.setLineDash([]); // Bỏ nét đứt
-                            const textX = pl.x + vec.dx * (BARREL_LEN + 95);
-                            const textY = pl.y + vec.dy * (BARREL_LEN + 95);
-
-                            ctx.font = '900 18px "Arial Black", Impact, sans-serif';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            
-                            // Viền đen dày chống chìm vào nền
-                            ctx.strokeStyle = '#000';
-                            ctx.lineWidth = 4;
-                            ctx.strokeText(`${pl.angle}°`, textX, textY);
-
-                            // Chữ vàng phát sáng nổi bật
-                            ctx.fillStyle = '#ffd369';
-                            ctx.shadowColor = '#ffaa00';
-                            ctx.shadowBlur = 8;
-                            ctx.fillText(`${pl.angle}°`, textX, textY);
-                        }
-
                         ctx.restore();
                     }
 
@@ -1234,7 +1293,29 @@
                     ctx.restore();
                 });
 
-                ctx.restore();
+                ctx.restore(); // (Dòng ctx.restore() có sẵn trong code của bạn)
+
+                // 🎯 SỐ ĐỘ GÓC BẮN ĐẶT Ở VỊ TRÍ CỐ ĐỊNH (GÓC TRÁI DƯỚI - CHỈ NGƯỜI BẮN THẤY)
+                if (isMyTurn() && !isFiring && !isGameOver) {
+                    const p = getActivePlayer();
+                    ctx.save();
+                    ctx.font = '900 22px "Arial Black", Impact, sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'bottom';
+                    
+                    // Viền đen
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 4;
+                    ctx.strokeText(`GÓC: ${p.angle}°`, 20, canvas.height - 75);
+
+                    // Chữ vàng phát sáng
+                    ctx.fillStyle = '#ffd369';
+                    ctx.shadowColor = '#ffaa00';
+                    ctx.shadowBlur = 8;
+                    ctx.fillText(`GÓC: ${p.angle}°`, 20, canvas.height - 75);
+                    ctx.restore();
+                }
+
                 drawWindCompass();
             }
 
@@ -1258,8 +1339,6 @@
                 const turnElem = document.getElementById('turn-indicator');
                 const hpBar = document.getElementById('active-hp-bar');
                 const btnPow = document.getElementById('active-pow-btn');
-                const btnSkill = document.getElementById('btn-skill-add1');
-                const badgeAdd1 = document.getElementById('badge-add1-count');
 
                 if (!nameElem || !turnElem || !hpBar || !btnPow) return;
 
@@ -1270,20 +1349,17 @@
                 hpBar.className = `hp-bar ${p.team === 1 ? 'p1-hp' : 'p2-hp'}`;
                 hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
 
-                // Cập nhật trạng thái hiển thị nút +1 Đạn
-                let extraBullets = p.extraBulletsCount || 0;
-                if (btnSkill) {
-                    btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || !isMyTurn();
-                    btnSkill.classList.toggle('active', extraBullets > 0);
-                }
-                if (badgeAdd1) {
-                    if (extraBullets > 0) {
-                        badgeAdd1.innerText = `+${extraBullets}`;
-                        badgeAdd1.style.display = 'block';
-                    } else {
-                        badgeAdd1.style.display = 'none';
-                    }
-                }
+                // Điều khiển bật/tắt 4 nút kỹ năng
+                const canUseSkill = !isFiring && isMyTurn();
+                const btnAdd1 = document.getElementById('btn-skill-add1');
+                const btnDame50 = document.getElementById('btn-skill-dame50');
+                const btnDame20 = document.getElementById('btn-skill-dame20');
+                const btnDame10 = document.getElementById('btn-skill-dame10');
+
+                if (btnAdd1) btnAdd1.disabled = (p.stamina < BUFF_COSTS.add1) || !canUseSkill;
+                if (btnDame50) btnDame50.disabled = (p.stamina < BUFF_COSTS.dame50) || !canUseSkill;
+                if (btnDame20) btnDame20.disabled = (p.stamina < BUFF_COSTS.dame20) || !canUseSkill;
+                if (btnDame10) btnDame10.disabled = (p.stamina < BUFF_COSTS.dame10) || !canUseSkill;
 
                 const isPowReady = p.pow >= 100;
                 btnPow.innerText = p.isPowActive ? 'POW (BẬT)' : (`POW (${Math.floor(p.pow)}%)`);
