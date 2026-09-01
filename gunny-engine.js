@@ -1218,10 +1218,11 @@
                 const nameElem = document.getElementById('active-player-name');
                 const turnElem = document.getElementById('turn-indicator');
                 const hpBar = document.getElementById('active-hp-bar');
-                const btnSkill = document.getElementById('active-skill-btn');
                 const btnPow = document.getElementById('active-pow-btn');
+                const btnSkill = document.getElementById('btn-skill-add1');
+                const badgeAdd1 = document.getElementById('badge-add1-count');
 
-                if (!nameElem || !turnElem || !hpBar || !btnSkill || !btnPow) return;
+                if (!nameElem || !turnElem || !hpBar || !btnPow) return;
 
                 nameElem.innerText = `${p.name} (Đội ${p.team})`;
                 nameElem.style.color = p.team === 1 ? '#ff5470' : '#4ecca3';
@@ -1230,10 +1231,7 @@
                 hpBar.className = `hp-bar ${p.team === 1 ? 'p1-hp' : 'p2-hp'}`;
                 hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
 
-                // Cập nhật text hiển thị số đạn cộng dồn
-                const btnSkill = document.getElementById('btn-skill-add1');
-                const badgeAdd1 = document.getElementById('badge-add1-count');
-
+                // Cập nhật trạng thái hiển thị nút +1 Đạn
                 let extraBullets = p.extraBulletsCount || 0;
                 if (btnSkill) {
                     btnSkill.disabled = (p.stamina < EXTRA_SHOT_COST) || isFiring || !isMyTurn();
