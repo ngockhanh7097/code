@@ -197,8 +197,9 @@
                         <div class="big-power-wrap">
                             <div class="big-power-container">
                                 <div id="power-bar-fill" class="big-power-fill"></div>
+                                <!-- Vạch xanh dương trong suốt chỉ mốc lực turn trước -->
+                                <div id="last-power-marker" style="display: none; position: absolute; top: 0; bottom: 0; width: 5%; background: rgba(0, 195, 255, 0.45); border: 1px solid #00ffff; box-shadow: 0 0 8px #00e1ff; pointer-events: none; z-index: 2; border-radius: 2px;"></div>
                                 <div id="ruler-ticks" class="ruler-ticks"></div>
-                                <div id="power-text" class="power-text">LỰC: 0%</div>
                             </div>
                         </div>
                     </div>
@@ -397,6 +398,7 @@
             let chargeSpeed = 0.45;
             let chargeDir = 1;
             let turnTimeLeft = 15;
+            let lastShotPower = null; // Lưu mốc lực vừa bắn (null là chưa bắn phát nào)
             let lastMoveEmitTime = 0;
 
             let bullets = [];
@@ -424,7 +426,7 @@
                 updateTimerUI();
 
                 turnCountdownInterval = setInterval(() => {
-                    if (isFiring || isGameOver) return;
+                    if (isFiring || isGameOver || isCharging) return;
                     turnTimeLeft--;
                     updateTimerUI();
 
@@ -596,6 +598,16 @@
             function startShooting(lockedPower) {
                 if (isGameOver || isFiring || !isMyTurn()) return;
                 const shooter = getActivePlayer();
+                // 🎯 LƯU MỐC LỰC VỪA BẮN VÀ HIỂN THỊ VẠCH XANH TRÊN THANH LỰC
+                lastShotPower = lockedPower;
+                const marker = document.getElementById("last-power-marker");
+                if (marker) {
+                    // Căn giữa mốc 5% theo giá trị lockedPower
+                    let markerLeft = Math.max(0, Math.min(95, lockedPower - 2.5));
+                    marker.style.left = markerLeft + '%';
+                    marker.style.display = 'block';
+                }
+
                 const fixedAngle = shooter.angle;
                 const extraCount = shooter.extraBulletsCount || 0;
                 const isPow = shooter.isPowActive;
@@ -1046,13 +1058,36 @@
 
                     if (isTurn && !isFiring) {
                         ctx.save();
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
                         ctx.setLineDash([5, 5]);
                         ctx.lineWidth = 2.5;
                         ctx.beginPath();
                         ctx.moveTo(pl.x + vec.dx * BARREL_LEN, pl.y + vec.dy * BARREL_LEN);
-                        ctx.lineTo(pl.x + vec.dx * (BARREL_LEN + 80), pl.y + vec.dy * (BARREL_LEN + 80));
+                        ctx.lineTo(pl.x + vec.dx * (BARREL_LEN + 75), pl.y + vec.dy * (BARREL_LEN + 75));
                         ctx.stroke();
+
+                        // 🎯 CHỈ NGƯỜI ĐANG TRONG LƯỢT BẮN MỚI NHÌN THẤY SỐ ĐỘ TO RÕ
+                        if (isMyTurn()) {
+                            ctx.setLineDash([]); // Bỏ nét đứt
+                            const textX = pl.x + vec.dx * (BARREL_LEN + 95);
+                            const textY = pl.y + vec.dy * (BARREL_LEN + 95);
+
+                            ctx.font = '900 18px "Arial Black", Impact, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            
+                            // Viền đen dày chống chìm vào nền
+                            ctx.strokeStyle = '#000';
+                            ctx.lineWidth = 4;
+                            ctx.strokeText(`${pl.angle}°`, textX, textY);
+
+                            // Chữ vàng phát sáng nổi bật
+                            ctx.fillStyle = '#ffd369';
+                            ctx.shadowColor = '#ffaa00';
+                            ctx.shadowBlur = 8;
+                            ctx.fillText(`${pl.angle}°`, textX, textY);
+                        }
+
                         ctx.restore();
                     }
 
@@ -1266,12 +1301,9 @@
                 if (curPower !== lastRenderedPower) {
                     lastRenderedPower = curPower;
                     const powerFill = document.getElementById('power-bar-fill');
-                    const powerText = document.getElementById('power-text');
                     if (powerFill) powerFill.style.width = curPower + '%';
-                    if (powerText) powerText.innerText = `LỰC: ${curPower}%`;
                 }
 
-                // Cập nhật các chỉ số còn lại
                 const staBar = document.getElementById('active-sta-bar');
                 const powBar = document.getElementById('active-pow-bar');
                 const statsEl = document.getElementById('active-stats');
