@@ -144,12 +144,26 @@
                 }
 
                 /* Nút POW kiểu Gunny */
+                /* Hiệu ứng xung nhịp khi POW đầy 100% */
+                @keyframes powPulseGlow {
+                    from { box-shadow: 0 0 6px #ff7675; transform: scale(1); }
+                    to { box-shadow: 0 0 16px #ff0055, 0 0 25px rgba(255, 0, 85, 0.6); transform: scale(1.05); }
+                }
+
+                /* Hiệu ứng phát sáng vàng/lửa rực rỡ khi BẬT POW */
+                @keyframes powActiveShine {
+                    0% { box-shadow: 0 0 12px #ffdd00, inset 0 0 8px #ff8c00; filter: brightness(1.1); }
+                    50% { box-shadow: 0 0 25px #ff5500, 0 0 35px #ffcc00, inset 0 0 12px #ff0055; filter: brightness(1.3); }
+                    100% { box-shadow: 0 0 12px #ffdd00, inset 0 0 8px #ff8c00; filter: brightness(1.1); }
+                }
+
+                /* NÚT POW ĐÃ XÓA VIỀN ĐỎ XẤU */
                 #gunny-game-wrapper .gunny-pow-slot-btn {
-                    position: relative; width: 44px; height: 44px;
-                    background: rgba(0, 0, 0, 0.55); border: 1.5px solid rgba(255, 211, 105, 0.6);
-                    border-radius: 8px; cursor: pointer; padding: 2px; display: flex;
+                    position: relative; width: 48px; height: 48px;
+                    background: rgba(0, 0, 0, 0.6); border: 1.5px solid rgba(255, 211, 105, 0.5);
+                    border-radius: 10px; cursor: pointer; padding: 3px; display: flex;
                     align-items: center; justify-content: center; backdrop-filter: blur(4px);
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: 0.2s;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.15s, box-shadow 0.2s;
                 }
                 #gunny-game-wrapper .gunny-pow-slot-btn img {
                     width: 100%; height: 100%; object-fit: contain; pointer-events: none;
@@ -157,46 +171,53 @@
                 #gunny-game-wrapper .gunny-pow-slot-btn:disabled {
                     opacity: 0.35; cursor: not-allowed; filter: grayscale(100%);
                 }
+                /* Khi đầy 100% nộ: phát sáng nhịp tim, KHÔNG ĐỔI VIỀN ĐỎ */
                 #gunny-game-wrapper .gunny-pow-slot-btn.ready {
-                    border-color: #ff0055 !important;
-                    animation: powPulse 0.6s infinite alternate;
+                    border-color: #ffd369 !important;
+                    animation: powPulseGlow 0.7s infinite alternate;
                 }
+                /* Khi ĐƯỢC BẬT: phát sáng hào quang lửa xung quanh, KHÔNG DÙNG VIỀN ĐỎ */
                 #gunny-game-wrapper .gunny-pow-slot-btn.active {
-                    border-color: #00ffcc !important; box-shadow: 0 0 15px #00ffcc !important;
-                    background: rgba(0, 255, 204, 0.3) !important;
+                    border-color: #ffeaa7 !important;
+                    background: rgba(255, 100, 0, 0.35) !important;
+                    animation: powActiveShine 1s infinite alternate !important;
                 }
 
-                /* Khối Nút Bắn & 4 nút D-Pad */
+                /* KHỐI NÚT BẮN TO BỌC NGOÀI (ĐƯỜNG KÍNH 88px) */
                 #gunny-game-wrapper .dpad-fire-cluster {
-                    position: relative; width: 78px; height: 78px;
+                    position: relative; width: 88px; height: 88px;
                     display: flex; align-items: center; justify-content: center;
                 }
+
+                /* NÚT BẮN PHÓNG TO TOÀN KHUNG */
                 #gunny-game-wrapper .btn-dpad-fire {
-                    position: absolute; width: 42px; height: 42px; border-radius: 50%;
+                    position: absolute; width: 100%; height: 100%; border-radius: 50%;
                     background: transparent; border: none; cursor: pointer; padding: 0;
                     z-index: 5; transition: transform 0.1s; display: flex; align-items: center; justify-content: center;
+                    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));
                 }
                 #gunny-game-wrapper .btn-dpad-fire img {
                     width: 100%; height: 100%; object-fit: contain; pointer-events: none;
                 }
-                #gunny-game-wrapper .btn-dpad-fire:hover:not(:disabled) { transform: scale(1.08); }
-                #gunny-game-wrapper .btn-dpad-fire:active:not(:disabled) { transform: scale(0.95); }
+                #gunny-game-wrapper .btn-dpad-fire:hover:not(:disabled) { transform: scale(1.05); }
+                #gunny-game-wrapper .btn-dpad-fire:active:not(:disabled) { transform: scale(0.96); }
                 #gunny-game-wrapper .btn-dpad-fire:disabled { filter: grayscale(100%); opacity: 0.4; cursor: not-allowed; }
 
+                /* 4 NÚT HƯỚNG NẰM GỌN BÊN TRONG 4 MÉP CỦA NÚT BẮN */
                 #gunny-game-wrapper .dpad-arrow-btn {
                     position: absolute; width: 22px; height: 22px;
-                    background: rgba(24, 34, 56, 0.85); border: 1px solid #ffd369;
-                    color: #ffd369; font-size: 10px; font-weight: bold; border-radius: 4px;
+                    background: rgba(9, 14, 23, 0.85); border: 1.5px solid #ffd369;
+                    color: #ffd369; font-size: 11px; font-weight: 900; border-radius: 5px;
                     display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; z-index: 6; box-shadow: 0 2px 4px rgba(0,0,0,0.6);
-                    transition: 0.1s;
+                    cursor: pointer; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+                    transition: transform 0.1s, background 0.15s;
                 }
-                #gunny-game-wrapper .dpad-arrow-btn:hover { background: #ffd369; color: #000; }
+                #gunny-game-wrapper .dpad-arrow-btn:hover { background: #ffd369; color: #111; transform: scale(1.15); }
                 #gunny-game-wrapper .dpad-arrow-btn:active { transform: scale(0.9); }
-                #gunny-game-wrapper .dpad-up    { top: 0; left: 50%; transform: translateX(-50%); }
-                #gunny-game-wrapper .dpad-down  { bottom: 0; left: 50%; transform: translateX(-50%); }
-                #gunny-game-wrapper .dpad-left  { left: 0; top: 50%; transform: translateY(-50%); }
-                #gunny-game-wrapper .dpad-right { right: 0; top: 50%; transform: translateY(-50%); }
+                #gunny-game-wrapper .dpad-up    { top: 2px; left: 50%; transform: translateX(-50%); }
+                #gunny-game-wrapper .dpad-down  { bottom: 2px; left: 50%; transform: translateX(-50%); }
+                #gunny-game-wrapper .dpad-left  { left: 2px; top: 50%; transform: translateY(-50%); }
+                #gunny-game-wrapper .dpad-right { right: 2px; top: 50%; transform: translateY(-50%); }
 
                 #gunny-game-wrapper .guide { margin-top: 8px; font-size: 12px; color: #bbb; text-align: center; }
             </style>
@@ -471,7 +492,7 @@
             let isGameOver = false;
             let isCharging = false;
             let chargePower = 0;
-            let chargeSpeed = 0.45;
+            let chargeSpeed = 0.25;
             let chargeDir = 1;
             let turnTimeLeft = 15;
             let lastShotPower = null; // Lưu mốc lực vừa bắn (null là chưa bắn phát nào)
@@ -1039,7 +1060,7 @@
 
                 // Tích lực
                 if (isCharging) {
-                    chargePower += chargeSpeed * chargeDir * 2.2;
+                    chargePower += chargeSpeed * chargeDir * 2;
                     if (chargePower >= 100) { chargePower = 100; chargeDir = -1; }
                     else if (chargePower <= 0) { chargePower = 0; chargeDir = 1; }
                 }
@@ -1259,23 +1280,23 @@
                         // 🎯 SỐ ĐỘ VỪA PHẢI ĐI CÙNG NHÂN VẬT (NẰM TRƯỚC MẶT TRÊN ĐẦU MỘT CHÚT)
                         if (isMyTurn()) {
                             ctx.setLineDash([]);
-                            // Vị trí nằm ngay trên đầu và hơi chếch theo hướng quay mặt
-                            const angleTextX = pl.x + (pl.facing * 22);
-                            const angleTextY = pl.y - pl.radius - 20;
+                            // Vị trí nằm ngay trước mặt (cách tâm 32px theo hướng nhìn)
+                            const angleTextX = pl.x + (pl.facing * 32);
+                            const angleTextY = pl.y - 8;
 
-                            ctx.font = '900 13px "Segoe UI", Arial, sans-serif';
+                            ctx.font = '900 12px "Segoe UI", Tahoma, sans-serif';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             
-                            // Viền đen chống lẫn vào cảnh nền
+                            // Viền đen chống chìm
                             ctx.strokeStyle = '#000';
-                            ctx.lineWidth = 3.5;
+                            ctx.lineWidth = 3;
                             ctx.strokeText(`${pl.angle}°`, angleTextX, angleTextY);
 
-                            // Chữ vàng rực rỡ sắc nét
+                            // Chữ vàng rực rỡ
                             ctx.fillStyle = '#ffd369';
                             ctx.shadowColor = '#000';
-                            ctx.shadowBlur = 4;
+                            ctx.shadowBlur = 3;
                             ctx.fillText(`${pl.angle}°`, angleTextX, angleTextY);
                         }
 
