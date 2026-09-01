@@ -394,7 +394,7 @@
             let isGameOver = false;
             let isCharging = false;
             let chargePower = 0;
-            let chargeSpeed = 0.35;
+            let chargeSpeed = 0.45;
             let chargeDir = 1;
             let turnTimeLeft = 15;
             let lastMoveEmitTime = 0;
@@ -577,7 +577,7 @@
             function spawnBullet(shooter, angleDeg, power, isPow) {
                 isFiring = true;
                 const vec = calculateVector(shooter, angleDeg);
-                const speed = (power / 100) * 22;
+                const speed = (power / 100) * 25;
                 const startX = shooter.x + vec.dx * (BARREL_LEN * 0.8);
                 const startY = shooter.y + vec.dy * (BARREL_LEN * 0.8);
 
@@ -807,7 +807,7 @@
 
                     if (hasMoved && socket) {
                         let now = Date.now();
-                        if (now - lastMoveEmitTime > 30) {
+                        if (now - lastMoveEmitTime > 50) {
                             lastMoveEmitTime = now;
                             socket.emit('player_move', {
                                 name: p.name,
@@ -822,15 +822,19 @@
                 }
 
                 // Trọng lực rơi
+                // Chỉ kiểm tra rơi khi nhân vật chưa chạm đất hoặc đang di chuyển
                 gamePlayers.forEach(player => {
                     if (player.hp <= 0) return;
+                    
                     const groundUnder = getGroundYAt(player.x, player.y);
                     const targetY = groundUnder - player.radius;
 
-                    if (player.y < targetY) {
-                        player.y = Math.min(player.y + 4, targetY);
-                    } else if (player.y > targetY && groundUnder <= canvas.height) {
-                        player.y = targetY;
+                    if (Math.abs(player.y - targetY) > 1) {
+                        if (player.y < targetY) {
+                            player.y = Math.min(player.y + 6, targetY);
+                        } else if (player.y > targetY && groundUnder <= canvas.height) {
+                            player.y = targetY;
+                        }
                     }
 
                     if (player.y >= canvas.height - player.radius) {
@@ -1253,23 +1257,27 @@
                 btnPow.classList.toggle('active', p.isPowActive);
             }
 
+            let lastRenderedPower = -1;
             function updateUIStats() {
                 const p = getActivePlayer();
+                if (!p) return;
+
+                const curPower = Math.round(chargePower);
+                if (curPower !== lastRenderedPower) {
+                    lastRenderedPower = curPower;
+                    const powerFill = document.getElementById('power-bar-fill');
+                    const powerText = document.getElementById('power-text');
+                    if (powerFill) powerFill.style.width = curPower + '%';
+                    if (powerText) powerText.innerText = `LỰC: ${curPower}%`;
+                }
+
+                // Cập nhật các chỉ số còn lại
                 const staBar = document.getElementById('active-sta-bar');
                 const powBar = document.getElementById('active-pow-bar');
                 const statsEl = document.getElementById('active-stats');
-                const powerFill = document.getElementById('power-bar-fill');
-                const powerText = document.getElementById('power-text');
-
-                if (!staBar || !powBar || !statsEl || !powerFill || !powerText) return;
-
-                staBar.style.width = Math.max(0, (p.stamina / p.maxStamina) * 100) + '%';
-                powBar.style.width = Math.max(0, p.pow) + '%';
-                statsEl.innerText = `HP: ${Math.ceil(p.hp)}/${p.maxHp} | Góc: ${p.angle}° | TL: ${Math.floor(p.stamina)}`;
-
-                const curPower = Math.round(chargePower);
-                powerFill.style.width = curPower + '%';
-                powerText.innerText = `LỰC: ${curPower}%`;
+                if (staBar) staBar.style.width = Math.max(0, (p.stamina / p.maxStamina) * 100) + '%';
+                if (powBar) powBar.style.width = Math.max(0, p.pow) + '%';
+                if (statsEl) statsEl.innerText = `HP: ${Math.ceil(p.hp)}/${p.maxHp} | Góc: ${p.angle}° | TL: ${Math.floor(p.stamina)}`;
             }
 
             initRuler();
