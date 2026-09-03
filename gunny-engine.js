@@ -223,6 +223,15 @@
             </style>
 
             <div id="game-container">
+                <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
+                <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
+                    <div style="font-size: 22px; font-weight: 900; color: #ffd369; text-shadow: 0 0 10px #ffaa00; margin-bottom: 4px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
+                    <div id="card-countdown-timer" style="font-size: 14px; font-weight: bold; color: #ff5470; margin-bottom: 15px;">Thời gian chọn thẻ: 10s</div>
+                    
+                    <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;">
+                        <!-- 9 Thẻ bài render tự động -->
+                    </div>
+                </div>
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
                 
                 <div id="top-turn-timer">15</div>
@@ -671,6 +680,114 @@
                     // Kết thúc trận không cần chờ đợi
                     checkGameOver(true, data.leaverName);
                 });
+
+                // Lắng nghe tạo bảng 9 thẻ bài
+                socket.on('cards_board_ready', ({ cards }) => {
+                    renderCardsBoardUI(cards);
+                });
+
+                // Lắng nghe khi có người chơi lật thẻ
+                socket.on('card_opened', ({ cardIndex, playerName, reward }) => {
+                    revealSingleCardUI(cardIndex, playerName, reward);
+                });
+
+                function renderCardsBoardUI(cards) {
+                    const overlay = document.getElementById("endgame-cards-overlay");
+                    const grid = document.getElementById("cards-grid-box");
+                    const timerEl = document.getElementById("card-countdown-timer");
+                    if (!overlay || !grid) return;
+
+                    overlay.style.display = "flex";
+                    grid.innerHTML = "";
+                    myHasPickedCard = false;
+                    cardTimeRemaining = 10;
+
+                    for (let i = 0; i < 9; i++) {
+                        const cardData = cards[i];
+                        const cardDiv = document.createElement("div");
+                        cardDiv.id = `card-slot-${i}`;
+                        cardDiv.style.cssText = `
+                            width: 105px; height: 145px; border-radius: 8px; cursor: pointer;
+                            position: relative; transition: transform 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+                        `;
+                        cardDiv.innerHTML = `
+                            <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-mattruoc.webp" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" />
+                        `;
+
+                        cardDiv.onclick = () => {
+                            if (myHasPickedCard || cardData.openedBy) return;
+                            myHasPickedCard = true;
+                            if (socket) {
+                                socket.emit('pick_card', {
+                                    cardIndex: i,
+                                    playerName: window.currentUser || "Player"
+                                });
+                            }
+                        };
+                        grid.appendChild(cardDiv);
+                    }
+
+                    // Bộ đếm 10 giây lật thẻ
+                    if (cardFlipTimer) clearInterval(cardFlipTimer);
+                    cardFlipTimer = setInterval(() => {
+                        cardTimeRemaining--;
+                        if (timerEl) timerEl.innerText = `Thời gian chọn thẻ: ${cardTimeRemaining}s`;
+
+                        if (cardTimeRemaining <= 0) {
+                            clearInterval(cardFlipTimer);
+                            // Lật toàn bộ các thẻ còn lại
+                            cards.forEach((c, idx) => {
+                                revealSingleCardUI(idx, c.openedBy || "", c.reward);
+                            });
+
+                            // Sau 4 giây đóng game về sảnh chờ
+                            setTimeout(() => {
+                                if (window.database && roomId) {
+                                    window.database.ref('pvp_rooms/' + roomId).update({
+                                        status: "WAITING",
+                                        matchData: null
+                                    });
+                                }
+                                if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                            }, 4000);
+                        }
+                    }, 1000);
+                }
+
+                function revealSingleCardUI(index, playerName, reward) {
+                    const cardEl = document.getElementById(`card-slot-${index}`);
+                    if (!cardEl) return;
+                    cardEl.style.cursor = "default";
+
+                    const KIEMKHI_ICON_URL = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
+
+                    cardEl.innerHTML = `
+                        <div style="width: 100%; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1.5px solid #ffcc00; box-shadow: 0 0 10px rgba(255,204,0,0.5);">
+                            <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-matsau.webp" style="width: 100%; height: 100%; object-fit: cover;" />
+                            <div style="position: absolute; top: 22px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                                <img src="${KIEMKHI_ICON_URL}" style="width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 0 5px #00ffff);" />
+                                <span style="color: #00ffff; font-weight: 900; font-size: 13px; text-shadow: 0 1px 3px #000;">+${reward}</span>
+                            </div>
+                            <div style="position: absolute; bottom: 6px; left: 4px; right: 4px; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px; text-align: center; font-size: 9px; font-weight: bold; color: #ffd369; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${playerName ? playerName : "Chưa lật"}
+                            </div>
+                        </div>
+                    `;
+
+                    // Nếu chính mình lật được thẻ này -> Cộng Kiếm Khí vào tài khoản App 1
+                    if (playerName && playerName.toLowerCase() === (window.currentUser || "").toLowerCase()) {
+                        if (typeof userStats !== "undefined") {
+                            if (!userStats.inventory) userStats.inventory = {};
+                            userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + reward;
+
+                            if (typeof pushSecureUserData === "function") {
+                                pushSecureUserData(window.currentUser).then(() => {
+                                    if (typeof refreshUIFields === "function") refreshUIFields();
+                                });
+                            }
+                        }
+                    }
+                }
             }
 
             // Thực hiện chuỗi bắn đạn liên hoàn (+1, +2, +3...)
@@ -937,6 +1054,10 @@
                 }
             }
 
+            let cardFlipTimer = null;
+            let cardTimeRemaining = 10;
+            let myHasPickedCard = false;
+
             function checkGameOver(isImmediateSurrender = false, leaverName = null) {
                 if (isGameOver) return;
                 let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
@@ -947,56 +1068,35 @@
                     if (turnCountdownInterval) clearInterval(turnCountdownInterval);
                     cleanupGameListeners();
 
-                    // Thu hồi toàn bộ đạn trên màn hình
                     bullets = [];
                     explosions = [];
 
-                    let winningTeam = team1Alive ? 1 : 2;
-                    let myPlayer = gamePlayers.find(p => p.name === (window.currentUser || ""));
-                    let isUserWin = myPlayer ? (myPlayer.team === winningTeam) : (winningTeam === 1);
-
-                    // Trao thưởng và cập nhật trạng thái
-                    let rewardMsg = "";
-                    if (window.currentUser) {
-                        let rewardKiemkhi = isUserWin ? 30 : 0;
-                        if (typeof userStats !== "undefined") {
-                            if (!userStats.inventory) userStats.inventory = {};
-                            if (rewardKiemkhi > 0) {
-                                userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
-                            }
-                            if (typeof pushSecureUserData === "function") {
-                                pushSecureUserData(window.currentUser).then(() => {
-                                    if (typeof refreshUIFields === "function") refreshUIFields();
-                                });
-                            }
+                    // TRƯỜNG HỢP RÚT LUI: Không ai được lật thẻ, kết thúc ngay lập tức
+                    if (isImmediateSurrender) {
+                        let winningTeam = team1Alive ? 1 : 2;
+                        let endNotice = leaverName ? `⚠️ Đạo hữu [${leaverName}] đã rút lui!\n` : "";
+                        endNotice += `Đội ${winningTeam} đã làm chủ Bí Cảnh! (Trận đấu dừng, không tính thẻ bài)`;
+                        
+                        if (window.database && roomId) {
+                            window.database.ref('pvp_rooms/' + roomId).update({
+                                status: "WAITING",
+                                matchData: null
+                            });
                         }
-                        rewardMsg = isUserWin 
-                            ? `\n🎁 Thu hoạch chiến thắng: +${rewardKiemkhi} ⚔️ Kiếm Khí.`
-                            : `\n💀 Thất bại: Không nhận được chiến lợi phẩm.`;
+                        if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                        alert(endNotice);
+                        return;
                     }
 
-                    let endNotice = "";
-                    if (leaverName) {
-                        endNotice = `⚠️ Đạo hữu [${leaverName}] đã rút lui khỏi Bí Cảnh!\n`;
+                    // TRƯỜNG HỢP ĐÁNH HẾT TRẬN: Khởi động hệ thống 9 Thẻ Bài
+                    if (socket) {
+                        socket.emit('match_finished_cards');
+                    } else {
+                        // Chạy offline/test cục bộ
+                        initLocalCardBoard();
                     }
-                    endNotice += `🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`;
-
-                    // Đưa phòng trên Firebase về trạng thái WAITING để cả 2 bên cùng quay lại phòng chờ App 1
-                    if (window.database && roomId) {
-                        window.database.ref('pvp_rooms/' + roomId).update({
-                            status: "WAITING",
-                            matchData: null
-                        });
-                    }
-
-                    // Đóng game và hiện kết quả ngay tức thì
-                    if (typeof closeGunnyGameModal === "function") {
-                        closeGunnyGameModal();
-                    }
-                    alert(endNotice);
                 }
             }
-
             function update() {
                 const p = getActivePlayer();
 
