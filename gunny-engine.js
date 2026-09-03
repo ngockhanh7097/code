@@ -956,10 +956,7 @@
             function cleanupGameListeners() {
                 window.onkeydown = null;
                 window.onkeyup = null;
-                if (socket) {
-                    socket.disconnect();
-                    socket = null;
-                }
+                // Tuyệt đối không disconnect socket ở đây vì còn cần dùng để lật 9 thẻ bài
             }
 
             let cardFlipTimer = null;
@@ -1094,7 +1091,7 @@
                     bullets = [];
                     explosions = [];
 
-                    // TRƯỜNG HỢP RÚT LUI: Không ai được lật thẻ, kết thúc ngay lập tức
+                    // TRƯỜNG HỢP 1: CÓ NGƯỜI CHỦ ĐỘNG RÚT LUI (BẤM NÚT ĐẦU HÀNG)
                     if (isImmediateSurrender) {
                         let winningTeam = team1Alive ? 1 : 2;
                         let endNotice = leaverName ? `⚠️ Đạo hữu [${leaverName}] đã rút lui!\n` : "";
@@ -1111,11 +1108,10 @@
                         return;
                     }
 
-                    // TRƯỜNG HỢP ĐÁNH HẾT TRẬN: Khởi động hệ thống 9 Thẻ Bài
-                    if (socket) {
+                    // TRƯỜNG HỢP 2: KẾT THÚC BÌNH THƯỜNG (BẮN HẾT MÁU) -> MỞ BẢNG 9 THẺ
+                    if (socket && socket.connected) {
                         socket.emit('match_finished_cards');
                     } else {
-                        // Chạy offline/test cục bộ
                         initLocalCardBoard();
                     }
                 }
