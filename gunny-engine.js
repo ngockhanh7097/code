@@ -565,6 +565,7 @@
             // ==========================================
             if (roomId) {
                 socket = io(SOCKET_SERVER_URL, { transports: ['websocket'] });
+                window.gunnyActiveSocket = socket; // 👉 Xuất ra để App 1 bấm rút lui là gửi socket được ngay
 
                 socket.emit('join_room', {
                     roomId: roomId,
@@ -653,14 +654,22 @@
                     resetTurnState();
                 });
 
-                // 5. Đối thủ thoát trận / Đầu hàng
+                // 5. Đối thủ rút lui / Đầu hàng: Dừng trận NGAY LẬP TỨC
                 socket.on('player_left', (data) => {
                     const leaver = gamePlayers.find(p => p.name === data.leaverName);
                     if (leaver) {
                         leaver.hp = 0;
-                        updateUI();
-                        checkGameOver();
                     }
+                    
+                    // Cắt đứt toàn bộ lượt đạn và lượt bắn đang diễn ra
+                    bullets = [];
+                    explosions = [];
+                    isFiring = false;
+                    isCharging = false;
+                    if (turnCountdownInterval) clearInterval(turnCountdownInterval);
+
+                    // Kết thúc trận không cần chờ đợi
+                    checkGameOver(true, data.leaverName);
                 });
             }
 
@@ -928,56 +937,63 @@
                 }
             }
 
-            function checkGameOver() {
+            function checkGameOver(isImmediateSurrender = false, leaverName = null) {
                 if (isGameOver) return;
                 let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
                 let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
 
-                if (!team1Alive || !team2Alive) {
+                if (isImmediateSurrender || !team1Alive || !team2Alive) {
                     isGameOver = true;
                     if (turnCountdownInterval) clearInterval(turnCountdownInterval);
                     cleanupGameListeners();
+
+                    // Thu hồi toàn bộ đạn trên màn hình
+                    bullets = [];
+                    explosions = [];
 
                     let winningTeam = team1Alive ? 1 : 2;
                     let myPlayer = gamePlayers.find(p => p.name === (window.currentUser || ""));
                     let isUserWin = myPlayer ? (myPlayer.team === winningTeam) : (winningTeam === 1);
 
-                    setTimeout(() => {
-                        let rewardMsg = "";
-                        if (window.currentUser) {
-                            // Cập nhật quy tắc thưởng mới: Thắng +30 Kiếm khí, Thua +0 Kiếm khí
-                            let rewardKiemkhi = isUserWin ? 30 : 0;
-
-                            if (typeof userStats !== "undefined") {
-                                if (!userStats.inventory) userStats.inventory = {};
-                                
-                                if (rewardKiemkhi > 0) {
-                                    userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
-                                }
-
-                                if (typeof pushSecureUserData === "function") {
-                                    pushSecureUserData(window.currentUser).then(() => {
-                                        if (typeof refreshUIFields === "function") refreshUIFields();
-                                    });
-                                }
+                    // Trao thưởng và cập nhật trạng thái
+                    let rewardMsg = "";
+                    if (window.currentUser) {
+                        let rewardKiemkhi = isUserWin ? 30 : 0;
+                        if (typeof userStats !== "undefined") {
+                            if (!userStats.inventory) userStats.inventory = {};
+                            if (rewardKiemkhi > 0) {
+                                userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + rewardKiemkhi;
                             }
-                            
-                            rewardMsg = isUserWin 
-                                ? `\n🎁 Thu hoạch chiến thắng: +${rewardKiemkhi} ⚔️ Kiếm Khí.`
-                                : `\n💀 Thất bại: Không nhận được chiến lợi phẩm.`;
+                            if (typeof pushSecureUserData === "function") {
+                                pushSecureUserData(window.currentUser).then(() => {
+                                    if (typeof refreshUIFields === "function") refreshUIFields();
+                                });
+                            }
                         }
+                        rewardMsg = isUserWin 
+                            ? `\n🎁 Thu hoạch chiến thắng: +${rewardKiemkhi} ⚔️ Kiếm Khí.`
+                            : `\n💀 Thất bại: Không nhận được chiến lợi phẩm.`;
+                    }
 
-                        alert(`🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`);
+                    let endNotice = "";
+                    if (leaverName) {
+                        endNotice = `⚠️ Đạo hữu [${leaverName}] đã rút lui khỏi Bí Cảnh!\n`;
+                    }
+                    endNotice += `🏆 ${isUserWin ? "CHIẾN THẮNG!" : "THẤT BẠI!"}\nĐội ${winningTeam} đã làm chủ Bí Cảnh!${rewardMsg}`;
 
-                        if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                    // Đưa phòng trên Firebase về trạng thái WAITING để cả 2 bên cùng quay lại phòng chờ App 1
+                    if (window.database && roomId) {
+                        window.database.ref('pvp_rooms/' + roomId).update({
+                            status: "WAITING",
+                            matchData: null
+                        });
+                    }
 
-                        if (window.database && roomId && isHost) {
-                            window.database.ref('pvp_rooms/' + roomId).update({
-                                status: "WAITING",
-                                matchData: null
-                            });
-                        }
-                    }, 500);
+                    // Đóng game và hiện kết quả ngay tức thì
+                    if (typeof closeGunnyGameModal === "function") {
+                        closeGunnyGameModal();
+                    }
+                    alert(endNotice);
                 }
             }
 
