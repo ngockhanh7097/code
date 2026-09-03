@@ -653,11 +653,12 @@
                     resetTurnState();
                 });
 
-                // 5. Đối thủ thoát trận
+                // 5. Đối thủ thoát trận / Đầu hàng
                 socket.on('player_left', (data) => {
                     const leaver = gamePlayers.find(p => p.name === data.leaverName);
                     if (leaver) {
                         leaver.hp = 0;
+                        updateUI();
                         checkGameOver();
                     }
                 });
