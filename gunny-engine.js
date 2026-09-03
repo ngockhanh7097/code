@@ -665,6 +665,12 @@
 
                 // 5. Đối thủ rút lui / Đầu hàng: Dừng trận NGAY LẬP TỨC
                 socket.on('player_left', (data) => {
+                    // Nếu bảng 9 thẻ bài đã xuất hiện thì KHÔNG đóng game nữa, để người thắng lật quà bình thường
+                    const overlay = document.getElementById("endgame-cards-overlay");
+                    if (overlay && overlay.style.display === "flex") {
+                        return;
+                    }
+
                     const leaver = gamePlayers.find(p => p.name === data.leaverName);
                     if (leaver) {
                         leaver.hp = 0;
