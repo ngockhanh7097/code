@@ -690,119 +690,7 @@
                 });
             } // 👈 Đóng if (roomId)
 
-            // --- CẢ 3 HÀM XỬ LÝ THẺ BÀI CHỈ VIẾT 1 LẦN DUY NHẤT Ở ĐÂY ---
-            function initLocalCardBoard() {
-                const localCards = [];
-                for (let i = 0; i < 9; i++) {
-                    localCards.push({
-                        id: i,
-                        reward: Math.floor(Math.random() * 50) + 1,
-                        openedBy: null
-                    });
-                }
-                renderCardsBoardUI(localCards);
-            }
-
-            function renderCardsBoardUI(cards) {
-                const overlay = document.getElementById("endgame-cards-overlay");
-                const grid = document.getElementById("cards-grid-box");
-                const timerEl = document.getElementById("card-countdown-timer");
-                if (!overlay || !grid) return;
-
-                overlay.style.display = "flex";
-                grid.innerHTML = "";
-                myHasPickedCard = false;
-                cardTimeRemaining = 10;
-
-                for (let i = 0; i < 9; i++) {
-                    const cardData = cards[i];
-                    const cardDiv = document.createElement("div");
-                    cardDiv.id = `card-slot-${i}`;
-                    cardDiv.style.cssText = `
-                        width: 105px; height: 145px; border-radius: 8px; cursor: pointer;
-                        position: relative; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-                    `;
-                    cardDiv.innerHTML = `
-                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-mattruoc.webp" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; pointer-events: none;" />
-                    `;
-
-                    cardDiv.onmouseover = () => { if (!myHasPickedCard && !cardData.openedBy) cardDiv.style.transform = "scale(1.06)"; };
-                    cardDiv.onmouseout = () => { cardDiv.style.transform = "scale(1)"; };
-
-                    cardDiv.onclick = () => {
-                        if (myHasPickedCard || cardData.openedBy) return;
-                        myHasPickedCard = true;
-                        cardDiv.style.cursor = "default";
-                        if (socket && socket.connected) {
-                            socket.emit('pick_card', {
-                                cardIndex: i,
-                                playerName: window.currentUser || "Player"
-                            });
-                        } else {
-                            revealSingleCardUI(i, window.currentUser || "Player", cardData.reward);
-                        }
-                    };
-                    grid.appendChild(cardDiv);
-                }
-
-                if (cardFlipTimer) clearInterval(cardFlipTimer);
-                cardFlipTimer = setInterval(() => {
-                    cardTimeRemaining--;
-                    if (timerEl) timerEl.innerText = `Thời gian chọn thẻ: ${cardTimeRemaining}s`;
-
-                    if (cardTimeRemaining <= 0) {
-                        clearInterval(cardFlipTimer);
-                        cards.forEach((c, idx) => {
-                            revealSingleCardUI(idx, c.openedBy || "", c.reward);
-                        });
-
-                        setTimeout(() => {
-                            if (window.database && roomId) {
-                                window.database.ref('pvp_rooms/' + roomId).update({
-                                    status: "WAITING",
-                                    matchData: null
-                                });
-                            }
-                            if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
-                        }, 4000);
-                    }
-                }, 1000);
-            }
-
-            function revealSingleCardUI(index, playerName, reward) {
-                const cardEl = document.getElementById(`card-slot-${index}`);
-                if (!cardEl) return;
-                cardEl.style.cursor = "default";
-                cardEl.style.transform = "scale(1)";
-
-                const KIEMKHI_ICON_URL = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
-
-                cardEl.innerHTML = `
-                    <div style="width: 100%; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1.5px solid #ffcc00; box-shadow: 0 0 10px rgba(255,204,0,0.5);">
-                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-matsau.webp" style="width: 100%; height: 100%; object-fit: cover;" />
-                        <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                            <img src="${KIEMKHI_ICON_URL}" style="width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 0 5px #00ffff);" />
-                            <span style="color: #00ffff; font-weight: 900; font-size: 13px; text-shadow: 0 1px 3px #000;">+${reward}</span>
-                        </div>
-                        <div style="position: absolute; bottom: 6px; left: 4px; right: 4px; background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px; text-align: center; font-size: 9px; font-weight: bold; color: #ffd369; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${playerName ? playerName : "Chưa lật"}
-                        </div>
-                    </div>
-                `;
-
-                if (playerName && playerName.toLowerCase() === (window.currentUser || "").toLowerCase()) {
-                    if (typeof userStats !== "undefined") {
-                        if (!userStats.inventory) userStats.inventory = {};
-                        userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + reward;
-
-                        if (typeof pushSecureUserData === "function") {
-                            pushSecureUserData(window.currentUser).then(() => {
-                                if (typeof refreshUIFields === "function") refreshUIFields();
-                            });
-                        }
-                    }
-                }
-            }
+           
 
             // Thực hiện chuỗi bắn đạn liên hoàn (+1, +2, +3...)
             function executeVisualShot(shooter, angleDeg, power, isPow, extraCount) {
@@ -1071,6 +959,121 @@
             let cardFlipTimer = null;
             let cardTimeRemaining = 10;
             let myHasPickedCard = false;
+            // 🎯 1. TẠO BẢNG THẺ DỰ PHÒNG (NẾU MẤT SOCKET)
+            function initLocalCardBoard() {
+                const localCards = [];
+                for (let i = 0; i < 9; i++) {
+                    localCards.push({
+                        id: i,
+                        reward: Math.floor(Math.random() * 50) + 1,
+                        openedBy: null
+                    });
+                }
+                renderCardsBoardUI(localCards);
+            }
+
+            // 🎯 2. VẼ BẢNG 9 THẺ BÀI LÊN MÀN HÌNH
+            function renderCardsBoardUI(cards) {
+                const overlay = document.getElementById("endgame-cards-overlay");
+                const grid = document.getElementById("cards-grid-box");
+                const timerEl = document.getElementById("card-countdown-timer");
+                if (!overlay || !grid) return;
+
+                overlay.style.display = "flex";
+                grid.innerHTML = "";
+                myHasPickedCard = false;
+                cardTimeRemaining = 10;
+
+                for (let i = 0; i < 9; i++) {
+                    const cardData = cards[i];
+                    const cardDiv = document.createElement("div");
+                    cardDiv.id = `card-slot-${i}`;
+                    cardDiv.style.cssText = `
+                        width: 105px; height: 145px; border-radius: 8px; cursor: pointer;
+                        position: relative; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+                    `;
+                    cardDiv.innerHTML = `
+                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-mattruoc.webp" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; pointer-events: none;" />
+                    `;
+
+                    cardDiv.onmouseover = () => { if (!myHasPickedCard && !cardData.openedBy) cardDiv.style.transform = "scale(1.06)"; };
+                    cardDiv.onmouseout = () => { cardDiv.style.transform = "scale(1)"; };
+
+                    cardDiv.onclick = () => {
+                        if (myHasPickedCard || cardData.openedBy) return;
+                        myHasPickedCard = true;
+                        cardDiv.style.cursor = "default";
+                        if (socket && socket.connected) {
+                            socket.emit('pick_card', {
+                                cardIndex: i,
+                                playerName: window.currentUser || "Player"
+                            });
+                        } else {
+                            revealSingleCardUI(i, window.currentUser || "Player", cardData.reward);
+                        }
+                    };
+                    grid.appendChild(cardDiv);
+                }
+
+                if (cardFlipTimer) clearInterval(cardFlipTimer);
+                cardFlipTimer = setInterval(() => {
+                    cardTimeRemaining--;
+                    if (timerEl) timerEl.innerText = `Thời gian chọn thẻ: ${cardTimeRemaining}s`;
+
+                    if (cardTimeRemaining <= 0) {
+                        clearInterval(cardFlipTimer);
+                        cards.forEach((c, idx) => {
+                            revealSingleCardUI(idx, c.openedBy || "", c.reward);
+                        });
+
+                        setTimeout(() => {
+                            if (window.database && roomId) {
+                                window.database.ref('pvp_rooms/' + roomId).update({
+                                    status: "WAITING",
+                                    matchData: null
+                                });
+                            }
+                            if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                        }, 4000);
+                    }
+                }, 1000);
+            }
+
+            // 🎯 3. LẬT MẶT SAU CỦA THẺ BÀI
+            function revealSingleCardUI(index, playerName, reward) {
+                const cardEl = document.getElementById(`card-slot-${index}`);
+                if (!cardEl) return;
+                cardEl.style.cursor = "default";
+                cardEl.style.transform = "scale(1)";
+
+                const KIEMKHI_ICON_URL = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
+
+                cardEl.innerHTML = `
+                    <div style="width: 100%; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1.5px solid #ffcc00; box-shadow: 0 0 10px rgba(255,204,0,0.5);">
+                        <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-matsau.webp" style="width: 100%; height: 100%; object-fit: cover;" />
+                        <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                            <img src="${KIEMKHI_ICON_URL}" style="width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 0 5px #00ffff);" />
+                            <span style="color: #00ffff; font-weight: 900; font-size: 13px; text-shadow: 0 1px 3px #000;">+${reward}</span>
+                        </div>
+                        <div style="position: absolute; bottom: 6px; left: 4px; right: 4px; background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px; text-align: center; font-size: 9px; font-weight: bold; color: #ffd369; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${playerName ? playerName : "Chưa lật"}
+                        </div>
+                    </div>
+                `;
+
+                if (playerName && playerName.toLowerCase() === (window.currentUser || "").toLowerCase()) {
+                    if (typeof userStats !== "undefined") {
+                        if (!userStats.inventory) userStats.inventory = {};
+                        userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + reward;
+
+                        if (typeof pushSecureUserData === "function") {
+                            pushSecureUserData(window.currentUser).then(() => {
+                                if (typeof refreshUIFields === "function") refreshUIFields();
+                            });
+                        }
+                    }
+                }
+            }
 
             function checkGameOver(isImmediateSurrender = false, leaverName = null) {
                 if (isGameOver) return;
