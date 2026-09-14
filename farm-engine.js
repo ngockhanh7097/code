@@ -235,74 +235,22 @@ function createFarmModalDOM() {
         </div>
     `;
     document.body.appendChild(shopLayer);
-
-// ==========================================
-// 🏪 TIỆM HẠT GIỐNG (TỰ ĐỘNG KHỞI TẠO DOM NẾU THIẾU)
-// ==========================================
-window.openFarmShopModal = function() {
-    // 1. Kiểm tra nếu modal chưa tồn tại trên trang thì tự tạo ngay
-    let modal = document.getElementById("farm-shop-modal-layer");
-    if (!modal) {
-        modal = document.createElement("div");
-        modal.className = "modal-layer";
-        modal.id = "farm-shop-modal-layer";
-        modal.style.zIndex = "13500"; // Tăng z-index cao hơn để chắc chắn nổi lên trên cùng
-        modal.innerHTML = `
-            <div class="modal-box" style="max-width: 440px; background: #0c0d14; color: #fff; border: 2px solid #ffaa00; position: relative;">
-                <span class="modal-close" onclick="window.closeFarmShopModal()">×</span>
-                <div class="modal-title" style="color: #ffaa00; border-bottom: 1px dashed rgba(255,255,255,0.2);">
-                    🏪 Tiệm Linh Chủng Các
-                </div>
-                <div id="farm-shop-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 4px; margin-top: 10px;"></div>
+}
+    // Modal Thăm Vườn Bạn Bè
+    const visitLayer = document.createElement("div");
+    visitLayer.className = "modal-layer";
+    visitLayer.id = "farm-visit-modal-layer";
+    visitLayer.style.zIndex = "13600";
+    visitLayer.innerHTML = `
+        <div class="modal-box" style="max-width: 400px; background: #0c0d14; color: #fff; border: 2px solid #00ffcc; position: relative;">
+            <span class="modal-close" onclick="closeFarmVisitModal()">×</span>
+            <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+                🏡 Bảng Phong Thần - Ghé Thăm Dược Viên
             </div>
-        `;
-        document.body.appendChild(modal);
-    }
-
-    // 2. Render danh sách các hạt giống
-    const list = document.getElementById("farm-shop-list");
-    if (!list) return;
-
-    let html = "";
-    // Đọc cấp bậc tu vi an toàn từ window.userStats hoặc mặc định là 1
-    const myLevel = (window.userStats && window.userStats.level) ? window.userStats.level : 1;
-
-    Object.keys(FARM_SEEDS_CONFIG).forEach(sKey => {
-        const item = FARM_SEEDS_CONFIG[sKey];
-        const isEligible = myLevel >= item.minLv;
-        const priceUnit = item.priceType === "coin" ? "Linh Thạch" : "Kiếm Khí";
-
-        html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,204,0,0.2);">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <img src="${getPlantAssetUrl(sKey, 'hatgiong')}" style="width: 40px; height: 40px; object-fit: contain;" />
-                    <div style="text-align: left;">
-                        <b style="color: #ffcc00; font-size: 13px;">[${item.rank}] ${item.name}</b>
-                        <div style="font-size: 10.5px; color: #bbb;">Yêu cầu: ${item.reqRoleText} (Lv.${item.minLv}) | Lớn: ${item.growHours}h</div>
-                        <div style="font-size: 10.5px; color: #00ffcc;">Sản vật: ${item.rewardText}</div>
-                    </div>
-                </div>
-                <div>
-                    <button onclick="window.executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
-                        Mua ${item.price} ${priceUnit}
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-
-    list.innerHTML = html;
-    modal.classList.add("popup-active");
-};
-
-window.closeFarmShopModal = function() {
-    const modal = document.getElementById("farm-shop-modal-layer");
-    if (modal) modal.classList.remove("popup-active");
-};
-
-window.executeBuySeed = function(seedKey) {
-    const item = FARM_SEEDS_CONFIG[seedKey];
-    if (!item) return;
+            <div id="farm-visit-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-top: 10px; padding-right: 4px;"></div>
+        </div>
+    `;
+    document.body.appendChild(visitLayer);
 
     // Kiểm tra tài sản an toàn
     const userCoin = (window.userStats && window.userStats.coin) ? window.userStats.coin : 0;
@@ -699,6 +647,7 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
 // 10. Mua hạt giống
 window.openFarmShopModal = function() {
     const list = document.getElementById("farm-shop-list");
+    if (!list) return;
     let html = "";
     const myLevel = (window.userStats && window.userStats.level) ? window.userStats.level : 1;
 
@@ -718,7 +667,7 @@ window.openFarmShopModal = function() {
                     </div>
                 </div>
                 <div>
-                    <button onclick="executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
+                    <button onclick="window.executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
                         Mua ${item.price} ${priceUnit}
                     </button>
                 </div>
@@ -751,7 +700,7 @@ window.executeBuySeed = function(seedKey) {
 
     window.pushSecureUserData(window.currentUser).then(() => {
         window.refreshUIFields();
-        window.openFarmShopModal(); // Tự động làm mới danh sách hạt sau khi mua
+        window.openFarmShopModal();
         alert(`🎉 Mua thành công 1 hạt giống ${item.name}! Đã cất vào Túi Hạt.`);
     });
 };
@@ -793,3 +742,5 @@ window.openFarmSeedBagModal = openFarmSeedBagModal;
 window.closeFarmSeedBagModal = closeFarmSeedBagModal;
 window.executePlantSeed = executePlantSeed;
 window.loadFarmGarden = loadFarmGarden;
+window.openFarmVisitModal = openFarmVisitModal;
+window.closeFarmVisitModal = closeFarmVisitModal;
