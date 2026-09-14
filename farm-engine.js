@@ -237,12 +237,34 @@ function createFarmModalDOM() {
     document.body.appendChild(shopLayer);
 
 // ==========================================
-// 🏪 TIỆM HẠT GIỐNG (ĐÃ ĐƯA RA WINDOW)
+// 🏪 TIỆM HẠT GIỐNG (TỰ ĐỘNG KHỞI TẠO DOM NẾU THIẾU)
 // ==========================================
 window.openFarmShopModal = function() {
+    // 1. Kiểm tra nếu modal chưa tồn tại trên trang thì tự tạo ngay
+    let modal = document.getElementById("farm-shop-modal-layer");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.className = "modal-layer";
+        modal.id = "farm-shop-modal-layer";
+        modal.style.zIndex = "13500"; // Tăng z-index cao hơn để chắc chắn nổi lên trên cùng
+        modal.innerHTML = `
+            <div class="modal-box" style="max-width: 440px; background: #0c0d14; color: #fff; border: 2px solid #ffaa00; position: relative;">
+                <span class="modal-close" onclick="window.closeFarmShopModal()">×</span>
+                <div class="modal-title" style="color: #ffaa00; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+                    🏪 Tiệm Linh Chủng Các
+                </div>
+                <div id="farm-shop-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 4px; margin-top: 10px;"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // 2. Render danh sách các hạt giống
     const list = document.getElementById("farm-shop-list");
     if (!list) return;
+
     let html = "";
+    // Đọc cấp bậc tu vi an toàn từ window.userStats hoặc mặc định là 1
     const myLevel = (window.userStats && window.userStats.level) ? window.userStats.level : 1;
 
     Object.keys(FARM_SEEDS_CONFIG).forEach(sKey => {
@@ -261,7 +283,7 @@ window.openFarmShopModal = function() {
                     </div>
                 </div>
                 <div>
-                    <button onclick="executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
+                    <button onclick="window.executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
                         Mua ${item.price} ${priceUnit}
                     </button>
                 </div>
@@ -270,8 +292,7 @@ window.openFarmShopModal = function() {
     });
 
     list.innerHTML = html;
-    const modal = document.getElementById("farm-shop-modal-layer");
-    if (modal) modal.classList.add("popup-active");
+    modal.classList.add("popup-active");
 };
 
 window.closeFarmShopModal = function() {
@@ -281,24 +302,38 @@ window.closeFarmShopModal = function() {
 
 window.executeBuySeed = function(seedKey) {
     const item = FARM_SEEDS_CONFIG[seedKey];
-    if (item.priceType === "coin" && (window.userStats.coin || 0) < item.price) {
+    if (!item) return;
+
+    // Kiểm tra tài sản an toàn
+    const userCoin = (window.userStats && window.userStats.coin) ? window.userStats.coin : 0;
+    const userKiemkhi = (window.userStats && window.userStats.inventory && window.userStats.inventory.kiemkhi) ? window.userStats.inventory.kiemkhi : 0;
+
+    if (item.priceType === "coin" && userCoin < item.price) {
         return alert("Không đủ Linh Thạch!");
     }
-    if (item.priceType === "kiemkhi" && ((window.userStats.inventory?.kiemkhi) || 0) < item.price) {
+    if (item.priceType === "kiemkhi" && userKiemkhi < item.price) {
         return alert("Không đủ Kiếm Khí!");
     }
 
-    if (item.priceType === "coin") window.userStats.coin -= item.price;
-    else window.userStats.inventory.kiemkhi -= item.price;
+    // Trừ tài sản
+    if (item.priceType === "coin") {
+        window.userStats.coin -= item.price;
+    } else {
+        window.userStats.inventory.kiemkhi -= item.price;
+    }
 
+    // Thêm vào túi hạt giống
     if (!window.userStats.farmSeeds) window.userStats.farmSeeds = {};
     window.userStats.farmSeeds[seedKey] = (window.userStats.farmSeeds[seedKey] || 0) + 1;
 
-    window.pushSecureUserData(window.currentUser).then(() => {
-        window.refreshUIFields();
-        window.openFarmShopModal(); // Vẽ lại modal để cập nhật trạng thái
-        alert(`🎉 Mua thành công 1 hạt giống ${item.name}! Đã cất vào Túi Hạt.`);
-    });
+    // Lưu vào Firebase và làm mới giao diện
+    if (typeof window.pushSecureUserData === "function") {
+        window.pushSecureUserData(window.currentUser).then(() => {
+            if (typeof window.refreshUIFields === "function") window.refreshUIFields();
+            window.openFarmShopModal(); // Vẽ lại để cập nhật
+            alert(`🎉 Mua thành công 1 hạt giống ${item.name}! Đã cất vào Túi Hạt.`);
+        });
+    }
 };
 
 // ==========================================
