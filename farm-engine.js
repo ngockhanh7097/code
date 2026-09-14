@@ -236,23 +236,116 @@ function createFarmModalDOM() {
     `;
     document.body.appendChild(shopLayer);
 
-    // Modal Thăm Vườn Bạn Bè
-    const visitLayer = document.createElement("div");
-    visitLayer.className = "modal-layer";
-    visitLayer.id = "farm-visit-modal-layer";
-    visitLayer.style.zIndex = "13300";
-    visitLayer.innerHTML = `
-        <div class="modal-box" style="max-width: 400px; background: #0c0d14; color: #fff; border: 2px solid #00ffcc;">
-            <span class="modal-close" onclick="closeFarmVisitModal()">×</span>
-            <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2);">
-                🏡 Bảng Phong Thần - Ghé Thăm Dược Viên
-            </div>
-            <div id="farm-visit-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-top: 10px; padding-right: 4px;"></div>
-        </div>
-    `;
-    document.body.appendChild(visitLayer);
-}
+// ==========================================
+// 🏪 TIỆM HẠT GIỐNG (ĐÃ ĐƯA RA WINDOW)
+// ==========================================
+window.openFarmShopModal = function() {
+    const list = document.getElementById("farm-shop-list");
+    if (!list) return;
+    let html = "";
+    const myLevel = (window.userStats && window.userStats.level) ? window.userStats.level : 1;
 
+    Object.keys(FARM_SEEDS_CONFIG).forEach(sKey => {
+        const item = FARM_SEEDS_CONFIG[sKey];
+        const isEligible = myLevel >= item.minLv;
+        const priceUnit = item.priceType === "coin" ? "Linh Thạch" : "Kiếm Khí";
+
+        html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,204,0,0.2);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <img src="${getPlantAssetUrl(sKey, 'hatgiong')}" style="width: 40px; height: 40px; object-fit: contain;" />
+                    <div style="text-align: left;">
+                        <b style="color: #ffcc00; font-size: 13px;">[${item.rank}] ${item.name}</b>
+                        <div style="font-size: 10.5px; color: #bbb;">Yêu cầu: ${item.reqRoleText} (Lv.${item.minLv}) | Lớn: ${item.growHours}h</div>
+                        <div style="font-size: 10.5px; color: #00ffcc;">Sản vật: ${item.rewardText}</div>
+                    </div>
+                </div>
+                <div>
+                    <button onclick="executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
+                        Mua ${item.price} ${priceUnit}
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    list.innerHTML = html;
+    const modal = document.getElementById("farm-shop-modal-layer");
+    if (modal) modal.classList.add("popup-active");
+};
+
+window.closeFarmShopModal = function() {
+    const modal = document.getElementById("farm-shop-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
+};
+
+window.executeBuySeed = function(seedKey) {
+    const item = FARM_SEEDS_CONFIG[seedKey];
+    if (item.priceType === "coin" && (window.userStats.coin || 0) < item.price) {
+        return alert("Không đủ Linh Thạch!");
+    }
+    if (item.priceType === "kiemkhi" && ((window.userStats.inventory?.kiemkhi) || 0) < item.price) {
+        return alert("Không đủ Kiếm Khí!");
+    }
+
+    if (item.priceType === "coin") window.userStats.coin -= item.price;
+    else window.userStats.inventory.kiemkhi -= item.price;
+
+    if (!window.userStats.farmSeeds) window.userStats.farmSeeds = {};
+    window.userStats.farmSeeds[seedKey] = (window.userStats.farmSeeds[seedKey] || 0) + 1;
+
+    window.pushSecureUserData(window.currentUser).then(() => {
+        window.refreshUIFields();
+        window.openFarmShopModal(); // Vẽ lại modal để cập nhật trạng thái
+        alert(`🎉 Mua thành công 1 hạt giống ${item.name}! Đã cất vào Túi Hạt.`);
+    });
+};
+
+// ==========================================
+// 🏡 GHÉ THĂM BẠN BÈ QUA BXH (ĐÃ ĐƯA RA WINDOW)
+// ==========================================
+window.openFarmVisitModal = function() {
+    const list = document.getElementById("farm-visit-list");
+    if (!list) return;
+
+    // Lấy từ window.cachedLeaderboardList hoặc mảng cục bộ
+    const lbList = window.cachedLeaderboardList || [];
+
+    if (lbList.length === 0) {
+        list.innerHTML = `<div style="color: #aaa; padding: 20px; text-align: center;">Đang đồng bộ thần thức danh sách đạo hữu... Hãy thử lại sau vài giây!</div>`;
+    } else {
+        let html = "";
+        lbList.forEach(u => {
+            if (u.name.toLowerCase() !== window.currentUser.toLowerCase()) {
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px;">
+                        <div style="text-align: left;">
+                            <b style="color: #ffcc00; font-size: 12px;">${u.name}</b>
+                            <span style="font-size: 10px; color: #aaa; margin-left: 6px;">Lv.${u.level}</span>
+                        </div>
+                        <button onclick="closeFarmVisitModal(); loadFarmGarden('${u.name}')" style="background: #008080; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer;">
+                            🏡 Ghé Thăm
+                        </button>
+                    </div>
+                `;
+            }
+        });
+        list.innerHTML = html;
+    }
+
+    const modal = document.getElementById("farm-visit-modal-layer");
+    if (modal) modal.classList.add("popup-active");
+};
+
+window.closeFarmVisitModal = function() {
+    const modal = document.getElementById("farm-visit-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
+};
+
+window.openFarmSeedBagModal = openFarmSeedBagModal;
+window.closeFarmSeedBagModal = closeFarmSeedBagModal;
+window.executePlantSeed = executePlantSeed;
+window.loadFarmGarden = loadFarmGarden;
 // 3. Mở & Đóng Nông Trại
 window.openFarmModal = function() {
     if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
