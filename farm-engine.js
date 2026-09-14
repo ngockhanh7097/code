@@ -328,14 +328,37 @@ window.closeFarmVisitModal = function() {
 
 // 3. Mở & Đóng Nông Trại
 window.openFarmModal = function() {
-    if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
-    createFarmModalDOM();
-    document.getElementById("farm-modal-layer").classList.add("popup-active");
-    loadFarmGarden(window.currentUser);
+    // 1. Kiểm tra tài khoản
+    const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+    if (!activeUser) {
+        alert("Vui lòng đăng nhập khế ước trước!");
+        return;
+    }
 
+    // 2. Tạo DOM nếu chưa có
+    if (typeof createFarmModalDOM === "function") {
+        createFarmModalDOM();
+    }
+
+    // 3. Kích hoạt hiển thị modal
+    const layer = document.getElementById("farm-modal-layer");
+    if (!layer) {
+        alert("Lỗi: Không tìm thấy khung giao diện Linh Điền!");
+        return;
+    }
+    layer.classList.add("popup-active");
+
+    // 4. Nạp dữ liệu
+    if (typeof loadFarmGarden === "function") {
+        loadFarmGarden(activeUser);
+    }
+
+    // 5. Khởi động bộ đếm
     if (farmUpdateTimer) clearInterval(farmUpdateTimer);
     farmUpdateTimer = setInterval(() => {
-        if (farmCurrentVisitingUser) renderFarmPlotsOnly(farmCurrentVisitingUser);
+        if (farmCurrentVisitingUser && typeof renderFarmPlotsOnly === "function") {
+            renderFarmPlotsOnly(farmCurrentVisitingUser);
+        }
     }, 1000);
 };
 
