@@ -419,10 +419,14 @@ function renderFarmPlotsOnly(targetUsername) {
         const farmData = snap.val() || { plots: {} };
         const plots = farmData.plots || {};
 
+        // Nếu là vườn của chính mình -> Lấy luôn level từ userStats cho tức thì
+        const isMe = (targetUsername.toLowerCase() === (window.currentUser || currentUser).toLowerCase());
+        let myDirectLevel = (window.userStats && window.userStats.level) ? window.userStats.level : 1;
+
         window.database.ref('users/' + targetUsername).once('value').then(uSnap => {
             const uData = uSnap.val() || {};
-            let userLevel = uData.level || 1;
-            if (uData.securePayload && window.GameCrypt) {
+            let userLevel = isMe ? myDirectLevel : (uData.level || 1);
+            if (!isMe && uData.securePayload && window.GameCrypt) {
                 const dec = window.GameCrypt.decrypt(uData.securePayload);
                 if (dec && dec.level) userLevel = dec.level;
             }
