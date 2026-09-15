@@ -462,7 +462,9 @@ const DUNGEON_CONFIGS = {
             BUFF_ICONS.dame10.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-10.webp';
 
             const roomId = matchData ? matchData.roomId : null;
-            const isHost = matchData ? (matchData.host === (window.currentUser || "Player 1")) : true;
+            const myNameClean = (window.currentUser || "").trim().toLowerCase();
+            const hostNameClean = (matchData && matchData.host ? matchData.host : "").trim().toLowerCase();
+            const isHost = matchData ? (myNameClean === hostNameClean) : true;
 
             const terrainCanvas = document.createElement('canvas');
             terrainCanvas.width = WORLD_WIDTH;
@@ -1679,7 +1681,8 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                         const curExpRadius = b.isPow ? 75 : EXPLOSION_RADIUS;
                         const holeRadius = b.isPow ? 60 : 40;
 
-                        const isBulletOwner = !socket || (b.ownerName === (window.currentUser || ""));
+                        // Nếu đạn của người chơi thì máy người đó nổ. Nếu đạn của Quái/Boss thì máy Host kích nổ.
+                        const isBulletOwner = !socket || (b.ownerName === (window.currentUser || "")) || (isHost && b.ownerTeam === 2);
 
                         if (isBulletOwner) {
                             explosions.push({ x: expX, y: expY, radius: 6, maxRadius: b.isPow ? 65 : 42, alpha: 1, color: b.isPow ? '#ff0055' : '#ffd369' });
@@ -1756,8 +1759,11 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                    chargePower = 0;
                    chargeDir = 1;
                
-                   // Chỉ người đang trong lượt bắn mới có quyền phát lệnh chuyển turn
-                   if (isMyTurn()) {
+                   const curActiveP = getActivePlayer();
+                   // Nếu là lượt người chơi thì người chơi chuyển lượt. Nếu là Quái/Boss bắn xong thì Host chuyển lượt ngay lập tức.
+                   const canTriggerNext = isMyTurn() || (isHost && curActiveP && curActiveP.isMonster);
+               
+                   if (canTriggerNext) {
                        setTimeout(() => {
                            triggerNextTurnServer();
                        }, 400);
