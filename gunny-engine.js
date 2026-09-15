@@ -19,63 +19,79 @@
 const DUNGEON_CONFIGS = {
     "linh_son_1": {
         name: "Ải 1: Yêu Lang Linh Sơn",
-        bg: "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=1200&q=80", // Ảnh nền ví dụ
+        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp",
         monsters: [
             {
-                name: "Huyết Lang Tinh",
-                level: 5,
-                hp: 150,
-                maxHp: 150,
-                damage: 12,
-                x: 720, y: 350,
+                id: "wolf_minion_1",
+                name: "Huyết Lang (Nhỏ)",
+                level: 3,
+                type: "melee", // Cận chiến: Bò lại gần mới đánh
+                hp: 120,
+                maxHp: 120,
+                damage: 8,
+                attackRange: 45, // Tầm đánh chạm người
+                moveSpeed: 60,   // Quãng đường bò mỗi lượt (pixel)
+                x: 650, y: 350,
                 isMonster: true,
+                isBoss: false,
                 gender: "male",
                 skin: "monster_wolf_1",
                 weaponImg: ""
             },
             {
-                name: "Huyết Lang Đầu Đàn (Boss)",
+                id: "wolf_boss",
+                name: "Huyết Lang Vương (Boss)",
                 level: 10,
-                hp: 350,
-                maxHp: 350,
-                damage: 22,
+                type: "ranged_weapon", // Đứng xa bắn như người
+                bossSkillType: "ranged", // "ranged": bắn vũ khí, "aoe": đánh lan toàn đội
+                hp: 450,
+                maxHp: 450,
+                damage: 25,
                 x: 820, y: 350,
                 isMonster: true,
                 isBoss: true,
                 gender: "male",
                 skin: "monster_boss_wolf",
-                weaponImg: ""
+                weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
             }
         ]
     },
     "linh_son_2": {
         name: "Ải 2: Cửu U Hắc Báo",
-        bg: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp",
         monsters: [
             {
-                name: "Hắc Báo Ma Sứ",
-                level: 12,
-                hp: 250,
-                maxHp: 250,
-                damage: 25,
-                x: 750, y: 350,
+                id: "panther_minion_1",
+                name: "Hắc Báo Binh",
+                level: 8,
+                type: "melee",
+                hp: 200,
+                maxHp: 200,
+                damage: 15,
+                attackRange: 45,
+                moveSpeed: 70,
+                x: 640, y: 350,
                 isMonster: true,
+                isBoss: false,
                 gender: "male",
                 skin: "monster_panther",
                 weaponImg: ""
             },
             {
-                name: "Ma Báo Vương (Boss)",
-                level: 18,
-                hp: 600,
-                maxHp: 600,
-                damage: 38,
+                id: "panther_boss",
+                name: "Cửu U Ma Báo (Boss AoE)",
+                level: 20,
+                type: "aoe_all", // Đứng xa gầm 1 phát toàn bộ người chơi mất máu
+                bossSkillType: "aoe",
+                hp: 800,
+                maxHp: 800,
+                damage: 35,
                 x: 830, y: 350,
                 isMonster: true,
                 isBoss: true,
                 gender: "male",
                 skin: "monster_boss_panther",
-                weaponImg: ""
+                weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
             }
         ]
     }
@@ -509,45 +525,119 @@ const DUNGEON_CONFIGS = {
             let playerImages = {};
             let weaponImages = {};
 
-           if (matchData && matchData.players && matchData.players.length > 0) {
-                // SẮP XẾP: Level thấp xếp trước, Level cao xếp sau
-                const sortedPlayers = [...matchData.players].sort((a, b) => (a.level || 1) - (b.level || 1));
+           const isDungeonMode = matchData && matchData.mode === "phoban";
+const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
 
-                sortedPlayers.forEach(p => {
-                    let pImg = new Image();
-                    let genderKey = (p.gender === "female") ? "female" : "male";
-                    pImg.src = CHIBI_AVATARS[genderKey];
-                    playerImages[p.name] = pImg;
+if (isDungeonMode && currentDungeon && currentDungeon.bg) {
+    bgImg.src = currentDungeon.bg;
+}
 
-                    let wImg = new Image();
-                    wImg.src = p.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
-                    weaponImages[p.name] = wImg;
+if (matchData && matchData.players && matchData.players.length > 0) {
+    let humanPlayers = [];
+    let monsterMinions = [];
+    let monsterBosses = [];
 
-                    gamePlayers.push({
-                        slotIndex: p.slotIndex,
-                        name: p.name || "Đạo Hữu",
-                        tuviText: p.tuviText || "Phàm Nhân",
-                        team: p.team,
-                        level: p.level || 1,
-                        damageStat: p.damage || BASE_DAMAGE,
-                        hp: p.hp || 100,
-                        maxHp: p.hp || 100,
-                        stamina: 100,
-                        maxStamina: p.energy || 100,
-                        pow: 0,
-                        isPowActive: false,
-                        extraBulletsCount: 0,
-                        damageBonusPercent: 0, // 👉 Thêm dòng này
-                        activeBuffs: [],       // 👉 Thêm dòng này
-                        x: SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750),
-                        y: 350,
-                        radius: 28,
-                        angle: 45,
-                        facing: p.team === 1 ? 1 : -1,
-                        color: p.team === 1 ? '#ff4b2b' : '#38ef7d'
-                    });
-                });
+    // 1. Nạp Người chơi (Tất cả thuộc Team 1)
+    matchData.players.forEach((p, idx) => {
+        let pImg = new Image();
+        let genderKey = (p.gender === "female") ? "female" : "male";
+        pImg.src = CHIBI_AVATARS[genderKey];
+        playerImages[p.name] = pImg;
+
+        let wImg = new Image();
+        wImg.src = p.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
+        weaponImages[p.name] = wImg;
+
+        // Vị trí xuất phát bên trái (tối đa 4 người: x = 80, 160, 240, 320)
+        let spawnX = isDungeonMode ? (80 + idx * 80) : (SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750));
+
+        humanPlayers.push({
+            slotIndex: p.slotIndex || (idx + 1),
+            name: p.name || "Đạo Hữu",
+            tuviText: p.tuviText || "Phàm Nhân",
+            team: isDungeonMode ? 1 : p.team,
+            level: p.level || 1,
+            damageStat: p.damage || BASE_DAMAGE,
+            hp: p.hp || 100,
+            maxHp: p.hp || 100,
+            stamina: 100,
+            maxStamina: p.energy || 100,
+            pow: 0,
+            isPowActive: false,
+            extraBulletsCount: 0,
+            damageBonusPercent: 0,
+            activeBuffs: [],
+            isMonster: false,
+            isBoss: false,
+            x: spawnX,
+            y: 350,
+            radius: 28,
+            angle: 45,
+            facing: 1,
+            color: '#38ef7d'
+        });
+    });
+
+    // 2. Nạp Quái vật (Chỉ khi đi Phó Bản - Quái vật thuộc Team 2)
+    if (isDungeonMode && currentDungeon && currentDungeon.monsters) {
+        currentDungeon.monsters.forEach((m, mIdx) => {
+            let mImg = new Image();
+            mImg.src = m.isBoss 
+                ? 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp'
+                : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp';
+            playerImages[m.name] = mImg;
+
+            let mWp = new Image();
+            mWp.src = m.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
+            weaponImages[m.name] = mWp;
+
+            let monsterObj = {
+                slotIndex: 10 + mIdx,
+                name: m.name,
+                tuviText: m.isBoss ? "YÊU VƯƠNG (BOSS)" : `Yêu Thú Lv.${m.level}`,
+                team: 2,
+                level: m.level,
+                damageStat: m.damage,
+                hp: m.hp,
+                maxHp: m.maxHp,
+                stamina: 100,
+                maxStamina: 100,
+                pow: 0,
+                isPowActive: false,
+                extraBulletsCount: 0,
+                damageBonusPercent: 0,
+                activeBuffs: [],
+                isMonster: true,
+                isBoss: m.isBoss,
+                monsterType: m.type, // 'melee', 'ranged_weapon', 'aoe_all'
+                attackRange: m.attackRange || 45,
+                moveSpeed: m.moveSpeed || 60,
+                x: m.x,
+                y: m.y || 350,
+                radius: m.isBoss ? 38 : 26,
+                angle: 45,
+                facing: -1,
+                color: m.isBoss ? '#ff0055' : '#ff7675'
+            };
+
+            if (m.isBoss) {
+                monsterBosses.push(monsterObj);
             } else {
+                monsterMinions.push(monsterObj);
+            }
+        });
+    }
+
+    // 3. Sắp xếp thứ tự lượt tuyệt đối: Quái nhỏ -> Boss -> Người chơi
+    if (isDungeonMode) {
+        // Trong phe người chơi: Level thấp đi trước
+        humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
+        gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
+    } else {
+        // Chế độ PvP: Xếp theo Level thấp lên cao
+        gamePlayers = [...humanPlayers].sort((a, b) => (a.level || 1) - (b.level || 1));
+    }
+} else {
                 const p1Img = new Image(); p1Img.src = CHIBI_AVATARS.male; playerImages["Player 1"] = p1Img;
                 const p2Img = new Image(); p2Img.src = CHIBI_AVATARS.female; playerImages["Player 2"] = p2Img;
                 const defWp = new Image(); defWp.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
@@ -834,43 +924,45 @@ const DUNGEON_CONFIGS = {
             }
 
           function triggerNextTurnServer() {
-                let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
-                let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
-                
-                if (!team1Alive || !team2Alive) {
-                    checkGameOver();
-                    return;
-                }
-            
-                let nextIdx = -1;
-                // Tìm người tiếp theo còn sống theo vòng tròn 1 -> 2 -> 3 -> 4 -> 1
-                for (let i = 1; i <= gamePlayers.length; i++) {
-                    let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
-                    if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
-                        nextIdx = candidateIdx;
-                        break;
-                    }
-                }
-            
-                if (nextIdx === -1) {
-                    checkGameOver();
-                    return;
-                }
-            
-                let newWind = (Math.random() * 0.06 - 0.03);
-            
-                if (socket && socket.connected) {
-                    socket.emit('request_next_turn', {
-                        nextIndex: nextIdx,
-                        nextWind: newWind
-                    });
-                } else {
-                    currentPlayerIndex = nextIdx;
-                    wind = newWind;
-                    resetTurnState();
-                }
-            }
+    const isDungeonMode = matchData && matchData.mode === "phoban";
 
+    // 1. Kiểm tra điều kiện sống còn
+    let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
+    let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
+
+    if (!team1Alive || !team2Alive) {
+        checkGameOver();
+        return;
+    }
+
+    // 2. Tìm lượt kế tiếp còn sống theo vòng xoay
+    let nextIdx = -1;
+    for (let i = 1; i <= gamePlayers.length; i++) {
+        let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
+        if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
+            nextIdx = candidateIdx;
+            break;
+        }
+    }
+
+    if (nextIdx === -1) {
+        checkGameOver();
+        return;
+    }
+
+    let newWind = (Math.random() * 0.06 - 0.03);
+
+    if (socket && socket.connected) {
+        socket.emit('request_next_turn', {
+            nextIndex: nextIdx,
+            nextWind: newWind
+        });
+    } else {
+        currentPlayerIndex = nextIdx;
+        wind = newWind;
+        resetTurnState();
+    }
+}
             function resetTurnState() {
                 isFiring = false;
                 isCharging = false;
