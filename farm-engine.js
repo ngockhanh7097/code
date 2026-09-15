@@ -1,4 +1,4 @@
-    /**
+/**
  * JOOARIS FARM ENGINE (DƯỢC VIÊN TU CHÂN)
  * Kiến trúc độc lập - Chống lag bằng Timestamp
  */
@@ -23,13 +23,23 @@ const FARM_PLOT_LEVELS = [
 
 let farmCurrentVisitingUser = null;
 let farmUpdateTimer = null;
+let isStealingInProgress = false;
+
+// Tọa độ khớp từng ô đá trên nền cay-linhdien.webp
+const PLOT_COORDINATES = {
+    1: { top: "28.5%", left: "22.2%", width: "26.5%", height: "15.6%" },
+    2: { top: "28.5%", left: "51.4%", width: "26.5%", height: "15.6%" },
+    3: { top: "44.6%", left: "23%", width: "26.5%", height: "15.6%" },
+    4: { top: "44.6%", left: "51.4%", width: "26.5%", height: "15.6%" },
+    5: { top: "61.3%", left: "23%", width: "26.5%", height: "15.6%" },
+    6: { top: "61.3%", left: "51.4%", width: "26.5%", height: "15.6%" }
+};
 
 // 🔥 HÀM GỌI THÔNG BÁO THẦN THỨC ĐẸP TỪ APP CHÍNH
 function showFarmAlert(titleOrMsg, maybeMsg) {
     let title = "THẦN THỨC TRUYỀN TIN";
     let message = titleOrMsg;
 
-    // Nếu truyền đủ cả 2 tham số
     if (maybeMsg !== undefined) {
         title = titleOrMsg;
         message = maybeMsg;
@@ -46,7 +56,8 @@ function showFarmAlert(titleOrMsg, maybeMsg) {
     } else {
         window.alert(message);
     }
-} 
+}
+
 function getPlantAssetUrl(seedKey, stage) {
     return `https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/cay-${seedKey}-${stage}.webp`;
 }
@@ -70,7 +81,6 @@ function injectFarmStyles() {
             box-shadow: 0 0 30px rgba(0,255,204,0.4);
             user-select: none;
         }
-        /* Khung chứa bao trọn toàn bộ sân khấu để các ô con lấy tọa độ chuẩn 100% theo ảnh nền */
         .farm-plots-overlay-grid {
             position: absolute;
             top: 0;
@@ -94,22 +104,19 @@ function injectFarmStyles() {
             object-fit: contain;
             filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8));
             transition: transform 0.2s, width 0.2s, height 0.2s;
-            margin-bottom: 8px; /* Căn khoảng cách tự nhiên với thẻ đếm giờ bên dưới */
+            margin-bottom: 6px;
         }
-        /* 🌱 Giai đoạn hạt: Tỷ lệ 1/3 chuẩn (45px) - nhìn rõ nét, vừa vặn giữa lòng đất */
         .stage-hatgiong {
-            width: 44px !important;
-            height: 44px !important;
+            width: 48px !important;
+            height: 48px !important;
         }
-        /* 🌿 Giai đoạn tầm trung: Tỷ lệ 1/2 chuẩn (62px) */
         .stage-trung {
-            width: 62px !important;
-            height: 62px !important;
+            width: 66px !important;
+            height: 66px !important;
         }
-        /* 🌳 Giai đoạn trưởng thành: To nguyên bản (88px) */
         .stage-truongthanh {
-            width: 88px !important;
-            height: 88px !important;
+            width: 90px !important;
+            height: 90px !important;
         }
         .farm-plot-cell:hover .farm-plant-img {
             transform: scale(1.08);
@@ -189,7 +196,6 @@ function injectFarmStyles() {
         .farm-btn-action:hover {
             transform: scale(1.05);
         }
-        /* 🌿 BẢNG THẦN THỨC SOI CÂY TRỒNG (TOOLTIP POPOVER) */
         .farm-plant-tooltip {
             position: absolute;
             bottom: calc(100% + 6px);
@@ -210,7 +216,6 @@ function injectFarmStyles() {
             text-align: left;
             backdrop-filter: blur(4px);
         }
-        /* Mũi tên nhọn chỉ xuống gốc cây */
         .farm-plant-tooltip::after {
             content: '';
             position: absolute;
@@ -221,7 +226,6 @@ function injectFarmStyles() {
             border-style: solid;
             border-color: #00ffcc transparent transparent transparent;
         }
-        /* Hiển thị khi rê chuột (Hover) hoặc khi được click kích hoạt (active) */
         .farm-plot-cell:hover .farm-plant-tooltip,
         .farm-plant-tooltip.show {
             opacity: 1;
@@ -247,9 +251,7 @@ function createFarmModalDOM() {
             <span class="modal-close" onclick="closeFarmModal()" style="position: absolute; top: -12px; right: -8px; font-size: 28px; color: #ffcc00; z-index: 99; cursor: pointer; text-shadow: 0 0 8px #000;">×</span>
             
             <div class="farm-stage-viewport">
-                <!-- Thanh Thông Tin Đầu -->
                 <div class="farm-top-nav-bar">
-                
                     <div class="farm-currency-badge" style="display: flex; align-items: center; gap: 6px;">
                         <span>💧 Linh Dịch: <b id="farm-lbl-linhdich" style="color: #00ffcc;">0</b></span>
                         <button onclick="window.openFarmGuideModal()" title="Cẩm Nang Dược Viên" style="background: rgba(0, 255, 204, 0.2); border: 1px solid #00ffcc; color: #00ffcc; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 1;">?</button>
@@ -260,14 +262,11 @@ function createFarmModalDOM() {
                     </div>
                 </div>
 
-                <!-- Lưới 6 Ô Đất Trồng -->
                 <div class="farm-plots-overlay-grid" id="farm-plots-container"></div>
 
-                <!-- Menu Phía Dưới -->
                 <div class="farm-bottom-menu-bar" id="farm-footer-menu">
-                	<!-- 🧙‍♂️ KHUNG NHÂN VẬT ĐỨNG TRÊN NÚT TÚI HẠT (KHÓA CHIỀU CAO CHUẨN - CHIỀU NGANG TỰ TÍNH) -->
                     <div id="farm-avatar-stand" style="position: absolute; bottom: 100%; left: 11.5%; transform: translateX(-50%); display: flex; align-items: flex-end; justify-content: center; pointer-events: none; z-index: 15; margin-bottom: 2px;">
-                        <img id="farm-character-display" src="" style="height: 235px !important; width: auto !important; max-width: none !important; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9));" />
+                        <img id="farm-character-display" src="" style="height: 290px !important; width: auto !important; max-width: none !important; object-fit: contain; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9));" />
                     </div>
                     <button class="farm-btn-action" style="background: linear-gradient(135deg, #795548 0%, #5d4037 100%); border: 1px solid #8d6e63;" onclick="openFarmSeedBagModal()">
                         🎒 Túi Hạt
@@ -290,7 +289,6 @@ function createFarmModalDOM() {
     `;
     document.body.appendChild(layer);
 
-    // Modal Túi Hạt Giống
     const seedBagLayer = document.createElement("div");
     seedBagLayer.className = "modal-layer";
     seedBagLayer.id = "farm-seedbag-modal-layer";
@@ -307,7 +305,6 @@ function createFarmModalDOM() {
     `;
     document.body.appendChild(seedBagLayer);
 
-    // Modal Tiệm Hạt Giống
     const shopLayer = document.createElement("div");
     shopLayer.className = "modal-layer";
     shopLayer.id = "farm-shop-modal-layer";
@@ -322,8 +319,38 @@ function createFarmModalDOM() {
         </div>
     `;
     document.body.appendChild(shopLayer);
-  
-  	// Modal Hướng Dẫn Cẩm Nang Dược Viên
+
+    const visitLayer = document.createElement("div");
+    visitLayer.className = "modal-layer";
+    visitLayer.id = "farm-visit-modal-layer";
+    visitLayer.style.zIndex = "13600";
+    visitLayer.innerHTML = `
+        <div class="modal-box" style="max-width: 400px; background: #0c0d14; color: #fff; border: 2px solid #00ffcc; position: relative;">
+            <span class="modal-close" onclick="closeFarmVisitModal()">×</span>
+            <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+                🏡 Bảng Phong Thần - Ghé Thăm Dược Viên
+            </div>
+            <div id="farm-visit-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-top: 10px; padding-right: 4px;"></div>
+        </div>
+    `;
+    document.body.appendChild(visitLayer);
+
+    const historyLayer = document.createElement("div");
+    historyLayer.className = "modal-layer";
+    historyLayer.id = "farm-history-modal-layer";
+    historyLayer.style.zIndex = "13600";
+    historyLayer.innerHTML = `
+        <div class="modal-box" style="max-width: 440px; background: #0c0d14; color: #fff; border: 2px solid #7f8c8d; position: relative;">
+            <span class="modal-close" onclick="window.closeFarmHistoryModal()">×</span>
+            <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2);">
+                📜 Thần Thức Giám Sát - Nhật Ký Dược Viên
+            </div>
+            <p style="font-size: 11px; color: #aaa; margin: -5px 0 10px 0;">Lưu lại 30 biến động thần thức gần nhất</p>
+            <div id="farm-history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 330px; overflow-y: auto; padding-right: 4px;"></div>
+        </div>
+    `;
+    document.body.appendChild(historyLayer);
+
     if (!document.getElementById("farm-guide-modal-layer")) {
         const guideLayer = document.createElement("div");
         guideLayer.className = "modal-layer";
@@ -378,95 +405,19 @@ function createFarmModalDOM() {
         document.body.appendChild(guideLayer);
     }
 }
-    // Modal Thăm Vườn Bạn Bè
-    const visitLayer = document.createElement("div");
-    visitLayer.className = "modal-layer";
-    visitLayer.id = "farm-visit-modal-layer";
-    visitLayer.style.zIndex = "13600";
-    visitLayer.innerHTML = `
-        <div class="modal-box" style="max-width: 400px; background: #0c0d14; color: #fff; border: 2px solid #00ffcc; position: relative;">
-            <span class="modal-close" onclick="closeFarmVisitModal()">×</span>
-            <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2);">
-                🏡 Bảng Phong Thần - Ghé Thăm Dược Viên
-            </div>
-            <div id="farm-visit-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-top: 10px; padding-right: 4px;"></div>
-        </div>
-    `;
-    document.body.appendChild(visitLayer);
-
-// Modal Lịch Sử Dược Viên
-    const historyLayer = document.createElement("div");
-    historyLayer.className = "modal-layer";
-    historyLayer.id = "farm-history-modal-layer";
-    historyLayer.style.zIndex = "13600";
-    historyLayer.innerHTML = `
-        <div class="modal-box" style="max-width: 440px; background: #0c0d14; color: #fff; border: 2px solid #7f8c8d; position: relative;">
-            <span class="modal-close" onclick="window.closeFarmHistoryModal()">×</span>
-            <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2);">
-                📜 Thần Thức Giám Sát - Nhật Ký Dược Viên
-            </div>
-            <p style="font-size: 11px; color: #aaa; margin: -5px 0 10px 0;">Lưu lại 30 biến động thần thức gần nhất</p>
-            <div id="farm-history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 330px; overflow-y: auto; padding-right: 4px;"></div>
-        </div>
-    `;
-    document.body.appendChild(historyLayer);
-// ==========================================
-// 🏡 GHÉ THĂM BẠN BÈ QUA BXH (ĐÃ ĐƯA RA WINDOW)
-// ==========================================
-window.openFarmVisitModal = function() {
-    const list = document.getElementById("farm-visit-list");
-    if (!list) return;
-
-    // Lấy từ window.cachedLeaderboardList hoặc mảng cục bộ
-    const lbList = window.cachedLeaderboardList || [];
-
-    if (lbList.length === 0) {
-        list.innerHTML = `<div style="color: #aaa; padding: 20px; text-align: center;">Đang đồng bộ thần thức danh sách đạo hữu... Hãy thử lại sau vài giây!</div>`;
-    } else {
-        let html = "";
-        lbList.forEach(u => {
-            if (u.name.toLowerCase() !== window.currentUser.toLowerCase()) {
-                html += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 6px;">
-                        <div style="text-align: left;">
-                            <b style="color: #ffcc00; font-size: 12px;">${u.name}</b>
-                            <span style="font-size: 10px; color: #aaa; margin-left: 6px;">Lv.${u.level}</span>
-                        </div>
-                        <button onclick="closeFarmVisitModal(); loadFarmGarden('${u.name}')" style="background: #008080; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer;">
-                            🏡 Ghé Thăm
-                        </button>
-                    </div>
-                `;
-            }
-        });
-        list.innerHTML = html;
-    }
-
-    const modal = document.getElementById("farm-visit-modal-layer");
-    if (modal) modal.classList.add("popup-active");
-};
-
-window.closeFarmVisitModal = function() {
-    const modal = document.getElementById("farm-visit-modal-layer");
-    if (modal) modal.classList.remove("popup-active");
-};
-
 
 // 3. Mở & Đóng Nông Trại
 window.openFarmModal = function() {
-    // 1. Kiểm tra tài khoản
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
     if (!activeUser) {
         showFarmAlert("Vui lòng đăng nhập khế ước trước!");
         return;
     }
 
-    // 2. Tạo DOM nếu chưa có
     if (typeof createFarmModalDOM === "function") {
         createFarmModalDOM();
     }
 
-    // 3. Kích hoạt hiển thị modal
     const layer = document.getElementById("farm-modal-layer");
     if (!layer) {
         showFarmAlert("Lỗi: Không tìm thấy khung giao diện Linh Điền!");
@@ -474,16 +425,14 @@ window.openFarmModal = function() {
     }
     layer.classList.add("popup-active");
 
-    // 4. Nạp dữ liệu
     if (typeof loadFarmGarden === "function") {
         loadFarmGarden(activeUser);
     }
 
-    // 5. Khởi động bộ đếm
     if (farmUpdateTimer) clearInterval(farmUpdateTimer);
     farmUpdateTimer = setInterval(() => {
-        if (farmCurrentVisitingUser && typeof updateFarmCountdownsOnly === "function") {
-            updateFarmCountdownsOnly(farmCurrentVisitingUser);
+        if (farmCurrentVisitingUser && typeof window.updateFarmCountdownsOnly === "function") {
+            window.updateFarmCountdownsOnly(farmCurrentVisitingUser);
         }
     }, 1000);
 };
@@ -500,7 +449,6 @@ function loadFarmGarden(targetUsername) {
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
     const isMe = (targetUsername.toLowerCase() === activeUser.toLowerCase());
 
-    // Ghi nhận khi người khác ghé thăm vườn bạn
     if (!isMe) {
         logFarmAction(targetUsername, activeUser, "VISIT", "Đã ghé thăm cảnh quan Dược Viên");
     }
@@ -512,11 +460,9 @@ function loadFarmGarden(targetUsername) {
     const linhDichCount = uStats.linhdich || 0;
     document.getElementById("farm-lbl-linhdich").innerText = linhDichCount;
 
-    // 🌟 TRUYỀN ẢNH NHÂN VẬT / AVATAR VÀO VỊ TRÍ TRÊN NÚT TÚI HẠT
     const charImgEl = document.getElementById("farm-character-display");
     if (charImgEl) {
         if (isMe) {
-            // Vườn bản thể: Lấy ngoại trang nhân vật đang mặc
             let g = uStats.gender || "male";
             let defSkin = (g === "female") ? "female_1" : "male_1";
             let currentSkinId = uStats.equippedSkin || defSkin;
@@ -526,7 +472,6 @@ function loadFarmGarden(targetUsername) {
                 charImgEl.src = (typeof currentAvatar !== 'undefined' ? currentAvatar : "");
             }
         } else {
-            // Vườn bạn bè: Lấy ngoại trang hoặc avatar của đối phương từ Firebase/Cache
             const db = window.database || (typeof database !== 'undefined' ? database : null);
             let friendObj = (window.cachedLeaderboardList || []).find(u => u.name.toLowerCase() === targetUsername.toLowerCase());
 
@@ -550,21 +495,10 @@ function loadFarmGarden(targetUsername) {
     renderFarmPlotsOnly(targetUsername);
 }
 
-// Tọa độ chuẩn xác 100% khớp từng ô đá trên ảnh cay-linhdien.webp
-const PLOT_COORDINATES = {
-    1: { top: "28.5%", left: "22.2%", width: "26.5%", height: "15.6%" }, // Hàng 1 - Trái
-    2: { top: "28.5%", left: "51.4%", width: "26.5%", height: "15.6%" }, // Hàng 1 - Phải
-    3: { top: "44.6%", left: "23%", width: "26.5%", height: "15.6%" }, // Hàng 2 - Trái
-    4: { top: "44.6%", left: "51.4%", width: "26.5%", height: "15.6%" }, // Hàng 2 - Phải
-    5: { top: "61.3%", left: "23%", width: "26.5%", height: "15.6%" }, // Hàng 3 - Trái (Hóa Thần)
-    6: { top: "61.3%", left: "51.4%", width: "26.5%", height: "15.6%" }  // Hàng 3 - Phải (Anh Biến)
-};
-
 function renderFarmPlotsOnly(targetUsername) {
     const container = document.getElementById("farm-plots-container");
     if (!container) return;
 
-    // Chuyển container từ dạng grid sang relative để các ô căn chuẩn theo tọa độ độc lập
     container.style.display = "block";
 
     const db = window.database || (typeof database !== 'undefined' ? database : null);
@@ -604,8 +538,6 @@ function renderFarmPlotsOnly(targetUsername) {
                 const plotData = plots[`plot_${pIndex}`];
                 const isUnlocked = Number(userLevel) >= Number(slotInfo.minLv);
                 const pos = PLOT_COORDINATES[pIndex] || { top: "0%", left: "0%", width: "27%", height: "16%" };
-
-                // Thiết lập vị trí tuyệt đối cho từng ô
                 const posStyle = `position: absolute; top: ${pos.top}; left: ${pos.left}; width: ${pos.width}; height: ${pos.height}; box-sizing: border-box;`;
 
                 if (!isUnlocked) {
@@ -648,24 +580,15 @@ function renderFarmPlotsOnly(targetUsername) {
                         tagText = plotData.isStolen ? "Đã Bị Trộm (90%)" : "Có Thể Thu Hoạch";
                         tagColor = "#ffcc00";
                     } else {
-                        // ⏱️ Định dạng hiển thị đếm lùi: Giờ - Phút - Giây
                         const remainSec = Math.max(0, Math.floor((readyTime - now) / 1000));
                         const h = Math.floor(remainSec / 3600);
                         const m = Math.floor((remainSec % 3600) / 60);
                         const s = remainSec % 60;
-
-                        let timeStr = "";
-                        if (h > 0) {
-                            timeStr = `${h}h ${m}m`;
-                        } else {
-                            timeStr = `${m}m ${s}s`;
-                        }
-
+                        const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`;
                         const waterTag = plotData.isWatered ? "💧" : "⚠️Khô";
                         tagText = `${waterTag} ${timeStr}`;
                     }
 
-                    // 📊 TÍNH TOÁN SẢN LƯỢNG THỰC TẾ & TRẠNG THÁI HIỂN THỊ
                     let baseRate = plotData.isWatered ? 100 : 50;
                     let currentRate = plotData.isStolen ? (baseRate - 10) : baseRate;
                     
@@ -678,7 +601,6 @@ function renderFarmPlotsOnly(targetUsername) {
 
                     html += `
                         <div class="farm-plot-cell" onclick="window.handleFarmPlotInteraction(event, ${pIndex}, '${plotData.seedKey}')" style="${posStyle}">
-                            <!-- 🌿 BẢNG NHỎ THẦN THỨC CÂY TRỒNG -->
                             <div class="farm-plant-tooltip" id="farm-tooltip-${pIndex}">
                                 <div style="font-size: 11.5px; font-weight: bold; color: #ffcc00; margin-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 2px;">
                                     🌸 ${cfg.name} [Phẩm ${cfg.rank}]
@@ -703,7 +625,7 @@ function renderFarmPlotsOnly(targetUsername) {
 }
 
 // Cập nhật nhãn đếm giờ realtime mà không phá hủy DOM/Tooltip
-function updateFarmCountdownsOnly(targetUsername) {
+window.updateFarmCountdownsOnly = function(targetUsername) {
     const db = window.database || (typeof database !== 'undefined' ? database : null);
     if (!db) return;
 
@@ -738,7 +660,8 @@ function updateFarmCountdownsOnly(targetUsername) {
             }
         });
     });
-}
+};
+
 // 5. Thao tác trên ô đất
 window.handleFarmPlotClick = function(plotIndex, currentSeedKey) {
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
@@ -766,7 +689,6 @@ window.handleFarmPlotClick = function(plotIndex, currentSeedKey) {
             });
         }
     } else {
-        // Vườn người khác
         db.ref(`farms/${farmCurrentVisitingUser.toLowerCase()}/plots/plot_${plotIndex}`).once('value').then(snap => {
             const p = snap.val();
             if (!p || !p.seedKey) return showFarmAlert("Ô đất này còn trống!");
@@ -783,10 +705,8 @@ window.handleFarmPlotClick = function(plotIndex, currentSeedKey) {
         });
     }
 };
-  
-// Hỗ trợ bật/tắt bảng tooltip khi nhấp chuột
+
 window.handleFarmPlotInteraction = function(event, plotIndex, seedKey) {
-    // Đóng tất cả tooltip khác đang mở
     document.querySelectorAll(".farm-plant-tooltip").forEach(tip => tip.classList.remove("show"));
     
     const tooltip = document.getElementById(`farm-tooltip-${plotIndex}`);
@@ -794,10 +714,9 @@ window.handleFarmPlotInteraction = function(event, plotIndex, seedKey) {
         tooltip.classList.add("show");
         setTimeout(() => {
             if (tooltip) tooltip.classList.remove("show");
-        }, 3500); // Tự động ẩn sau 3.5 giây
+        }, 3500);
     }
 
-    // Vẫn gọi tiếp thao tác gieo / tưới / thu hoạch / trộm như bình thường
     if (typeof window.handleFarmPlotClick === "function") {
         window.handleFarmPlotClick(plotIndex, seedKey);
     }
@@ -878,9 +797,9 @@ window.executePlantSeed = function(seedKey) {
         renderFarmPlotsOnly(activeUser);
     });
 };
-// 7. Tưới nước (Đã fix chặn tưới trùng lặp)
+
+// 7. Tưới nước
 function executeWaterCrop(plotIndex, plotData, cfg, isWateringForFriend) {
-    // 🛑 CHẶN NGAY NẾU CÂY ĐÃ ĐƯỢC TƯỚI NƯỚC RỒI
     if (plotData && plotData.isWatered) {
         return showFarmAlert(`🌱 ${cfg.name} đã được hấp thụ đủ Linh Dịch, không cần tưới thêm!`);
     }
@@ -904,15 +823,12 @@ function executeWaterCrop(plotIndex, plotData, cfg, isWateringForFriend) {
     const db = window.database || (typeof database !== 'undefined' ? database : null);
     const pushFn = window.pushSecureUserData || (typeof pushSecureUserData !== 'undefined' ? pushSecureUserData : null);
 
-    // Cập nhật trạng thái ô đất thành đã tưới (isWatered: true)
     db.ref(`farms/${targetUser.toLowerCase()}/plots/plot_${plotIndex}/isWatered`).set(true).then(() => {
-        // Cập nhật số Linh Dịch mới vào tài khoản
         if (pushFn) pushFn(activeUser);
 
         const lblLd = document.getElementById("farm-lbl-linhdich");
         if (lblLd) lblLd.innerText = uStats.linhdich;
 
-        // 🔥 GHI NHẬN LỊCH SỬ TƯỚI HỘ NẾU TƯỚI VƯỜN BẠN
         if (isWateringForFriend) {
             logFarmAction(targetUser, activeUser, "WATER", `Đã tưới hộ ${cfg.reqWater} giọt Linh Dịch cho ${cfg.name} (Ô ${plotIndex})`);
         }
@@ -922,11 +838,10 @@ function executeWaterCrop(plotIndex, plotData, cfg, isWateringForFriend) {
     });
 }
 
-// 8. Thu hoạch (Đã fix lỗi database & đồng bộ tài sản)
+// 8. Thu hoạch
 function executeHarvestCrop(plotIndex, plotData, cfg) {
     if (!cfg) return showFarmAlert("Không tìm thấy thông tin cấu hình cây trồng!");
 
-    // Tính tỷ lệ thu hoạch: Chưa tưới nước = 50%, Bị trộm = trừ 10%
     let multiplier = plotData.isWatered ? 1.0 : 0.5;
     let stolenDeduction = plotData.isStolen ? 0.1 : 0.0;
     let finalRate = Math.max(0.1, multiplier - stolenDeduction);
@@ -935,7 +850,6 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
     const uStats = (typeof userStats !== 'undefined') ? userStats : (window.userStats || {});
     if (!uStats.inventory) uStats.inventory = {};
 
-    // Kết toán sản vật
     Object.keys(cfg.rewards).forEach(rKey => {
         let baseVal = cfg.rewards[rKey] || 0;
         let realVal = Math.floor(baseVal * finalRate);
@@ -962,15 +876,12 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
 
     if (!db) return alert("Không tìm thấy kết nối cơ sở dữ liệu!");
 
-    // Xóa ô đất cũ trên Firebase sau khi thu hoạch
     db.ref(`farms/${activeUser.toLowerCase()}/plots/plot_${plotIndex}`).remove().then(() => {
-        // Đồng bộ dữ liệu túi đồ lên server
         const finishSync = pushFn ? pushFn(activeUser) : Promise.resolve();
 
         finishSync.then(() => {
             if (typeof refreshUIFields === "function") refreshUIFields();
             
-            // Cập nhật nhãn hiển thị Linh Dịch trên thanh đầu nông trại
             const lblLd = document.getElementById("farm-lbl-linhdich");
             if (lblLd) lblLd.innerText = uStats.linhdich || 0;
 
@@ -983,11 +894,8 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
     });
 }
 
-// 9. Trộm cây (Đã tích hợp Chống Spam & Chống Lag tuyệt đối)
-let isStealingInProgress = false;
-
+// 9. Trộm cây
 function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
-    // 🛑 1. Chặn nếu đang có lệnh trộm trước đó đang xử lý dở
     if (isStealingInProgress) return;
 
     if (!plotData || plotData.isStolen) {
@@ -1026,9 +934,8 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
 
     if (!confirm(`Xác nhận hái trộm 10% sản vật trên cây của đạo hữu ${targetUser}?`)) return;
 
-    // 🔒 KHÓA LẬP TỨC: Chặn mọi cú click chuột spam tiếp theo
     isStealingInProgress = true;
-    plotData.isStolen = true; // Đổi cờ trên RAM ngay tức thì
+    plotData.isStolen = true;
 
     const db = window.database || (typeof database !== 'undefined' ? database : null);
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
@@ -1039,33 +946,29 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
         return;
     }
 
-    // Đánh dấu đã bị trộm trên Firebase của đối phương
     db.ref(`farms/${targetUser.toLowerCase()}/plots/plot_${plotIndex}/isStolen`).set(true).then(() => {
-        // Ghi vào sổ nhật ký của nạn nhân
         if (typeof logFarmAction === "function") {
             logFarmAction(targetUser, activeUser, "STEAL", `Đã hái trộm 10% sản vật trên cây ${cfg.name} (Ô ${plotIndex}): ${stolenItems.join(', ')}`);
         }
 
-        // Lưu dữ liệu túi đồ của mình
         const syncTask = pushFn ? pushFn(activeUser) : Promise.resolve();
 
         syncTask.then(() => {
             if (typeof refreshUIFields === "function") refreshUIFields();
             renderFarmPlotsOnly(targetUser);
-            isStealingInProgress = false; // 🔓 Mở khóa sau khi hoàn tất
-            alert(`🥷 HÁI TRỘM THÀNH CÔNG!\nBạn thu được: ${stolenItems.join(', ')}`);
+            isStealingInProgress = false;
+            showFarmAlert(`🥷 HÁI TRỘM THÀNH CÔNG!\nBạn thu được: ${stolenItems.join(', ')}`);
         }).catch(() => {
             isStealingInProgress = false;
         });
     }).catch(err => {
         isStealingInProgress = false;
-        plotData.isStolen = false; // Hoàn tác cờ nếu lỗi mạng
+        plotData.isStolen = false;
         console.error("Lỗi khi trộm cây:", err);
     });
 }
-// ==========================================
-// 📜 HỆ THỐNG LỊCH SỬ DƯỢC VIÊN (MAX 30 LƯỢT)
-// ==========================================
+
+// 10. Lịch sử Nông Trại
 function logFarmAction(targetUser, actorUser, actionType, detailText) {
     if (!targetUser || !actorUser || targetUser.toLowerCase() === actorUser.toLowerCase()) return;
     const db = window.database || (typeof database !== 'undefined' ? database : null);
@@ -1075,13 +978,12 @@ function logFarmAction(targetUser, actorUser, actionType, detailText) {
     const now = Date.now();
     const newLog = {
         actor: actorUser,
-        type: actionType, // "VISIT", "WATER", "STEAL"
+        type: actionType,
         detail: detailText,
         time: now
     };
 
     logRef.push(newLog).then(() => {
-        // Giữ lại đúng 30 log mới nhất
         logRef.once('value').then(snap => {
             if (snap.numChildren() > 30) {
                 let keys = [];
@@ -1112,12 +1014,12 @@ window.openFarmHistoryModal = function() {
 
         let logs = [];
         snap.forEach(c => { logs.push(c.val()); });
-        logs.reverse(); // Mới nhất lên đầu
+        logs.reverse();
 
         let html = "";
         logs.forEach(l => {
             const d = new Date(l.time);
-            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} -${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+            const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} - ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
 
             let icon = "👁️";
             let typeColor = "#00ffcc";
@@ -1152,9 +1054,8 @@ window.closeFarmHistoryModal = function() {
     const modal = document.getElementById("farm-history-modal-layer");
     if (modal) modal.classList.remove("popup-active");
 };
-// ==========================================
-// 📖 ĐÓNG/MỞ CẨM NANG HƯỚNG DẪN DƯỢC VIÊN
-// ==========================================
+
+// 11. Hướng dẫn & Tiệm Hạt
 window.openFarmGuideModal = function() {
     const modal = document.getElementById("farm-guide-modal-layer");
     if (modal) modal.classList.add("popup-active");
@@ -1164,9 +1065,7 @@ window.closeFarmGuideModal = function() {
     const modal = document.getElementById("farm-guide-modal-layer");
     if (modal) modal.classList.remove("popup-active");
 };
-//--------------------------------------
-  
-// 10. Mua hạt giống
+
 window.openFarmShopModal = function() {
     const list = document.getElementById("farm-shop-list");
     if (!list) return;
@@ -1211,7 +1110,7 @@ window.executeBuySeed = function(seedKey) {
         return showFarmAlert("Không đủ Linh Thạch!");
     }
     if (item.priceType === "kiemkhi" && ((window.userStats.inventory?.kiemkhi) || 0) < item.price) {
-        return alert("Không đủ Kiếm Khí!");
+        return showFarmAlert("Không đủ Kiếm Khí!");
     }
 
     if (item.priceType === "coin") window.userStats.coin -= item.price;
@@ -1227,7 +1126,7 @@ window.executeBuySeed = function(seedKey) {
     });
 };
 
-// 11. Ghé thăm Dược Viên qua BXH (Chỉ hiện Lv >= 3, sắp xếp giảm dần theo Level)
+// 12. Ghé thăm bạn bè
 window.openFarmVisitModal = function() {
     const list = document.getElementById("farm-visit-list");
     if (!list) return;
@@ -1235,14 +1134,12 @@ window.openFarmVisitModal = function() {
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
     const lbList = window.cachedLeaderboardList || [];
 
-    // 1. Lọc: Không phải chính mình VÀ Cảnh giới từ Level 3 trở lên
     let eligibleFriends = lbList.filter(u => {
         let isNotMe = u.name.toLowerCase() !== activeUser.toLowerCase();
         let isLv3OrHigher = Number(u.level || 1) >= 3;
         return isNotMe && isLv3OrHigher;
     });
 
-    // 2. Sắp xếp theo thứ tự Level cao nhất đứng đầu
     eligibleFriends.sort((a, b) => Number(b.level || 1) - Number(a.level || 1));
 
     if (eligibleFriends.length === 0) {
@@ -1270,8 +1167,12 @@ window.openFarmVisitModal = function() {
 };
 
 function closeFarmVisitModal() {
-    document.getElementById("farm-visit-modal-layer").classList.remove("popup-active");
+    const modal = document.getElementById("farm-visit-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
 }
+
+// 🌟 XUẤT TOÀN BỘ HÀM ĐIỀU KHIỂN RA WINDOW CHO GIAO DIỆN GỌI
+window.openFarmModal = openFarmModal;
 window.closeFarmModal = closeFarmModal;
 window.openFarmSeedBagModal = openFarmSeedBagModal;
 window.closeFarmSeedBagModal = closeFarmSeedBagModal;
