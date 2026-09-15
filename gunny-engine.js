@@ -829,28 +829,68 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 }
 
                 // -------------------------------------------------------------
-                // DẠNG 3: BOSS CĂN GÓC BẮN ĐẠN NHƯ NGƯỜI
+                // DẠNG 3: BOSS CĂN GÓC BẮN ĐẠN THÔNG MINH (TỰ TÍNH GÓC + GIÓ + LỰC)
                 // -------------------------------------------------------------
                 if (monster.monsterType === "ranged_weapon") {
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
-
+            
                         const dx = Math.abs(target.x - monster.x);
-                        const dy = target.y - monster.y;
-                        const chosenAngle = 50;
-                        const rad = (chosenAngle * Math.PI) / 180;
-
-                        const term = dx * Math.tan(rad) - dy;
-                        let calculatedPower = 45;
-                        if (term > 0) {
-                            const speed = Math.sqrt((GRAVITY * dx * dx) / (2 * Math.cos(rad) * Math.cos(rad) * term));
-                            calculatedPower = Math.round((speed / 25) * 100);
+                        const dy = target.y - monster.y; // dy > 0: mục tiêu ở thấp hơn, dy < 0: mục tiêu ở cao hơn
+            
+                        // 1. Thuật toán chọn góc thông minh:
+                        // Nếu ở gần -> chọn góc cao (55° - 65°) để đạn cắm thẳng xuống
+                        // Nếu ở xa hoặc có gió cản -> chọn góc thấp (35° - 45°) để đạn bay căng
+                        let chosenAngle = 45;
+                        if (dx < 300) {
+                            chosenAngle = 60;
+                        } else if (dx > 600) {
+                            chosenAngle = 38;
+                        } else {
+                            chosenAngle = 48;
                         }
-
-                        const finalPower = Math.max(15, Math.min(100, calculatedPower + (Math.random() * 6 - 3)));
+            
+                        // Nếu mục tiêu ở quá cao, tự nâng thêm góc
+                        if (dy < -40) chosenAngle += 8;
+            
+                        const rad = (chosenAngle * Math.PI) / 180;
+                        const cos = Math.cos(rad);
+                        const sin = Math.sin(rad);
+            
+                        // 2. Tính vận tốc lý thuyết cơ bản theo công thức quỹ đạo ném xiên:
+                        // dy = -v*sin(a)*t + 0.5*g*t^2  và  dx = v*cos(a)*t
+                        let term = dx * Math.tan(rad) - dy;
+                        let baseSpeed = 15;
+            
+                        if (term > 0 && cos > 0) {
+                            baseSpeed = Math.sqrt((GRAVITY * dx * dx) / (2 * cos * cos * term));
+                        }
+            
+                        // 3. Tính thời gian đạn bay ước tính (t) để bù trừ gió (wind):
+                        // Gió cùng chiều đẩy đạn đi xa hơn -> giảm lực. Gió ngược cản đạn -> tăng lực.
+                        let estFlightTime = dx / (baseSpeed * cos || 1);
+                        let windEffect = 0.5 * wind * estFlightTime * estFlightTime * 20; // Hệ số ảnh hưởng của gió
+            
+                        // Điều chỉnh khoảng cách ảo sau khi tính gió
+                        let adjustedDx = dx - (monster.facing * windEffect);
+                        let adjustedTerm = adjustedDx * Math.tan(rad) - dy;
+            
+                        if (adjustedTerm > 0) {
+                            baseSpeed = Math.sqrt((GRAVITY * adjustedDx * adjustedDx) / (2 * cos * cos * adjustedTerm));
+                        }
+            
+                        // Quy đổi vận tốc sang % lực thanh đo (max speed = 25)
+                        let calculatedPower = Math.round((baseSpeed / 25) * 100);
+            
+                        // 4. Độ lệch chuẩn xác (Sai số nhẹ để Boss không bị quá máy móc nhưng vẫn rất nguy hiểm)
+                        // Sai số chỉ lệch tối đa 1 - 2 lực
+                        let randomError = (Math.random() * 3 - 1.5);
+                        let finalPower = Math.max(12, Math.min(100, Math.round(calculatedPower + randomError)));
+            
                         monster.angle = chosenAngle;
-                        const isPow = (monster.pow >= 100) || (Math.random() < 0.25);
-
+                        const isPow = (monster.pow >= 100) || (Math.random() < 0.3);
+            
+                        // Đồng bộ tư thế ngắm của Boss sang các máy khác
                         if (socket && socket.connected) {
                             socket.emit('player_move', {
                                 name: monster.name,
@@ -862,10 +902,11 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                                 activeBuffs: []
                             });
                         }
-
+            
+                        // Dừng 600ms giả lập Boss căn góc xong rồi bấm bắn
                         setTimeout(() => {
                             if (isGameOver || monster.hp <= 0) return;
-
+            
                             if (socket && socket.connected) {
                                 socket.emit('player_fire', {
                                     shooterName: monster.name,
@@ -876,13 +917,13 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                                     power: finalPower,
                                     wind: wind,
                                     isPow: isPow,
-                                    extraBullets: 0
+                                    extraBullets: isPow ? 1 : 0 // Khi nộ bắn thêm 1 viên đạn kép
                                 });
                             }
-                            executeVisualShot(monster, monster.angle, finalPower, isPow, 0);
-                        }, 500);
-
-                    }, 800);
+                            executeVisualShot(monster, monster.angle, finalPower, isPow, isPow ? 1 : 0);
+                        }, 600);
+            
+                    }, 1000);
                 }
             }
 
