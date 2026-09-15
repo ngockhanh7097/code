@@ -681,18 +681,29 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 const rad = (angleDeg * Math.PI) / 180;
                 return { dx: Math.cos(rad) * player.facing, dy: -Math.sin(rad) };
             }
-            // ==========================================
-// 🐺 BỘ XỬ LÝ HÀNH VI TỰ ĐỘNG CỦA QUÁI VẬT & BOSS
+// ==========================================
+// 🐺 BỘ XỬ LÝ HÀNH VI TỰ ĐỘNG CỦA QUÁI VẬT & BOSS (ĐÃ SỬA LỖI ĐƠ)
 // ==========================================
 function executeMonsterTurn(monster) {
-    // Chỉ Host điều khiển để đồng bộ lệnh qua Socket cho tất cả người chơi
-    if (!isHost || isGameOver || monster.hp <= 0) return;
+    // Kiểm tra an toàn: nếu trận đã kết thúc hoặc quái đã chết
+    if (isGameOver || monster.hp <= 0) return;
+
+    // Chỉ máy Host điều khiển hành động của quái để tránh 2 máy phát lệnh trùng lặp
+    // Chuẩn hóa so sánh tên để tránh lỗi chữ hoa / chữ thường
+    const myNameClean = (window.currentUser || "").trim().toLowerCase();
+    const hostNameClean = (matchData && matchData.host ? matchData.host : "").trim().toLowerCase();
+    const isCurrentHost = (myNameClean === hostNameClean) || !socket || !socket.connected;
+
+    if (!isCurrentHost) return;
 
     // 1. Tìm tất cả người chơi (Team 1) còn sống
     const livingHumans = gamePlayers.filter(p => !p.isMonster && p.hp > 0);
-    if (livingHumans.length === 0) return;
+    if (livingHumans.length === 0) {
+        checkGameOver();
+        return;
+    }
 
-    // Tìm người chơi gần nhất theo trục ngang X
+    // Tìm người chơi gần quái nhất
     let target = livingHumans[0];
     let minDist = Math.abs(target.x - monster.x);
     for (let i = 1; i < livingHumans.length; i++) {
@@ -703,7 +714,7 @@ function executeMonsterTurn(monster) {
         }
     }
 
-    // Luôn quay mặt về hướng mục tiêu
+    // Luôn quay mặt về phía mục tiêu
     monster.facing = (target.x > monster.x) ? 1 : -1;
 
     // -------------------------------------------------------------
@@ -715,18 +726,20 @@ function executeMonsterTurn(monster) {
 
             const distanceToTarget = Math.abs(monster.x - target.x);
 
-            // A. Chưa tới tầm đánh: Di chuyển lại gần theo từng bước
+            // A. Chưa tới tầm đánh: Bò lại gần cho đến khi hết thể lực (hoặc chạm cự ly đánh)
             if (distanceToTarget > monster.attackRange) {
+                // Di chuyển một quãng đường theo moveSpeed (mặc định 60px)
                 const moveDist = Math.min(monster.moveSpeed, distanceToTarget - monster.attackRange);
-                const step = monster.facing * 3;
+                const step = monster.facing * 2.5;
                 let moved = 0;
 
                 const walkInterval = setInterval(() => {
-                    if (Math.abs(moved) >= moveDist || isGameOver) {
+                    // Kiểm tra nếu chạm hoặc đã bò đủ tầm
+                    if (Math.abs(moved) >= moveDist || Math.abs(monster.x - target.x) <= monster.attackRange || isGameOver) {
                         clearInterval(walkInterval);
 
-                        // Đồng bộ vị trí sau khi đi xong
-                        if (socket) {
+                        // Đồng bộ tọa độ sau khi dừng di chuyển
+                        if (socket && socket.connected) {
                             socket.emit('player_move', {
                                 name: monster.name,
                                 x: monster.x,
@@ -738,66 +751,26 @@ function executeMonsterTurn(monster) {
                             });
                         }
 
-                        // Sau khi di chuyển xong, kết thúc lượt của quái nhỏ
-                        setTimeout(() => triggerNextTurnServer(), 500);
+                        // Sau khi di chuyển xong, kiểm tra nếu đã vào sát người thì cắn luôn, chưa thì chuyển lượt
+                        if (Math.abs(monster.x - target.x) <= monster.attackRange + 5) {
+                            setTimeout(() => executeMeleeBite(monster, target), 300);
+                        } else {
+                            setTimeout(() => triggerNextTurnServer(), 600);
+                        }
                         return;
                     }
 
                     monster.x += step;
                     moved += Math.abs(step);
 
-                    // Tự căn chỉnh độ cao mặt đất khi đi
+                    // Căn chỉnh độ cao chân quái bám sát mặt đất
                     const groundY = getGroundYAt(monster.x, monster.y);
                     monster.y = groundY - monster.radius;
                 }, 20);
 
             } else {
-                // B. Đã ở tầm gần: Tung đòn cào/cắn cận chiến
-                target.hp = Math.max(0, target.hp - monster.damageStat);
-                target.pow = Math.min(100, target.pow + monster.damageStat * 1.5);
-
-                // Hiệu ứng chữ sát thương nhảy lên đầu người chơi
-                damageTexts.push({
-                    x: target.x,
-                    y: target.y - target.radius - 20,
-                    text: monster.damageStat.toString(),
-                    isCrit: false,
-                    scale: 0.2,
-                    targetScale: 1.0,
-                    alpha: 1.0,
-                    life: 60
-                });
-
-                // Hiệu ứng nổ nhỏ mô phỏng vết cào
-                explosions.push({
-                    x: target.x,
-                    y: target.y,
-                    radius: 4,
-                    maxRadius: 25,
-                    alpha: 1,
-                    color: '#ff4b2b'
-                });
-
-                // Đồng bộ sát thương này cho mọi người trong phòng
-                if (socket) {
-                    socket.emit('bullet_exploded', {
-                        shooterName: monster.name,
-                        expX: target.x,
-                        expY: target.y,
-                        holeRadius: 0, // Không đào đất khi đánh cận chiến
-                        isPow: false,
-                        updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
-                        damageList: [{
-                            x: target.x,
-                            y: target.y - target.radius - 20,
-                            text: monster.damageStat.toString(),
-                            isCrit: false
-                        }]
-                    });
-                }
-
-                checkGameOver();
-                setTimeout(() => triggerNextTurnServer(), 800);
+                // B. Đã ở sát cạnh người chơi: Cắn/Cào trực tiếp
+                executeMeleeBite(monster, target);
             }
         }, 800);
         return;
@@ -812,7 +785,6 @@ function executeMonsterTurn(monster) {
 
             let damageSyncList = [];
 
-            // Gây sát thương lên toàn bộ người chơi Team 1
             livingHumans.forEach(h => {
                 h.hp = Math.max(0, h.hp - monster.damageStat);
                 h.pow = Math.min(100, h.pow + monster.damageStat * 1.2);
@@ -830,7 +802,6 @@ function executeMonsterTurn(monster) {
                 damageTexts.push(dtObj);
                 damageSyncList.push(dtObj);
 
-                // Cột nổ dưới chân từng người
                 explosions.push({
                     x: h.x,
                     y: h.y,
@@ -841,7 +812,7 @@ function executeMonsterTurn(monster) {
                 });
             });
 
-            if (socket) {
+            if (socket && socket.connected) {
                 socket.emit('bullet_exploded', {
                     shooterName: monster.name,
                     expX: monster.x,
@@ -860,7 +831,7 @@ function executeMonsterTurn(monster) {
     }
 
     // -------------------------------------------------------------
-    // DẠNG 3: BOSS ĐỨNG XA CĂN GÓC BẮN ĐẠN VŨ KHÍ NHƯ NGƯỜI THẬT
+    // DẠNG 3: BOSS CĂN GÓC BẮN ĐẠN NHƯ NGƯỜI
     // -------------------------------------------------------------
     if (monster.monsterType === "ranged_weapon") {
         setTimeout(() => {
@@ -868,10 +839,9 @@ function executeMonsterTurn(monster) {
 
             const dx = Math.abs(target.x - monster.x);
             const dy = target.y - monster.y;
-            const chosenAngle = 50; // Góc bắn chuẩn Gunny 50 độ
+            const chosenAngle = 50;
             const rad = (chosenAngle * Math.PI) / 180;
 
-            // Công thức ước lượng lực bắn đạn pháo
             const term = dx * Math.tan(rad) - dy;
             let calculatedPower = 45;
             if (term > 0) {
@@ -879,14 +849,11 @@ function executeMonsterTurn(monster) {
                 calculatedPower = Math.round((speed / 25) * 100);
             }
 
-            // Thêm sai số ngẫu nhiên nhẹ (-3 đến +3)
             const finalPower = Math.max(15, Math.min(100, calculatedPower + (Math.random() * 6 - 3)));
             monster.angle = chosenAngle;
-
             const isPow = (monster.pow >= 100) || (Math.random() < 0.25);
 
-            // Đồng bộ hướng ngắm của Boss
-            if (socket) {
+            if (socket && socket.connected) {
                 socket.emit('player_move', {
                     name: monster.name,
                     x: monster.x,
@@ -898,11 +865,10 @@ function executeMonsterTurn(monster) {
                 });
             }
 
-            // Boss khai hỏa
             setTimeout(() => {
                 if (isGameOver || monster.hp <= 0) return;
 
-                if (socket) {
+                if (socket && socket.connected) {
                     socket.emit('player_fire', {
                         shooterName: monster.name,
                         x: monster.x,
@@ -917,27 +883,82 @@ function executeMonsterTurn(monster) {
                 }
                 executeVisualShot(monster, monster.angle, finalPower, isPow, 0);
             }, 600);
-
         }, 1000);
     }
 }
 
+// Hàm phụ trợ tung đòn cắn cận chiến
+function executeMeleeBite(monster, target) {
+    if (isGameOver || monster.hp <= 0) return;
+
+    target.hp = Math.max(0, target.hp - monster.damageStat);
+    target.pow = Math.min(100, target.pow + monster.damageStat * 1.5);
+
+    damageTexts.push({
+        x: target.x,
+        y: target.y - target.radius - 20,
+        text: monster.damageStat.toString(),
+        isCrit: false,
+        scale: 0.2,
+        targetScale: 1.0,
+        alpha: 1.0,
+        life: 60
+    });
+
+    explosions.push({
+        x: target.x,
+        y: target.y,
+        radius: 4,
+        maxRadius: 25,
+        alpha: 1,
+        color: '#ff4b2b'
+    });
+
+    if (socket && socket.connected) {
+        socket.emit('bullet_exploded', {
+            shooterName: monster.name,
+            expX: target.x,
+            expY: target.y,
+            holeRadius: 0,
+            isPow: false,
+            updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
+            damageList: [{
+                x: target.x,
+                y: target.y - target.radius - 20,
+                text: monster.damageStat.toString(),
+                isCrit: false
+            }]
+        });
+    }
+
+    checkGameOver();
+    setTimeout(() => triggerNextTurnServer(), 700);
+}
+
             function startTurnTimer() {
-                if (turnCountdownInterval) clearInterval(turnCountdownInterval);
-                turnTimeLeft = 15;
-                updateTimerUI();
+    if (turnCountdownInterval) clearInterval(turnCountdownInterval);
+    turnTimeLeft = 15;
+    updateTimerUI();
 
-                turnCountdownInterval = setInterval(() => {
-                    if (isFiring || isGameOver || isCharging) return;
-                    turnTimeLeft--;
-                    updateTimerUI();
+    turnCountdownInterval = setInterval(() => {
+        if (isFiring || isGameOver || isCharging) return;
+        turnTimeLeft--;
+        updateTimerUI();
 
-                    if (turnTimeLeft <= 0) {
-                        clearInterval(turnCountdownInterval);
-                        if (isMyTurn()) passTurnAction();
-                    }
-                }, 1000);
+        if (turnTimeLeft <= 0) {
+            clearInterval(turnCountdownInterval);
+            const activeP = getActivePlayer();
+            // Nếu là lượt người chơi thì người chơi bỏ lượt
+            if (isMyTurn()) {
+                passTurnAction();
+            } 
+            // Nếu là lượt của Quái mà bị kẹt hết giờ -> Host tự động chuyển lượt sang mục tiêu kế tiếp
+            else if (activeP && activeP.isMonster && isHost) {
+                triggerNextTurnServer();
             }
+        }
+    }, 1000);
+}
 
             function updateTimerUI() {
                 const timerEl = document.getElementById("top-turn-timer");
@@ -1625,10 +1646,10 @@ function executeMonsterTurn(monster) {
                     else if (screenX < margin) cameraX -= (margin - screenX) * 0.08;
                     cameraX = Math.max(0, Math.min(cameraX, WORLD_WIDTH - canvas.width));
                 } else if (!isFiring && p.hp > 0) {
-                    let targetCamX = p.x - canvas.width / 2;
-                    targetCamX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - canvas.width));
-                    cameraX += (targetCamX - cameraX) * 0.04;
-                }
+                   let targetCamX = p.x - canvas.width / 2;
+                   targetCamX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - canvas.width));
+                   cameraX += (targetCamX - cameraX) * 0.04;
+               }
 
                 // Tích lực
                 if (isCharging) {
