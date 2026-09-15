@@ -537,7 +537,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
     let monsterMinions = [];
     let monsterBosses = [];
 
-    // 1. Nạp Người chơi (Tất cả thuộc Team 1)
+    // 1. Nạp Người chơi (Team 1)
     matchData.players.forEach((p, idx) => {
         let pImg = new Image();
         let genderKey = (p.gender === "female") ? "female" : "male";
@@ -548,7 +548,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
         wImg.src = p.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
         weaponImages[p.name] = wImg;
 
-        // Vị trí xuất phát bên trái (tối đa 4 người: x = 80, 160, 240, 320)
         let spawnX = isDungeonMode ? (80 + idx * 80) : (SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750));
 
         humanPlayers.push({
@@ -578,18 +577,22 @@ if (matchData && matchData.players && matchData.players.length > 0) {
         });
     });
 
-    // 2. Nạp Quái vật (Chỉ khi đi Phó Bản - Quái vật thuộc Team 2)
+    // 2. Nạp Quái vật (Team 2) với tọa độ hiển thị rõ ràng bên phải màn hình
     if (isDungeonMode && currentDungeon && currentDungeon.monsters) {
         currentDungeon.monsters.forEach((m, mIdx) => {
             let mImg = new Image();
+            // Lấy ảnh chibi hoặc ảnh mặc định để chắc chắn canvas luôn vẽ được hình
             mImg.src = m.isBoss 
-                ? 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp'
-                : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp';
+                ? CHIBI_AVATARS.male 
+                : CHIBI_AVATARS.female;
             playerImages[m.name] = mImg;
 
             let mWp = new Image();
             mWp.src = m.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
             weaponImages[m.name] = mWp;
+
+            // Đảm bảo Boss luôn đứng ở nửa bên phải bản đồ (khoảng x = 700 đến 820)
+            let defaultMonsterX = m.isBoss ? 800 : (650 + mIdx * 60);
 
             let monsterObj = {
                 slotIndex: 10 + mIdx,
@@ -609,11 +612,11 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 activeBuffs: [],
                 isMonster: true,
                 isBoss: m.isBoss,
-                monsterType: m.type, // 'melee', 'ranged_weapon', 'aoe_all'
+                monsterType: m.type, 
                 attackRange: m.attackRange || 45,
                 moveSpeed: m.moveSpeed || 60,
-                x: m.x,
-                y: m.y || 350,
+                x: m.x || defaultMonsterX,
+                y: 350,
                 radius: m.isBoss ? 38 : 26,
                 angle: 45,
                 facing: -1,
@@ -628,13 +631,11 @@ if (matchData && matchData.players && matchData.players.length > 0) {
         });
     }
 
-    // 3. Sắp xếp thứ tự lượt tuyệt đối: Quái nhỏ -> Boss -> Người chơi
+    // 3. Sắp xếp thứ tự lượt: Quái nhỏ -> Boss -> Người chơi (Level thấp đi trước)
     if (isDungeonMode) {
-        // Trong phe người chơi: Level thấp đi trước
         humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
         gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
     } else {
-        // Chế độ PvP: Xếp theo Level thấp lên cao
         gamePlayers = [...humanPlayers].sort((a, b) => (a.level || 1) - (b.level || 1));
     }
 } else {
