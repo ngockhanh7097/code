@@ -15,6 +15,71 @@
         male: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp',
         female: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp'
     };
+    // --- CẤU HÌNH DỮ LIỆU PHÓ BẢN (DUNGEONS CONFIG) ---
+const DUNGEON_CONFIGS = {
+    "linh_son_1": {
+        name: "Ải 1: Yêu Lang Linh Sơn",
+        bg: "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=1200&q=80", // Ảnh nền ví dụ
+        monsters: [
+            {
+                name: "Huyết Lang Tinh",
+                level: 5,
+                hp: 150,
+                maxHp: 150,
+                damage: 12,
+                x: 720, y: 350,
+                isMonster: true,
+                gender: "male",
+                skin: "monster_wolf_1",
+                weaponImg: ""
+            },
+            {
+                name: "Huyết Lang Đầu Đàn (Boss)",
+                level: 10,
+                hp: 350,
+                maxHp: 350,
+                damage: 22,
+                x: 820, y: 350,
+                isMonster: true,
+                isBoss: true,
+                gender: "male",
+                skin: "monster_boss_wolf",
+                weaponImg: ""
+            }
+        ]
+    },
+    "linh_son_2": {
+        name: "Ải 2: Cửu U Hắc Báo",
+        bg: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+        monsters: [
+            {
+                name: "Hắc Báo Ma Sứ",
+                level: 12,
+                hp: 250,
+                maxHp: 250,
+                damage: 25,
+                x: 750, y: 350,
+                isMonster: true,
+                gender: "male",
+                skin: "monster_panther",
+                weaponImg: ""
+            },
+            {
+                name: "Ma Báo Vương (Boss)",
+                level: 18,
+                hp: 600,
+                maxHp: 600,
+                damage: 38,
+                x: 830, y: 350,
+                isMonster: true,
+                isBoss: true,
+                gender: "male",
+                skin: "monster_boss_panther",
+                weaponImg: ""
+            }
+        ]
+    }
+};
 
     function loadSocketIO(callback) {
         if (typeof io !== "undefined") {
