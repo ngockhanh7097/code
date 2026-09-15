@@ -680,6 +680,246 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 const rad = (angleDeg * Math.PI) / 180;
                 return { dx: Math.cos(rad) * player.facing, dy: -Math.sin(rad) };
             }
+            // ==========================================
+// 🐺 BỘ XỬ LÝ HÀNH VI TỰ ĐỘNG CỦA QUÁI VẬT & BOSS
+// ==========================================
+function executeMonsterTurn(monster) {
+    // Chỉ Host điều khiển để đồng bộ lệnh qua Socket cho tất cả người chơi
+    if (!isHost || isGameOver || monster.hp <= 0) return;
+
+    // 1. Tìm tất cả người chơi (Team 1) còn sống
+    const livingHumans = gamePlayers.filter(p => !p.isMonster && p.hp > 0);
+    if (livingHumans.length === 0) return;
+
+    // Tìm người chơi gần nhất theo trục ngang X
+    let target = livingHumans[0];
+    let minDist = Math.abs(target.x - monster.x);
+    for (let i = 1; i < livingHumans.length; i++) {
+        let d = Math.abs(livingHumans[i].x - monster.x);
+        if (d < minDist) {
+            minDist = d;
+            target = livingHumans[i];
+        }
+    }
+
+    // Luôn quay mặt về hướng mục tiêu
+    monster.facing = (target.x > monster.x) ? 1 : -1;
+
+    // -------------------------------------------------------------
+    // DẠNG 1: QUÁI PHỤ (CẬN CHIẾN - MELEE)
+    // -------------------------------------------------------------
+    if (monster.monsterType === "melee") {
+        setTimeout(() => {
+            if (isGameOver || monster.hp <= 0) return;
+
+            const distanceToTarget = Math.abs(monster.x - target.x);
+
+            // A. Chưa tới tầm đánh: Di chuyển lại gần theo từng bước
+            if (distanceToTarget > monster.attackRange) {
+                const moveDist = Math.min(monster.moveSpeed, distanceToTarget - monster.attackRange);
+                const step = monster.facing * 3;
+                let moved = 0;
+
+                const walkInterval = setInterval(() => {
+                    if (Math.abs(moved) >= moveDist || isGameOver) {
+                        clearInterval(walkInterval);
+
+                        // Đồng bộ vị trí sau khi đi xong
+                        if (socket) {
+                            socket.emit('player_move', {
+                                name: monster.name,
+                                x: monster.x,
+                                y: monster.y,
+                                angle: monster.angle,
+                                facing: monster.facing,
+                                stamina: monster.stamina,
+                                activeBuffs: []
+                            });
+                        }
+
+                        // Sau khi di chuyển xong, kết thúc lượt của quái nhỏ
+                        setTimeout(() => triggerNextTurnServer(), 500);
+                        return;
+                    }
+
+                    monster.x += step;
+                    moved += Math.abs(step);
+
+                    // Tự căn chỉnh độ cao mặt đất khi đi
+                    const groundY = getGroundYAt(monster.x, monster.y);
+                    monster.y = groundY - monster.radius;
+                }, 20);
+
+            } else {
+                // B. Đã ở tầm gần: Tung đòn cào/cắn cận chiến
+                target.hp = Math.max(0, target.hp - monster.damageStat);
+                target.pow = Math.min(100, target.pow + monster.damageStat * 1.5);
+
+                // Hiệu ứng chữ sát thương nhảy lên đầu người chơi
+                damageTexts.push({
+                    x: target.x,
+                    y: target.y - target.radius - 20,
+                    text: monster.damageStat.toString(),
+                    isCrit: false,
+                    scale: 0.2,
+                    targetScale: 1.0,
+                    alpha: 1.0,
+                    life: 60
+                });
+
+                // Hiệu ứng nổ nhỏ mô phỏng vết cào
+                explosions.push({
+                    x: target.x,
+                    y: target.y,
+                    radius: 4,
+                    maxRadius: 25,
+                    alpha: 1,
+                    color: '#ff4b2b'
+                });
+
+                // Đồng bộ sát thương này cho mọi người trong phòng
+                if (socket) {
+                    socket.emit('bullet_exploded', {
+                        shooterName: monster.name,
+                        expX: target.x,
+                        expY: target.y,
+                        holeRadius: 0, // Không đào đất khi đánh cận chiến
+                        isPow: false,
+                        updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
+                        damageList: [{
+                            x: target.x,
+                            y: target.y - target.radius - 20,
+                            text: monster.damageStat.toString(),
+                            isCrit: false
+                        }]
+                    });
+                }
+
+                checkGameOver();
+                setTimeout(() => triggerNextTurnServer(), 800);
+            }
+        }, 800);
+        return;
+    }
+
+    // -------------------------------------------------------------
+    // DẠNG 2: BOSS KỸ NĂNG DIỆN RỘNG (AOE TOÀN BỘ NGƯỜI CHƠI)
+    // -------------------------------------------------------------
+    if (monster.monsterType === "aoe_all") {
+        setTimeout(() => {
+            if (isGameOver || monster.hp <= 0) return;
+
+            let damageSyncList = [];
+
+            // Gây sát thương lên toàn bộ người chơi Team 1
+            livingHumans.forEach(h => {
+                h.hp = Math.max(0, h.hp - monster.damageStat);
+                h.pow = Math.min(100, h.pow + monster.damageStat * 1.2);
+
+                const dtObj = {
+                    x: h.x,
+                    y: h.y - h.radius - 20,
+                    text: monster.damageStat.toString(),
+                    isCrit: true,
+                    scale: 0.2,
+                    targetScale: 1.2,
+                    alpha: 1.0,
+                    life: 60
+                };
+                damageTexts.push(dtObj);
+                damageSyncList.push(dtObj);
+
+                // Cột nổ dưới chân từng người
+                explosions.push({
+                    x: h.x,
+                    y: h.y,
+                    radius: 6,
+                    maxRadius: 38,
+                    alpha: 1,
+                    color: '#a020f0'
+                });
+            });
+
+            if (socket) {
+                socket.emit('bullet_exploded', {
+                    shooterName: monster.name,
+                    expX: monster.x,
+                    expY: monster.y,
+                    holeRadius: 0,
+                    isPow: true,
+                    updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
+                    damageList: damageSyncList
+                });
+            }
+
+            checkGameOver();
+            setTimeout(() => triggerNextTurnServer(), 1000);
+        }, 1200);
+        return;
+    }
+
+    // -------------------------------------------------------------
+    // DẠNG 3: BOSS ĐỨNG XA CĂN GÓC BẮN ĐẠN VŨ KHÍ NHƯ NGƯỜI THẬT
+    // -------------------------------------------------------------
+    if (monster.monsterType === "ranged_weapon") {
+        setTimeout(() => {
+            if (isGameOver || monster.hp <= 0) return;
+
+            const dx = Math.abs(target.x - monster.x);
+            const dy = target.y - monster.y;
+            const chosenAngle = 50; // Góc bắn chuẩn Gunny 50 độ
+            const rad = (chosenAngle * Math.PI) / 180;
+
+            // Công thức ước lượng lực bắn đạn pháo
+            const term = dx * Math.tan(rad) - dy;
+            let calculatedPower = 45;
+            if (term > 0) {
+                const speed = Math.sqrt((GRAVITY * dx * dx) / (2 * Math.cos(rad) * Math.cos(rad) * term));
+                calculatedPower = Math.round((speed / 25) * 100);
+            }
+
+            // Thêm sai số ngẫu nhiên nhẹ (-3 đến +3)
+            const finalPower = Math.max(15, Math.min(100, calculatedPower + (Math.random() * 6 - 3)));
+            monster.angle = chosenAngle;
+
+            const isPow = (monster.pow >= 100) || (Math.random() < 0.25);
+
+            // Đồng bộ hướng ngắm của Boss
+            if (socket) {
+                socket.emit('player_move', {
+                    name: monster.name,
+                    x: monster.x,
+                    y: monster.y,
+                    angle: monster.angle,
+                    facing: monster.facing,
+                    stamina: monster.stamina,
+                    activeBuffs: []
+                });
+            }
+
+            // Boss khai hỏa
+            setTimeout(() => {
+                if (isGameOver || monster.hp <= 0) return;
+
+                if (socket) {
+                    socket.emit('player_fire', {
+                        shooterName: monster.name,
+                        x: monster.x,
+                        y: monster.y,
+                        angle: monster.angle,
+                        facing: monster.facing,
+                        power: finalPower,
+                        wind: wind,
+                        isPow: isPow,
+                        extraBullets: 0
+                    });
+                }
+                executeVisualShot(monster, monster.angle, finalPower, isPow, 0);
+            }, 600);
+
+        }, 1000);
+    }
+}
 
             function startTurnTimer() {
                 if (turnCountdownInterval) clearInterval(turnCountdownInterval);
@@ -975,6 +1215,11 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 activeP.activeBuffs = []; // Xóa icon buff trên đầu khi sang turn mới
                 updateUI();
                 startTurnTimer();
+                // 👉 THÊM VÀO ĐÂY: Nếu là lượt của Quái vật hoặc Boss
+                if (activeP && activeP.isMonster && activeP.hp > 0) {
+                    executeMonsterTurn(activeP);
+                }
+
             }
 
             window.onkeydown = function (e) {
@@ -1236,43 +1481,76 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             }
 
             function checkGameOver(isImmediateSurrender = false, leaverName = null) {
-                if (isGameOver) return;
-                let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
-                let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
+    if (isGameOver) return;
 
-                if (isImmediateSurrender || !team1Alive || !team2Alive) {
-                    isGameOver = true;
-                    if (turnCountdownInterval) clearInterval(turnCountdownInterval);
-                    cleanupGameListeners();
+    const isDungeonMode = matchData && matchData.mode === "phoban";
 
-                    bullets = [];
-                    explosions = [];
+    // 1. Kiểm tra trạng thái sống còn của các bên
+    let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0); // Toàn bộ người chơi
+    let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0); // Quái và Boss
 
-                    // TRƯỜNG HỢP 1: CÓ NGƯỜI CHỦ ĐỘNG RÚT LUI (BẤM NÚT ĐẦU HÀNG)
-                    if (isImmediateSurrender) {
-                        let winningTeam = team1Alive ? 1 : 2;
-                        let endNotice = leaverName ? `⚠️ Đạo hữu [${leaverName}] đã rút lui!\n` : "";
-                        endNotice += `Đội ${winningTeam} đã làm chủ Bí Cảnh! (Trận đấu dừng, không tính thẻ bài)`;
-                        
-                        if (window.database && roomId) {
-                            window.database.ref('pvp_rooms/' + roomId).update({
-                                status: "WAITING",
-                                matchData: null
-                            });
-                        }
-                        if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
-                        alert(endNotice);
-                        return;
-                    }
+    // Trong phó bản: Tìm xem con Boss còn sống hay không
+    let bossUnit = gamePlayers.find(p => p.isBoss);
+    let isBossDead = isDungeonMode && bossUnit && bossUnit.hp <= 0;
 
-                    // TRƯỜNG HỢP 2: KẾT THÚC BÌNH THƯỜNG (BẮN HẾT MÁU) -> MỞ BẢNG 9 THẺ
-                    if (socket && socket.connected) {
-                        socket.emit('match_finished_cards');
-                    } else {
-                        initLocalCardBoard();
-                    }
-                }
+    // Điều kiện kết thúc trận đấu:
+    // - Chủ động đầu hàng (isImmediateSurrender)
+    // - Hoặc Người chơi chết hết (!team1Alive)
+    // - Hoặc Trong PvP: 1 trong 2 team chết hết
+    // - Hoặc Trong Phó Bản: Boss chết (isBossDead)
+    let shouldEndGame = isImmediateSurrender || !team1Alive || (!isDungeonMode && !team2Alive) || (isDungeonMode && isBossDead);
+
+    if (shouldEndGame) {
+        isGameOver = true;
+        if (turnCountdownInterval) clearInterval(turnCountdownInterval);
+        cleanupGameListeners();
+
+        bullets = [];
+        explosions = [];
+
+        // TRƯỜNG HỢP A: ĐẦU HÀNG / RÚT LUI CHỦ ĐỘNG
+        if (isImmediateSurrender) {
+            let msg = leaverName ? `⚠️ Đạo hữu [${leaverName}] đã rút lui!\n` : "";
+            msg += isDungeonMode ? "Ải Phó Bản thất bại!" : "Trận đấu đối kháng kết thúc!";
+
+            if (window.database && roomId) {
+                window.database.ref('pvp_rooms/' + roomId).update({
+                    status: "WAITING",
+                    matchData: null
+                });
             }
+            if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+            alert(msg);
+            return;
+        }
+
+        // TRƯỜNG HỢP B: KẾT THÚC TRẬN PHÓ BẢN
+        if (isDungeonMode) {
+            if (isBossDead) {
+                // Thắng lợi: Boss chết!
+                alert("🎉 VƯỢT ẢI THÀNH CÔNG!\nYêu Vương đã bị tiêu diệt! Hãy mở phù bài đoạt cơ duyên!");
+            } else {
+                // Thất bại: Người chơi tử trận
+                alert("💀 TOÀN ĐỘI ĐÃ TỬ TRẬN!\nPhó bản thất bại, yêu ma quá hùng mạnh!");
+            }
+
+            // Gọi mở 9 thẻ bài lật thưởng đồng bộ qua Socket (y hệt như PvP)
+            if (socket && socket.connected) {
+                socket.emit('match_finished_cards');
+            } else {
+                initLocalCardBoard();
+            }
+            return;
+        }
+
+        // TRƯỜNG HỢP C: KẾT THÚC TRẬN PVP THÔNG THƯỜNG
+        if (socket && socket.connected) {
+            socket.emit('match_finished_cards');
+        } else {
+            initLocalCardBoard();
+        }
+    }
+}
             function update() {
                 const p = getActivePlayer();
 
