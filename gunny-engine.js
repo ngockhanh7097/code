@@ -1640,18 +1640,20 @@ const DUNGEON_CONFIGS = {
                     }
                 });
 
-                // Camera theo đạn hoặc nhân vật
+                
+                // Camera tự động lia mượt mà trên map rộng 1800px
                 if (bullets.length > 0) {
+                    // Ưu tiên 1: Camera bám theo đạn bay
                     const b = bullets[0];
-                    const screenX = b.x - cameraX;
-                    const margin = canvas.width * 0.35;
-                    if (screenX > canvas.width - margin) cameraX += (screenX - (canvas.width - margin)) * 0.08;
-                    else if (screenX < margin) cameraX -= (margin - screenX) * 0.08;
-                    cameraX = Math.max(0, Math.min(cameraX, WORLD_WIDTH - canvas.width));
-                } else if (!isFiring && p.hp > 0) {
-                    let targetCamX = p.x - canvas.width / 2;
-                    targetCamX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - canvas.width));
-                    cameraX += (targetCamX - cameraX) * 0.04;
+                    const targetCamX = Math.max(0, Math.min(b.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
+                    cameraX += (targetCamX - cameraX) * 0.12;
+                } else if (!isFiring) {
+                    // Ưu tiên 2: Camera chuyển tiêu điểm sang nhân vật đang có lượt (dù là người hay quái)
+                    const curP = getActivePlayer();
+                    if (curP && curP.hp > 0) {
+                        const targetCamX = Math.max(0, Math.min(curP.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
+                        cameraX += (targetCamX - cameraX) * 0.06;
+                    }
                 }
 
                 // Tích lực
