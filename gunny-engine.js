@@ -518,9 +518,6 @@ const DUNGEON_CONFIGS = {
             const bgImg = new Image();
             bgImg.src = activeMapData.bg;
 
-            const bgImg = new Image();
-            bgImg.src = activeMapData.bg;
-
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
                 // Quét từ trên xuống bắt đầu từ Y = 280 để đón chính xác từng gờ đá lồi lõm
@@ -1675,7 +1672,6 @@ const DUNGEON_CONFIGS = {
                     b.y += b.vy;
                     b.rotation += (b.vx >= 0 ? 0.08 : -0.08);
 
-                    let hitTerrain = false;
 
                     let hitTerrain = false;
                     if (b.x >= 0 && b.x < WORLD_WIDTH && b.y >= 0 && b.y < canvas.height) {
