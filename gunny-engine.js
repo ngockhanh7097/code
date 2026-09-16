@@ -19,19 +19,20 @@
 const DUNGEON_CONFIGS = {
     "linh_son_1": {
         name: "Ải 1: Yêu Lang Linh Sơn",
-        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp",
+        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen1.webp",
+        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen2.webp",
         monsters: [
             {
                 id: "wolf_minion_1",
                 name: "Huyết Lang (Nhỏ)",
                 level: 3,
-                type: "melee", // Cận chiến: Bò lại gần mới đánh
+                type: "melee",
                 hp: 120,
                 maxHp: 120,
                 damage: 8,
-                attackRange: 45, // Tầm đánh chạm người
-                moveSpeed: 60,   // Quãng đường bò mỗi lượt (pixel)
-                x: 650, y: 350,
+                attackRange: 50,
+                moveSpeed: 80,
+                x: 1300, y: 350, // Điều chỉnh đứng ở nửa sau map 1800px
                 isMonster: true,
                 isBoss: false,
                 gender: "male",
@@ -42,12 +43,12 @@ const DUNGEON_CONFIGS = {
                 id: "wolf_boss",
                 name: "Huyết Lang Vương (Boss)",
                 level: 10,
-                type: "ranged_weapon", // Đứng xa bắn như người
-                bossSkillType: "ranged", // "ranged": bắn vũ khí, "aoe": đánh lan toàn đội
+                type: "ranged_weapon",
+                bossSkillType: "ranged",
                 hp: 450,
                 maxHp: 450,
                 damage: 25,
-                x: 820, y: 350,
+                x: 1650, y: 350, // Boss đứng xa ở góc phải (1650px)
                 isMonster: true,
                 isBoss: true,
                 gender: "male",
@@ -58,7 +59,8 @@ const DUNGEON_CONFIGS = {
     },
     "linh_son_2": {
         name: "Ải 2: Cửu U Hắc Báo",
-        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp",
+        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen1.webp",
+        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen2.webp",
         monsters: [
             {
                 id: "panther_minion_1",
@@ -68,9 +70,9 @@ const DUNGEON_CONFIGS = {
                 hp: 200,
                 maxHp: 200,
                 damage: 15,
-                attackRange: 45,
-                moveSpeed: 70,
-                x: 640, y: 350,
+                attackRange: 50,
+                moveSpeed: 90,
+                x: 1350, y: 350,
                 isMonster: true,
                 isBoss: false,
                 gender: "male",
@@ -81,12 +83,12 @@ const DUNGEON_CONFIGS = {
                 id: "panther_boss",
                 name: "Cửu U Ma Báo (Boss AoE)",
                 level: 20,
-                type: "aoe_all", // Đứng xa gầm 1 phát toàn bộ người chơi mất máu
+                type: "aoe_all",
                 bossSkillType: "aoe",
                 hp: 800,
                 maxHp: 800,
                 damage: 35,
-                x: 830, y: 350,
+                x: 1650, y: 350,
                 isMonster: true,
                 isBoss: true,
                 gender: "male",
@@ -96,7 +98,6 @@ const DUNGEON_CONFIGS = {
         ]
     }
 };
-
     function loadSocketIO(callback) {
         if (typeof io !== "undefined") {
             callback();
@@ -436,7 +437,8 @@ const DUNGEON_CONFIGS = {
             const ctx = canvas.getContext('2d');
 
             const GRAVITY = 0.25;
-            const WORLD_WIDTH = 900;
+            // Phó bản rộng 1800px (gấp đôi), PvP giữ nguyên 900px
+            const WORLD_WIDTH = isDungeonMode ? 1800 : 900;
             const GROUND_Y = 410;
             const BARREL_LEN = 35;
             const MOVE_SPEED = 3.0;
@@ -473,12 +475,18 @@ const DUNGEON_CONFIGS = {
 
             const groundImg = new Image();
             groundImg.crossOrigin = "anonymous";
-            groundImg.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
+            // Nếu là phó bản thì lấy ảnh đất mới, PvP lấy ảnh cũ
+            groundImg.src = (isDungeonMode && currentDungeon && currentDungeon.ground)
+                ? currentDungeon.ground
+                : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
             groundImg.onload = () => initTerrain();
-
+            
             const bgImg = new Image();
             bgImg.crossOrigin = "anonymous";
-            bgImg.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp';
+            // Nếu là phó bản lấy ảnh nền lâu đài ban đêm mới, PvP lấy ảnh cũ
+            bgImg.src = (isDungeonMode && currentDungeon && currentDungeon.bg)
+                ? currentDungeon.bg
+                : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp';
 
             function drawFallbackGround() {
                 terrainCtx.fillStyle = '#2d8a4e';
@@ -550,7 +558,10 @@ if (matchData && matchData.players && matchData.players.length > 0) {
         wImg.src = p.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
         weaponImages[p.name] = wImg;
 
-        let spawnX = isDungeonMode ? (80 + idx * 80) : (SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750));
+        // 1. Vị trí người chơi (Team 1 đứng bên trái: x = 120, 220, 320, 420)
+        let spawnX = isDungeonMode 
+        ? (120 + idx * 100) 
+        : (SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750));
 
         humanPlayers.push({
             slotIndex: p.slotIndex || (idx + 1),
@@ -593,8 +604,8 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             mWp.src = m.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
             weaponImages[m.name] = mWp;
 
-            // Đảm bảo Boss luôn đứng ở nửa bên phải bản đồ (khoảng x = 700 đến 820)
-            let defaultMonsterX = m.isBoss ? 800 : (650 + mIdx * 60);
+            // Quái nhỏ đứng ở mốc 1200px - 1400px, Boss đứng ở mốc 1650px
+            let defaultMonsterX = m.isBoss ? 1650 : (1250 + mIdx * 100);
 
             let monsterObj = {
                 slotIndex: 10 + mIdx,
@@ -842,12 +853,12 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                         // Nếu ở gần -> chọn góc cao (55° - 65°) để đạn cắm thẳng xuống
                         // Nếu ở xa hoặc có gió cản -> chọn góc thấp (35° - 45°) để đạn bay căng
                         let chosenAngle = 45;
-                        if (dx < 300) {
+                        if (dx < 400) {
                             chosenAngle = 60;
-                        } else if (dx > 600) {
-                            chosenAngle = 38;
+                        } else if (dx > 1000) {
+                            chosenAngle = 35; // Tầm siêu xa hạ góc 35 độ để đạn bay căng hết map
                         } else {
-                            chosenAngle = 48;
+                            chosenAngle = 45;
                         }
             
                         // Nếu mục tiêu ở quá cao, tự nâng thêm góc
