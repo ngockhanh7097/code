@@ -19,8 +19,8 @@
 const DUNGEON_CONFIGS = {
     "linh_son_1": {
         name: "Ải 1: Yêu Lang Linh Sơn",
-        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen1.webp",
-        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen2.webp",
+        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen1.webp",
+        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen2.webp",
         monsters: [
             {
                 id: "wolf_minion_1",
