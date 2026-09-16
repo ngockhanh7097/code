@@ -461,13 +461,8 @@ const DUNGEON_CONFIGS = {
             const activeMapData = GAME_MAPS_CONFIG[selectedMapKey] || GAME_MAPS_CONFIG["co_mo"];
 
             const GRAVITY = 0.25;
-            // Nếu chọn map Cổ Mộ (dù ở PvP hay Phó Bản) đều chạy khổ rộng 1800px; map Linh Sơn chạy 900px
             const WORLD_WIDTH = (selectedMapKey === "co_mo" || isDungeonMode) ? 1800 : 900;
-            const GROUND_Y = 410;
-
-            const GRAVITY = 0.25;
-            const WORLD_WIDTH = isDungeonMode ? 1800 : 900;
-            const GROUND_Y = 410;
+            const GROUND_Y = 350;
             const BARREL_LEN = 35;
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
@@ -508,11 +503,10 @@ const DUNGEON_CONFIGS = {
                 terrainCtx.fillRect(0, GROUND_Y + 15, WORLD_WIDTH, canvas.height - (GROUND_Y + 15));
             }
 
-            // Vẽ nền đất tạm thời để luôn có sàn đứng trong lúc chờ ảnh tải
+            // Vẽ nền đất tạm thời
             drawFallbackGround();
 
             const groundImg = new Image();
-            groundImg.crossOrigin = "anonymous";
             groundImg.onload = function() {
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
@@ -523,25 +517,27 @@ const DUNGEON_CONFIGS = {
             groundImg.src = activeMapData.ground;
 
             const bgImg = new Image();
-            bgImg.crossOrigin = "anonymous";
             bgImg.src = activeMapData.bg;
 
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
-                const start = Math.max(0, Math.floor(startY));
+                // Quét bắt đầu từ Y = 200 để đón trúng mặt trên của khối đất/đá
+                const start = 200;
                 try {
                     const imgData = terrainCtx.getImageData(checkX, start, 1, canvas.height - start).data;
                     for (let y = 0; y < canvas.height - start; y++) {
-                        // Pixel có độ mờ > 50 thì xem là mặt đất
-                        if (imgData[y * 4 + 3] > 50) return start + y;
+                        // Pixel có alpha > 50 coi là có đất
+                        if (imgData[y * 4 + 3] > 50) {
+                            return start + y;
+                        }
                     }
                 } catch (e) {
                     return GROUND_Y;
                 }
                 return GROUND_Y;
             }
+
             function digHole(x, y, radius) {
-                // Phó bản cấm hoàn toàn việc đào đất; PvP vẫn đào bình thường
                 if (isDungeonMode) return;
 
                 terrainCtx.save();
@@ -596,7 +592,7 @@ const DUNGEON_CONFIGS = {
                         isMonster: false,
                         isBoss: false,
                         x: spawnX,
-                        y: 350,
+                        y: 280,
                         radius: 28,
                         angle: 45,
                         facing: 1,
@@ -641,7 +637,7 @@ const DUNGEON_CONFIGS = {
                             attackRange: m.attackRange || 50,
                             moveSpeed: m.moveSpeed || 80,
                             x: m.x || defaultMonsterX,
-                            y: 350,
+                            y: 280,
                             radius: m.isBoss ? 38 : 26,
                             angle: 45,
                             facing: -1,
@@ -670,8 +666,8 @@ const DUNGEON_CONFIGS = {
                 weaponImages["Player 1"] = defWp; weaponImages["Player 2"] = defWp;
 
                 gamePlayers = [
-                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, damageBonusPercent: 0, activeBuffs: [], x: 120, y: 350, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
-                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, damageBonusPercent: 0, activeBuffs: [], x: 780, y: 350, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
+                    { slotIndex: 1, name: "Player 1", tuviText: "Luyện khí tầng 1", team: 1, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, damageBonusPercent: 0, activeBuffs: [], x: 120, y: 280, radius: 28, angle: 45, facing: 1, color: '#ff4b2b' },
+                    { slotIndex: 3, name: "Player 2", tuviText: "Luyện khí tầng 1", team: 2, level: 1, damageStat: 10, hp: 100, maxHp: 100, stamina: 100, maxStamina: 100, pow: 0, isPowActive: false, extraBulletsCount: 0, damageBonusPercent: 0, activeBuffs: [], x: 780, y: 280, radius: 28, angle: 45, facing: -1, color: '#38ef7d' }
                 ];
             }
 
