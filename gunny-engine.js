@@ -474,7 +474,7 @@ const DUNGEON_CONFIGS = {
             const terrainCanvas = document.createElement('canvas');
             terrainCanvas.width = WORLD_WIDTH;
             terrainCanvas.height = canvas.height;
-            const terrainCtx = terrainCanvas.getContext('2d');
+            const terrainCtx = terrainCanvas.getContext('2d', { willReadFrequently: true });
 
             function drawFallbackGround() {
                 terrainCtx.fillStyle = '#2d8a4e';
@@ -483,57 +483,28 @@ const DUNGEON_CONFIGS = {
                 terrainCtx.fillRect(0, GROUND_Y + 15, WORLD_WIDTH, canvas.height - (GROUND_Y + 15));
             }
 
-            function initTerrain() {
-                terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
-                try {
-                    if (groundImg.complete && groundImg.naturalWidth > 0) {
-                        terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
-                    } else {
-                        drawFallbackGround();
-                    }
-                } catch (e) {
-                    drawFallbackGround();
-                }
-            }
-
-            // Vẽ nền tạm ngay lập tức để không bao giờ bị đen màn hình trong lúc chờ ảnh tải
+            // Vẽ nền đất tạm thời để luôn có sàn đứng trong lúc chờ ảnh tải
             drawFallbackGround();
 
             const groundImg = new Image();
+            groundImg.crossOrigin = "anonymous";
             groundImg.onload = function() {
-                // Xóa nền đất tạm cũ và vẽ toàn bộ ảnh đất mới lên đúng chiều dài 1800px
+                // Khi ảnh đất tải xong, xóa nền tạm và vẽ ảnh đất thật phủ kín 1800px
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
+            };
+            groundImg.onerror = function() {
+                drawFallbackGround();
             };
             groundImg.src = (isDungeonMode && currentDungeon && currentDungeon.ground)
                 ? currentDungeon.ground
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
 
             const bgImg = new Image();
+            bgImg.crossOrigin = "anonymous";
             bgImg.src = (isDungeonMode && currentDungeon && currentDungeon.bg)
                 ? currentDungeon.bg
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp';
-
-            function drawFallbackGround() {
-                terrainCtx.fillStyle = '#2d8a4e';
-                terrainCtx.fillRect(0, GROUND_Y, WORLD_WIDTH, 15);
-                terrainCtx.fillStyle = '#5c3a21';
-                terrainCtx.fillRect(0, GROUND_Y + 15, WORLD_WIDTH, canvas.height - (GROUND_Y + 15));
-            }
-
-            function initTerrain() {
-                terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
-                try {
-                    if (groundImg.complete && groundImg.naturalWidth !== 0) {
-                        terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
-                    } else {
-                        drawFallbackGround();
-                    }
-                } catch (e) {
-                    drawFallbackGround();
-                }
-            }
-            initTerrain();
 
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
@@ -541,10 +512,10 @@ const DUNGEON_CONFIGS = {
                 try {
                     const imgData = terrainCtx.getImageData(checkX, start, 1, canvas.height - start).data;
                     for (let y = 0; y < canvas.height - start; y++) {
+                        // Pixel có độ mờ > 50 thì xem là mặt đất
                         if (imgData[y * 4 + 3] > 50) return start + y;
                     }
                 } catch (e) {
-                    // Fallback an toàn nếu dính lỗi đọc pixel: trả về cao độ đất mặc định
                     return GROUND_Y;
                 }
                 return GROUND_Y;
