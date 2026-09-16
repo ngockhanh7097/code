@@ -26,13 +26,13 @@ const DUNGEON_CONFIGS = {
                 id: "wolf_minion_1",
                 name: "Huyết Lang (Nhỏ)",
                 level: 3,
-                type: "melee",
+                type: "melee", // Cận chiến: Bò lại gần mới đánh
                 hp: 120,
                 maxHp: 120,
                 damage: 8,
-                attackRange: 50,
-                moveSpeed: 80,
-                x: 1300, y: 350, // Điều chỉnh đứng ở nửa sau map 1800px
+                attackRange: 50, // Tầm đánh chạm người
+                moveSpeed: 80,   // Quãng đường bò mỗi lượt (pixel)
+                x: 1300, y: 350,
                 isMonster: true,
                 isBoss: false,
                 gender: "male",
@@ -43,12 +43,12 @@ const DUNGEON_CONFIGS = {
                 id: "wolf_boss",
                 name: "Huyết Lang Vương (Boss)",
                 level: 10,
-                type: "ranged_weapon",
-                bossSkillType: "ranged",
+                type: "ranged_weapon", // Đứng xa bắn như người
+                bossSkillType: "ranged", // "ranged": bắn vũ khí, "aoe": đánh lan toàn đội
                 hp: 450,
                 maxHp: 450,
                 damage: 25,
-                x: 1650, y: 350, // Boss đứng xa ở góc phải (1650px)
+                x: 1650, y: 350,
                 isMonster: true,
                 isBoss: true,
                 gender: "male",
@@ -83,7 +83,7 @@ const DUNGEON_CONFIGS = {
                 id: "panther_boss",
                 name: "Cửu U Ma Báo (Boss AoE)",
                 level: 20,
-                type: "aoe_all",
+                type: "aoe_all", // Đứng xa gầm 1 phát toàn bộ người chơi mất máu
                 bossSkillType: "aoe",
                 hp: 800,
                 maxHp: 800,
@@ -98,6 +98,7 @@ const DUNGEON_CONFIGS = {
         ]
     }
 };
+
     function loadSocketIO(callback) {
         if (typeof io !== "undefined") {
             callback();
@@ -436,8 +437,11 @@ const DUNGEON_CONFIGS = {
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
+            const isDungeonMode = matchData && matchData.mode === "phoban";
+            const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
+
             const GRAVITY = 0.25;
-            // Phó bản rộng 1800px (gấp đôi), PvP giữ nguyên 900px
+            // Map phó bản mở rộng gấp đôi (1800px), PvP giữ 900px
             const WORLD_WIDTH = isDungeonMode ? 1800 : 900;
             const GROUND_Y = 410;
             const BARREL_LEN = 35;
@@ -475,15 +479,13 @@ const DUNGEON_CONFIGS = {
 
             const groundImg = new Image();
             groundImg.crossOrigin = "anonymous";
-            // Nếu là phó bản thì lấy ảnh đất mới, PvP lấy ảnh cũ
             groundImg.src = (isDungeonMode && currentDungeon && currentDungeon.ground)
                 ? currentDungeon.ground
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
             groundImg.onload = () => initTerrain();
-            
+
             const bgImg = new Image();
             bgImg.crossOrigin = "anonymous";
-            // Nếu là phó bản lấy ảnh nền lâu đài ban đêm mới, PvP lấy ảnh cũ
             bgImg.src = (isDungeonMode && currentDungeon && currentDungeon.bg)
                 ? currentDungeon.bg
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp';
@@ -535,123 +537,113 @@ const DUNGEON_CONFIGS = {
             let playerImages = {};
             let weaponImages = {};
 
-           const isDungeonMode = matchData && matchData.mode === "phoban";
-const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
+            if (matchData && matchData.players && matchData.players.length > 0) {
+                let humanPlayers = [];
+                let monsterMinions = [];
+                let monsterBosses = [];
 
-if (isDungeonMode && currentDungeon && currentDungeon.bg) {
-    bgImg.src = currentDungeon.bg;
-}
+                // 1. Nạp Người chơi (Team 1)
+                matchData.players.forEach((p, idx) => {
+                    let pImg = new Image();
+                    let genderKey = (p.gender === "female") ? "female" : "male";
+                    pImg.src = CHIBI_AVATARS[genderKey];
+                    playerImages[p.name] = pImg;
 
-if (matchData && matchData.players && matchData.players.length > 0) {
-    let humanPlayers = [];
-    let monsterMinions = [];
-    let monsterBosses = [];
+                    let wImg = new Image();
+                    wImg.src = p.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
+                    weaponImages[p.name] = wImg;
 
-    // 1. Nạp Người chơi (Team 1)
-    matchData.players.forEach((p, idx) => {
-        let pImg = new Image();
-        let genderKey = (p.gender === "female") ? "female" : "male";
-        pImg.src = CHIBI_AVATARS[genderKey];
-        playerImages[p.name] = pImg;
+                    let spawnX = isDungeonMode 
+                        ? (120 + idx * 100) 
+                        : (SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750));
 
-        let wImg = new Image();
-        wImg.src = p.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
-        weaponImages[p.name] = wImg;
+                    humanPlayers.push({
+                        slotIndex: p.slotIndex || (idx + 1),
+                        name: p.name || "Đạo Hữu",
+                        tuviText: p.tuviText || "Phàm Nhân",
+                        team: isDungeonMode ? 1 : p.team,
+                        level: p.level || 1,
+                        damageStat: p.damage || BASE_DAMAGE,
+                        hp: p.hp || 100,
+                        maxHp: p.hp || 100,
+                        stamina: 100,
+                        maxStamina: p.energy || 100,
+                        pow: 0,
+                        isPowActive: false,
+                        extraBulletsCount: 0,
+                        damageBonusPercent: 0,
+                        activeBuffs: [],
+                        isMonster: false,
+                        isBoss: false,
+                        x: spawnX,
+                        y: 350,
+                        radius: 28,
+                        angle: 45,
+                        facing: 1,
+                        color: '#38ef7d'
+                    });
+                });
 
-        // 1. Vị trí người chơi (Team 1 đứng bên trái: x = 120, 220, 320, 420)
-        let spawnX = isDungeonMode 
-        ? (120 + idx * 100) 
-        : (SLOT_SPAWN_X[p.slotIndex] || (p.team === 1 ? 150 : 750));
+                // 2. Nạp Quái vật (Team 2) với tọa độ hiển thị mở rộng trên map 1800px
+                if (isDungeonMode && currentDungeon && currentDungeon.monsters) {
+                    currentDungeon.monsters.forEach((m, mIdx) => {
+                        let mImg = new Image();
+                        mImg.src = m.isBoss 
+                            ? CHIBI_AVATARS.male 
+                            : CHIBI_AVATARS.female;
+                        playerImages[m.name] = mImg;
 
-        humanPlayers.push({
-            slotIndex: p.slotIndex || (idx + 1),
-            name: p.name || "Đạo Hữu",
-            tuviText: p.tuviText || "Phàm Nhân",
-            team: isDungeonMode ? 1 : p.team,
-            level: p.level || 1,
-            damageStat: p.damage || BASE_DAMAGE,
-            hp: p.hp || 100,
-            maxHp: p.hp || 100,
-            stamina: 100,
-            maxStamina: p.energy || 100,
-            pow: 0,
-            isPowActive: false,
-            extraBulletsCount: 0,
-            damageBonusPercent: 0,
-            activeBuffs: [],
-            isMonster: false,
-            isBoss: false,
-            x: spawnX,
-            y: 350,
-            radius: 28,
-            angle: 45,
-            facing: 1,
-            color: '#38ef7d'
-        });
-    });
+                        let mWp = new Image();
+                        mWp.src = m.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
+                        weaponImages[m.name] = mWp;
 
-    // 2. Nạp Quái vật (Team 2) với tọa độ hiển thị rõ ràng bên phải màn hình
-    if (isDungeonMode && currentDungeon && currentDungeon.monsters) {
-        currentDungeon.monsters.forEach((m, mIdx) => {
-            let mImg = new Image();
-            // Lấy ảnh chibi hoặc ảnh mặc định để chắc chắn canvas luôn vẽ được hình
-            mImg.src = m.isBoss 
-                ? CHIBI_AVATARS.male 
-                : CHIBI_AVATARS.female;
-            playerImages[m.name] = mImg;
+                        let defaultMonsterX = m.isBoss ? 1650 : (1250 + mIdx * 100);
 
-            let mWp = new Image();
-            mWp.src = m.weaponImg || 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
-            weaponImages[m.name] = mWp;
+                        let monsterObj = {
+                            slotIndex: 10 + mIdx,
+                            name: m.name,
+                            tuviText: m.isBoss ? "YÊU VƯƠNG (BOSS)" : `Yêu Thú Lv.${m.level}`,
+                            team: 2,
+                            level: m.level,
+                            damageStat: m.damage,
+                            hp: m.hp,
+                            maxHp: m.maxHp,
+                            stamina: 100,
+                            maxStamina: 100,
+                            pow: 0,
+                            isPowActive: false,
+                            extraBulletsCount: 0,
+                            damageBonusPercent: 0,
+                            activeBuffs: [],
+                            isMonster: true,
+                            isBoss: m.isBoss,
+                            monsterType: m.type, 
+                            attackRange: m.attackRange || 50,
+                            moveSpeed: m.moveSpeed || 80,
+                            x: m.x || defaultMonsterX,
+                            y: 350,
+                            radius: m.isBoss ? 38 : 26,
+                            angle: 45,
+                            facing: -1,
+                            color: m.isBoss ? '#ff0055' : '#ff7675'
+                        };
 
-            // Quái nhỏ đứng ở mốc 1200px - 1400px, Boss đứng ở mốc 1650px
-            let defaultMonsterX = m.isBoss ? 1650 : (1250 + mIdx * 100);
+                        if (m.isBoss) {
+                            monsterBosses.push(monsterObj);
+                        } else {
+                            monsterMinions.push(monsterObj);
+                        }
+                    });
+                }
 
-            let monsterObj = {
-                slotIndex: 10 + mIdx,
-                name: m.name,
-                tuviText: m.isBoss ? "YÊU VƯƠNG (BOSS)" : `Yêu Thú Lv.${m.level}`,
-                team: 2,
-                level: m.level,
-                damageStat: m.damage,
-                hp: m.hp,
-                maxHp: m.maxHp,
-                stamina: 100,
-                maxStamina: 100,
-                pow: 0,
-                isPowActive: false,
-                extraBulletsCount: 0,
-                damageBonusPercent: 0,
-                activeBuffs: [],
-                isMonster: true,
-                isBoss: m.isBoss,
-                monsterType: m.type, 
-                attackRange: m.attackRange || 45,
-                moveSpeed: m.moveSpeed || 60,
-                x: m.x || defaultMonsterX,
-                y: 350,
-                radius: m.isBoss ? 38 : 26,
-                angle: 45,
-                facing: -1,
-                color: m.isBoss ? '#ff0055' : '#ff7675'
-            };
-
-            if (m.isBoss) {
-                monsterBosses.push(monsterObj);
+                // 3. Sắp xếp thứ tự lượt: Quái nhỏ -> Boss -> Người chơi (Level thấp đi trước)
+                if (isDungeonMode) {
+                    humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
+                    gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
+                } else {
+                    gamePlayers = [...humanPlayers].sort((a, b) => (a.level || 1) - (b.level || 1));
+                }
             } else {
-                monsterMinions.push(monsterObj);
-            }
-        });
-    }
-
-    // 3. Sắp xếp thứ tự lượt: Quái nhỏ -> Boss -> Người chơi (Level thấp đi trước)
-    if (isDungeonMode) {
-        humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
-        gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
-    } else {
-        gamePlayers = [...humanPlayers].sort((a, b) => (a.level || 1) - (b.level || 1));
-    }
-} else {
                 const p1Img = new Image(); p1Img.src = CHIBI_AVATARS.male; playerImages["Player 1"] = p1Img;
                 const p2Img = new Image(); p2Img.src = CHIBI_AVATARS.female; playerImages["Player 2"] = p2Img;
                 const defWp = new Image(); defWp.src = 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp';
@@ -673,7 +665,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             let chargeSpeed = 0.25;
             let chargeDir = 1;
             let turnTimeLeft = 15;
-            let lastShotPower = null; // Lưu mốc lực vừa bắn (null là chưa bắn phát nào)
+            let lastShotPower = null;
             let lastMoveEmitTime = 0;
 
             let bullets = [];
@@ -694,18 +686,17 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 const rad = (angleDeg * Math.PI) / 180;
                 return { dx: Math.cos(rad) * player.facing, dy: -Math.sin(rad) };
             }
-// ==========================================
+
+            // ==========================================
             // 🐺 BỘ XỬ LÝ HÀNH VI TỰ ĐỘNG CỦA QUÁI VẬT & BOSS
             // ==========================================
             function executeMonsterTurn(monster) {
                 if (isGameOver || monster.hp <= 0) return;
 
-                // Chuẩn hóa tên để so sánh host chính xác không phân biệt hoa thường
-                const myNameClean = (window.currentUser || "").trim().toLowerCase();
-                const hostNameClean = (matchData && matchData.host ? matchData.host : "").trim().toLowerCase();
-                const isCurrentHost = (myNameClean === hostNameClean) || !socket || !socket.connected;
+                const myNameCheck = (window.currentUser || "").trim().toLowerCase();
+                const hostNameCheck = (matchData && matchData.host ? matchData.host : "").trim().toLowerCase();
+                const isCurrentHost = (myNameCheck === hostNameCheck) || !socket || !socket.connected;
 
-                // Chỉ máy Host điều khiển hành động của quái rồi gửi socket đồng bộ sang các máy khác
                 if (!isCurrentHost) return;
 
                 // 1. Tìm mục tiêu người chơi (Team 1) còn sống
@@ -840,68 +831,54 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 }
 
                 // -------------------------------------------------------------
-                // DẠNG 3: BOSS CĂN GÓC BẮN ĐẠN THÔNG MINH (TỰ TÍNH GÓC + GIÓ + LỰC)
+                // DẠNG 3: BOSS CĂN GÓC BẮN ĐẠN THÔNG MINH TRÊN MAP RỘNG 1800PX
                 // -------------------------------------------------------------
                 if (monster.monsterType === "ranged_weapon") {
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
-            
+
                         const dx = Math.abs(target.x - monster.x);
-                        const dy = target.y - monster.y; // dy > 0: mục tiêu ở thấp hơn, dy < 0: mục tiêu ở cao hơn
-            
-                        // 1. Thuật toán chọn góc thông minh:
-                        // Nếu ở gần -> chọn góc cao (55° - 65°) để đạn cắm thẳng xuống
-                        // Nếu ở xa hoặc có gió cản -> chọn góc thấp (35° - 45°) để đạn bay căng
+                        const dy = target.y - monster.y;
+
+                        // Ngưỡng góc bắn tương thích theo khoảng cách trên map 1800px
                         let chosenAngle = 45;
                         if (dx < 400) {
                             chosenAngle = 60;
                         } else if (dx > 1000) {
-                            chosenAngle = 35; // Tầm siêu xa hạ góc 35 độ để đạn bay căng hết map
+                            chosenAngle = 35; // Tầm siêu xa hạ góc 35° để đạn bay căng hết map
                         } else {
                             chosenAngle = 45;
                         }
-            
-                        // Nếu mục tiêu ở quá cao, tự nâng thêm góc
+
                         if (dy < -40) chosenAngle += 8;
-            
+
                         const rad = (chosenAngle * Math.PI) / 180;
                         const cos = Math.cos(rad);
-                        const sin = Math.sin(rad);
-            
-                        // 2. Tính vận tốc lý thuyết cơ bản theo công thức quỹ đạo ném xiên:
-                        // dy = -v*sin(a)*t + 0.5*g*t^2  và  dx = v*cos(a)*t
+
                         let term = dx * Math.tan(rad) - dy;
                         let baseSpeed = 15;
-            
+
                         if (term > 0 && cos > 0) {
                             baseSpeed = Math.sqrt((GRAVITY * dx * dx) / (2 * cos * cos * term));
                         }
-            
-                        // 3. Tính thời gian đạn bay ước tính (t) để bù trừ gió (wind):
-                        // Gió cùng chiều đẩy đạn đi xa hơn -> giảm lực. Gió ngược cản đạn -> tăng lực.
+
                         let estFlightTime = dx / (baseSpeed * cos || 1);
-                        let windEffect = 0.5 * wind * estFlightTime * estFlightTime * 20; // Hệ số ảnh hưởng của gió
-            
-                        // Điều chỉnh khoảng cách ảo sau khi tính gió
+                        let windEffect = 0.5 * wind * estFlightTime * estFlightTime * 20;
+
                         let adjustedDx = dx - (monster.facing * windEffect);
                         let adjustedTerm = adjustedDx * Math.tan(rad) - dy;
-            
+
                         if (adjustedTerm > 0) {
                             baseSpeed = Math.sqrt((GRAVITY * adjustedDx * adjustedDx) / (2 * cos * cos * adjustedTerm));
                         }
-            
-                        // Quy đổi vận tốc sang % lực thanh đo (max speed = 25)
+
                         let calculatedPower = Math.round((baseSpeed / 25) * 100);
-            
-                        // 4. Độ lệch chuẩn xác (Sai số nhẹ để Boss không bị quá máy móc nhưng vẫn rất nguy hiểm)
-                        // Sai số chỉ lệch tối đa 1 - 2 lực
                         let randomError = (Math.random() * 3 - 1.5);
                         let finalPower = Math.max(12, Math.min(100, Math.round(calculatedPower + randomError)));
-            
+
                         monster.angle = chosenAngle;
                         const isPow = (monster.pow >= 100) || (Math.random() < 0.3);
-            
-                        // Đồng bộ tư thế ngắm của Boss sang các máy khác
+
                         if (socket && socket.connected) {
                             socket.emit('player_move', {
                                 name: monster.name,
@@ -913,11 +890,10 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                                 activeBuffs: []
                             });
                         }
-            
-                        // Dừng 600ms giả lập Boss căn góc xong rồi bấm bắn
+
                         setTimeout(() => {
                             if (isGameOver || monster.hp <= 0) return;
-            
+
                             if (socket && socket.connected) {
                                 socket.emit('player_fire', {
                                     shooterName: monster.name,
@@ -928,13 +904,13 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                                     power: finalPower,
                                     wind: wind,
                                     isPow: isPow,
-                                    extraBullets: isPow ? 1 : 0 // Khi nộ bắn thêm 1 viên đạn kép
+                                    extraBullets: isPow ? 1 : 0
                                 });
                             }
                             executeVisualShot(monster, monster.angle, finalPower, isPow, isPow ? 1 : 0);
-                        }, 600);
-            
-                    }, 1000);
+                        }, 500);
+
+                    }, 800);
                 }
             }
 
@@ -999,12 +975,9 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     if (turnTimeLeft <= 0) {
                         clearInterval(turnCountdownInterval);
                         const activeP = getActivePlayer();
-                        // Nếu là lượt người chơi thì người chơi tự bỏ lượt
                         if (isMyTurn()) {
                             passTurnAction();
-                        } 
-                        // 👉 NẾU LÀ LƯỢT CỦA QUÁI MÀ HẾT GIỜ -> Tự động ép chuyển lượt kế tiếp
-                        else if (activeP && activeP.isMonster) {
+                        } else if (activeP && activeP.isMonster) {
                             triggerNextTurnServer();
                         }
                     }
@@ -1029,7 +1002,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 triggerNextTurnServer();
             }
 
-            // Gắn sự kiện nút Bỏ Lượt dưới khung gió
             const btnPassTop = document.getElementById("btn-top-pass-turn");
             if (btnPassTop) {
                 btnPassTop.onclick = function () {
@@ -1042,7 +1014,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             // ==========================================
             if (roomId) {
                 socket = io(SOCKET_SERVER_URL, { transports: ['websocket'] });
-                window.gunnyActiveSocket = socket; // 👉 Xuất ra để App 1 bấm rút lui là gửi socket được ngay
+                window.gunnyActiveSocket = socket;
 
                 socket.emit('join_room', {
                     roomId: roomId,
@@ -1050,7 +1022,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     playerData: { host: isHost }
                 });
 
-                // 1. Nhận tọa độ di chuyển từ đối thủ
                 // 1. Nhận tọa độ di chuyển từ đối thủ
                 socket.on('opponent_moved', (data) => {
                     const targetPlayer = gamePlayers.find(p => p.name === data.name);
@@ -1060,8 +1031,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                         targetPlayer.angle = data.angle;
                         targetPlayer.facing = data.facing;
                         targetPlayer.stamina = data.stamina;
-
-                        // 👉 THÊM DÒNG NÀY VÀO ĐÂY:
                         if (data.activeBuffs) targetPlayer.activeBuffs = data.activeBuffs;
                     }
                 });
@@ -1133,7 +1102,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
 
                 // 5. Đối thủ rút lui / Đầu hàng: Dừng trận NGAY LẬP TỨC
                 socket.on('player_left', (data) => {
-                    // Nếu bảng 9 thẻ bài đã xuất hiện thì KHÔNG đóng game nữa, để người thắng lật quà bình thường
                     const overlay = document.getElementById("endgame-cards-overlay");
                     if (overlay && overlay.style.display === "flex") {
                         return;
@@ -1162,21 +1130,18 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 socket.on('card_opened', ({ cardIndex, playerName, reward }) => {
                     revealSingleCardUI(cardIndex, playerName, reward);
                 });
-            } // 👈 Đóng if (roomId)
+            }
 
-           
-
-            // Thực hiện chuỗi bắn đạn liên hoàn (+1, +2, +3...)
             function executeVisualShot(shooter, angleDeg, power, isPow, extraCount) {
                 isFiring = true;
                 let totalBullets = 1 + (extraCount || 0);
-                shooter.extraBulletsCount = 0; // Đã bắn xong thì reset đạn buff
+                shooter.extraBulletsCount = 0;
                 if (isPow) { shooter.pow = 0; shooter.isPowActive = false; }
 
                 for (let i = 0; i < totalBullets; i++) {
                     setTimeout(() => {
                         if (!isGameOver) spawnBullet(shooter, angleDeg, power, isPow);
-                    }, i * 320); // Mỗi viên bắn cách nhau 320ms
+                    }, i * 320);
                 }
             }
 
@@ -1187,7 +1152,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 const startX = shooter.x + vec.dx * (BARREL_LEN * 0.8);
                 const startY = shooter.y + vec.dy * (BARREL_LEN * 0.8);
 
-                // Tính toán tổng Sát thương gốc + % Dame từ buff (50%, 20%, 10%)
                 const bonusRate = 1 + ((shooter.damageBonusPercent || 0) / 100);
                 const finalDamage = Math.round(shooter.damageStat * bonusRate);
 
@@ -1206,11 +1170,9 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             function startShooting(lockedPower) {
                 if (isGameOver || isFiring || !isMyTurn()) return;
                 const shooter = getActivePlayer();
-                // 🎯 LƯU MỐC LỰC VỪA BẮN VÀ HIỂN THỊ VẠCH XANH TRÊN THANH LỰC
                 lastShotPower = lockedPower;
                 const marker = document.getElementById("last-power-marker");
                 if (marker) {
-                    // Căn giữa mốc 5% theo giá trị lockedPower
                     let markerLeft = Math.max(0, Math.min(95, lockedPower - 2.5));
                     marker.style.left = markerLeft + '%';
                     marker.style.display = 'block';
@@ -1237,45 +1199,43 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             }
 
           function triggerNextTurnServer() {
-    const isDungeonMode = matchData && matchData.mode === "phoban";
+            // 1. Kiểm tra điều kiện sống còn
+            let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
+            let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
 
-    // 1. Kiểm tra điều kiện sống còn
-    let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
-    let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
+            if (!team1Alive || !team2Alive) {
+                checkGameOver();
+                return;
+            }
 
-    if (!team1Alive || !team2Alive) {
-        checkGameOver();
-        return;
-    }
+            // 2. Tìm lượt kế tiếp còn sống theo vòng xoay
+            let nextIdx = -1;
+            for (let i = 1; i <= gamePlayers.length; i++) {
+                let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
+                if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
+                    nextIdx = candidateIdx;
+                    break;
+                }
+            }
 
-    // 2. Tìm lượt kế tiếp còn sống theo vòng xoay
-    let nextIdx = -1;
-    for (let i = 1; i <= gamePlayers.length; i++) {
-        let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
-        if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
-            nextIdx = candidateIdx;
-            break;
+            if (nextIdx === -1) {
+                checkGameOver();
+                return;
+            }
+
+            let newWind = (Math.random() * 0.06 - 0.03);
+
+            if (socket && socket.connected) {
+                socket.emit('request_next_turn', {
+                    nextIndex: nextIdx,
+                    nextWind: newWind
+                });
+            } else {
+                currentPlayerIndex = nextIdx;
+                wind = newWind;
+                resetTurnState();
+            }
         }
-    }
-
-    if (nextIdx === -1) {
-        checkGameOver();
-        return;
-    }
-
-    let newWind = (Math.random() * 0.06 - 0.03);
-
-    if (socket && socket.connected) {
-        socket.emit('request_next_turn', {
-            nextIndex: nextIdx,
-            nextWind: newWind
-        });
-    } else {
-        currentPlayerIndex = nextIdx;
-        wind = newWind;
-        resetTurnState();
-    }
-}
             function resetTurnState() {
                 isFiring = false;
                 isCharging = false;
@@ -1285,14 +1245,13 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 activeP.stamina = activeP.maxStamina;
                 activeP.extraBulletsCount = 0;
                 activeP.damageBonusPercent = 0;
-                activeP.activeBuffs = []; // Xóa icon buff trên đầu khi sang turn mới
+                activeP.activeBuffs = [];
                 updateUI();
                 startTurnTimer();
-                // 👉 THÊM VÀO ĐÂY: Nếu là lượt của Quái vật hoặc Boss
+
                 if (activeP && activeP.isMonster && activeP.hp > 0) {
                     executeMonsterTurn(activeP);
                 }
-
             }
 
             window.onkeydown = function (e) {
@@ -1319,7 +1278,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 }
             };
 
-// --- HÀM XỬ LÝ DÙNG BUFF KỸ NĂNG VÀ ĐỒNG BỘ ---
             function applySkillBuff(buffType, cost, extraDmgPercent, isExtraShot) {
                 if (!isMyTurn() || isFiring || isCharging || isGameOver) return;
                 const p = getActivePlayer();
@@ -1336,7 +1294,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     p.damageBonusPercent = (p.damageBonusPercent || 0) + extraDmgPercent;
                 }
 
-                // Đồng bộ danh sách Buff lên đầu nhân vật cho đối thủ thấy
                 if (socket) {
                     socket.emit('player_move', {
                         name: p.name,
@@ -1351,7 +1308,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 updateUI();
             }
 
-            // Gán sự kiện cho 4 nút kỹ năng bên phải
             const btnAdd1 = document.getElementById('btn-skill-add1');
             if (btnAdd1) btnAdd1.onclick = () => applySkillBuff('add1', BUFF_COSTS.add1, 0, true);
 
@@ -1364,7 +1320,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             const btnDame10 = document.getElementById('btn-skill-dame10');
             if (btnDame10) btnDame10.onclick = () => applySkillBuff('dame10', BUFF_COSTS.dame10, 10, false);
 
-            // --- GIỮ LẠI NÚT POW NÀY ---
             const powBtn = document.getElementById('active-pow-btn');
             if (powBtn) {
                 powBtn.onclick = function () {
@@ -1377,7 +1332,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 };
             }
 
-            // 🎯 XỬ LÝ NÚT BẮN (HỖ TRỢ CẢ CHUỘT VÀ CẢM ỨNG ĐIỆN THOẠI)
             const btnTouchFire = document.getElementById('btn-touch-fire');
             if (btnTouchFire) {
                 const handleFireStart = (e) => {
@@ -1403,7 +1357,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 btnTouchFire.addEventListener('touchend', handleFireEnd, { passive: false });
             }
 
-            // 🎯 XỬ LÝ 4 NÚT HƯỚNG D-PAD (BẤM GIỮ ĐỂ DI CHUYỂN / CHỈNH GÓC)
             function bindDpadButton(btnId, keyCode) {
                 const btn = document.getElementById(btnId);
                 if (!btn) return;
@@ -1414,6 +1367,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 };
                 const stopAction = (e) => {
                     e.preventDefault();
+                    if (!isMyTurn() || isFiring || isGameOver) return;
                     keys[keyCode] = false;
                 };
                 btn.addEventListener('mousedown', startAction);
@@ -1431,13 +1385,12 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             function cleanupGameListeners() {
                 window.onkeydown = null;
                 window.onkeyup = null;
-                // Tuyệt đối không disconnect socket ở đây vì còn cần dùng để lật 9 thẻ bài
             }
 
             let cardFlipTimer = null;
             let cardTimeRemaining = 10;
             let myHasPickedCard = false;
-            // 🎯 1. TẠO BẢNG THẺ DỰ PHÒNG (NẾU MẤT SOCKET)
+
             function initLocalCardBoard() {
                 const localCards = [];
                 for (let i = 0; i < 9; i++) {
@@ -1450,7 +1403,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 renderCardsBoardUI(localCards);
             }
 
-            // 🎯 2. VẼ BẢNG 9 THẺ BÀI LÊN MÀN HÌNH
             function renderCardsBoardUI(cards) {
                 const overlay = document.getElementById("endgame-cards-overlay");
                 const grid = document.getElementById("cards-grid-box");
@@ -1517,7 +1469,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 }, 1000);
             }
 
-            // 🎯 3. LẬT MẶT SAU CỦA THẺ BÀI
             function revealSingleCardUI(index, playerName, reward) {
                 const cardEl = document.getElementById(`card-slot-${index}`);
                 if (!cardEl) return;
@@ -1554,76 +1505,62 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             }
 
             function checkGameOver(isImmediateSurrender = false, leaverName = null) {
-    if (isGameOver) return;
+                if (isGameOver) return;
 
-    const isDungeonMode = matchData && matchData.mode === "phoban";
+                let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
+                let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
 
-    // 1. Kiểm tra trạng thái sống còn của các bên
-    let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0); // Toàn bộ người chơi
-    let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0); // Quái và Boss
+                let bossUnit = gamePlayers.find(p => p.isBoss);
+                let isBossDead = isDungeonMode && bossUnit && bossUnit.hp <= 0;
 
-    // Trong phó bản: Tìm xem con Boss còn sống hay không
-    let bossUnit = gamePlayers.find(p => p.isBoss);
-    let isBossDead = isDungeonMode && bossUnit && bossUnit.hp <= 0;
+                let shouldEndGame = isImmediateSurrender || !team1Alive || (!isDungeonMode && !team2Alive) || (isDungeonMode && isBossDead);
 
-    // Điều kiện kết thúc trận đấu:
-    // - Chủ động đầu hàng (isImmediateSurrender)
-    // - Hoặc Người chơi chết hết (!team1Alive)
-    // - Hoặc Trong PvP: 1 trong 2 team chết hết
-    // - Hoặc Trong Phó Bản: Boss chết (isBossDead)
-    let shouldEndGame = isImmediateSurrender || !team1Alive || (!isDungeonMode && !team2Alive) || (isDungeonMode && isBossDead);
+                if (shouldEndGame) {
+                    isGameOver = true;
+                    if (turnCountdownInterval) clearInterval(turnCountdownInterval);
+                    cleanupGameListeners();
 
-    if (shouldEndGame) {
-        isGameOver = true;
-        if (turnCountdownInterval) clearInterval(turnCountdownInterval);
-        cleanupGameListeners();
+                    bullets = [];
+                    explosions = [];
 
-        bullets = [];
-        explosions = [];
+                    if (isImmediateSurrender) {
+                        let msg = leaverName ? `⚠️ Đạo hữu [${leaverName}] đã rút lui!\n` : "";
+                        msg += isDungeonMode ? "Ải Phó Bản thất bại!" : "Trận đấu đối kháng kết thúc!";
 
-        // TRƯỜNG HỢP A: ĐẦU HÀNG / RÚT LUI CHỦ ĐỘNG
-        if (isImmediateSurrender) {
-            let msg = leaverName ? `⚠️ Đạo hữu [${leaverName}] đã rút lui!\n` : "";
-            msg += isDungeonMode ? "Ải Phó Bản thất bại!" : "Trận đấu đối kháng kết thúc!";
+                        if (window.database && roomId) {
+                            window.database.ref('pvp_rooms/' + roomId).update({
+                                status: "WAITING",
+                                matchData: null
+                            });
+                        }
+                        if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                        alert(msg);
+                        return;
+                    }
 
-            if (window.database && roomId) {
-                window.database.ref('pvp_rooms/' + roomId).update({
-                    status: "WAITING",
-                    matchData: null
-                });
+                    if (isDungeonMode) {
+                        if (isBossDead) {
+                            alert("🎉 VƯỢT ẢI THÀNH CÔNG!\nYêu Vương đã bị tiêu diệt! Hãy mở phù bài đoạt cơ duyên!");
+                        } else {
+                            alert("💀 TOÀN ĐỘI ĐÃ TỬ TRẬN!\nPhó bản thất bại, yêu ma quá hùng mạnh!");
+                        }
+
+                        if (socket && socket.connected) {
+                            socket.emit('match_finished_cards');
+                        } else {
+                            initLocalCardBoard();
+                        }
+                        return;
+                    }
+
+                    if (socket && socket.connected) {
+                        socket.emit('match_finished_cards');
+                    } else {
+                        initLocalCardBoard();
+                    }
+                }
             }
-            if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
-            alert(msg);
-            return;
-        }
 
-        // TRƯỜNG HỢP B: KẾT THÚC TRẬN PHÓ BẢN
-        if (isDungeonMode) {
-            if (isBossDead) {
-                // Thắng lợi: Boss chết!
-                alert("🎉 VƯỢT ẢI THÀNH CÔNG!\nYêu Vương đã bị tiêu diệt! Hãy mở phù bài đoạt cơ duyên!");
-            } else {
-                // Thất bại: Người chơi tử trận
-                alert("💀 TOÀN ĐỘI ĐÃ TỬ TRẬN!\nPhó bản thất bại, yêu ma quá hùng mạnh!");
-            }
-
-            // Gọi mở 9 thẻ bài lật thưởng đồng bộ qua Socket (y hệt như PvP)
-            if (socket && socket.connected) {
-                socket.emit('match_finished_cards');
-            } else {
-                initLocalCardBoard();
-            }
-            return;
-        }
-
-        // TRƯỜNG HỢP C: KẾT THÚC TRẬN PVP THÔNG THƯỜNG
-        if (socket && socket.connected) {
-            socket.emit('match_finished_cards');
-        } else {
-            initLocalCardBoard();
-        }
-    }
-}
             function update() {
                 const p = getActivePlayer();
 
@@ -1667,7 +1604,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 }
 
                 // Trọng lực rơi
-                // Chỉ kiểm tra rơi khi nhân vật chưa chạm đất hoặc đang di chuyển
                 gamePlayers.forEach(player => {
                     if (player.hp <= 0) return;
                     
@@ -1688,7 +1624,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     }
                 });
 
-                // Camera theo đạn
+                // Camera theo đạn hoặc nhân vật
                 if (bullets.length > 0) {
                     const b = bullets[0];
                     const screenX = b.x - cameraX;
@@ -1697,10 +1633,10 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     else if (screenX < margin) cameraX -= (margin - screenX) * 0.08;
                     cameraX = Math.max(0, Math.min(cameraX, WORLD_WIDTH - canvas.width));
                 } else if (!isFiring && p.hp > 0) {
-                   let targetCamX = p.x - canvas.width / 2;
-                   targetCamX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - canvas.width));
-                   cameraX += (targetCamX - cameraX) * 0.04;
-               }
+                    let targetCamX = p.x - canvas.width / 2;
+                    targetCamX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - canvas.width));
+                    cameraX += (targetCamX - cameraX) * 0.04;
+                }
 
                 // Tích lực
                 if (isCharging) {
@@ -1733,7 +1669,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                         const curExpRadius = b.isPow ? 75 : EXPLOSION_RADIUS;
                         const holeRadius = b.isPow ? 60 : 40;
 
-                        // Nếu đạn của người chơi thì máy người đó nổ. Nếu đạn của Quái/Boss thì máy Host kích nổ.
+                        // Đạn người chơi do chính họ kích nổ, đạn quái/boss do Host kích nổ
                         const isBulletOwner = !socket || (b.ownerName === (window.currentUser || "")) || (isHost && b.ownerTeam === 2);
 
                         if (isBulletOwner) {
@@ -1812,9 +1748,8 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                    chargeDir = 1;
                
                    const curActiveP = getActivePlayer();
-                   // Nếu là lượt người chơi thì người chơi chuyển lượt. Nếu là Quái/Boss bắn xong thì Host chuyển lượt ngay lập tức.
                    const canTriggerNext = isMyTurn() || (isHost && curActiveP && curActiveP.isMonster);
-               
+
                    if (canTriggerNext) {
                        setTimeout(() => {
                            triggerNextTurnServer();
@@ -1893,13 +1828,13 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     ctx.fillText(pl.name, pl.x, pl.y - pl.radius - 40);
                     ctx.restore();
 
-                    // 🎯 1. VẼ CÁC ICON BUFF TRÊN ĐẦU NHÂN VẬT (CẢ PHÒNG ĐỀU THẤY)
+                    // 1. Vẽ các Icon buff trên đầu
                     if (pl.activeBuffs && pl.activeBuffs.length > 0) {
                         const iconSize = 24;
                         const gap = 4;
                         const totalW = pl.activeBuffs.length * iconSize + (pl.activeBuffs.length - 1) * gap;
                         const startIconX = pl.x - totalW / 2;
-                        const startIconY = pl.y - pl.radius - 68; // Đặt cách xa đỉnh đầu
+                        const startIconY = pl.y - pl.radius - 68;
 
                         pl.activeBuffs.forEach((buffKey, bIdx) => {
                             const iconImg = BUFF_ICONS[buffKey];
@@ -1914,7 +1849,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                         });
                     }
 
-                    // 🎯 2. VẼ ĐƯỜNG NGẮM BẮN & SỐ ĐỘ NGAY TRƯỚC ĐẦU NHÂN VẬT
+                    // 2. Vẽ đường ngắm và góc độ
                     if (isTurn && !isFiring) {
                         ctx.save();
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
@@ -1925,10 +1860,8 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                         ctx.lineTo(pl.x + vec.dx * (BARREL_LEN + 75), pl.y + vec.dy * (BARREL_LEN + 75));
                         ctx.stroke();
 
-                        // 🎯 SỐ ĐỘ VỪA PHẢI ĐI CÙNG NHÂN VẬT (NẰM TRƯỚC MẶT TRÊN ĐẦU MỘT CHÚT)
                         if (isMyTurn()) {
                             ctx.setLineDash([]);
-                            // Vị trí nằm ngay trước mặt (cách tâm 32px theo hướng nhìn)
                             const angleTextX = pl.x + (pl.facing * 32);
                             const angleTextY = pl.y - 8;
 
@@ -1936,12 +1869,10 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             
-                            // Viền đen chống chìm
                             ctx.strokeStyle = '#000';
                             ctx.lineWidth = 3;
                             ctx.strokeText(`${pl.angle}°`, angleTextX, angleTextY);
 
-                            // Chữ vàng rực rỡ
                             ctx.fillStyle = '#ffd369';
                             ctx.shadowColor = '#000';
                             ctx.shadowBlur = 3;
@@ -2094,7 +2025,7 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                     ctx.restore();
                 });
 
-                ctx.restore(); // (Dòng ctx.restore() có sẵn trong code của bạn)
+                ctx.restore();
                 drawWindCompass();
             }
 
@@ -2128,7 +2059,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
                 hpBar.className = `hp-bar ${p.team === 1 ? 'p1-hp' : 'p2-hp'}`;
                 hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
 
-                // Điều khiển bật/tắt 4 nút kỹ năng
                 const canUseSkill = !isFiring && isMyTurn();
                 const btnAdd1 = document.getElementById('btn-skill-add1');
                 const btnDame50 = document.getElementById('btn-skill-dame50');
@@ -2176,7 +2106,6 @@ if (matchData && matchData.players && matchData.players.length > 0) {
             }
 
             initRuler();
-            // 👉 THAY THẾ: Gọi resetTurnState() để kích hoạt ngay hành vi của quái ở lượt đầu tiên
             resetTurnState();
 
             function gameLoop() {
