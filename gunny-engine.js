@@ -15,89 +15,100 @@
         male: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp',
         female: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp'
     };
+   // --- CẤU HÌNH TẤT CẢ MAP DÙNG CHUNG CHO CẢ PVP LẪN PHÓ BẢN ---
+    const GAME_MAPS_CONFIG = {
+        "linh_son": {
+            name: "Linh Sơn Cổ Tự",
+            bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp",
+            ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp"
+        },
+        "co_mo": {
+            name: "Cổ Mộ Lâu Đài",
+            bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen1.webp",
+            ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen2.webp"
+        }
+    };
     // --- CẤU HÌNH DỮ LIỆU PHÓ BẢN (DUNGEONS CONFIG) ---
 const DUNGEON_CONFIGS = {
-    "linh_son_1": {
-        name: "Ải 1: Yêu Lang Linh Sơn",
-        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen1.webp",
-        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen2.webp",
-        monsters: [
-            {
-                id: "wolf_minion_1",
-                name: "Huyết Lang (Nhỏ)",
-                level: 3,
-                type: "melee", // Cận chiến: Bò lại gần mới đánh
-                hp: 120,
-                maxHp: 120,
-                damage: 8,
-                attackRange: 50, // Tầm đánh chạm người
-                moveSpeed: 80,   // Quãng đường bò mỗi lượt (pixel)
-                x: 1300, y: 350,
-                isMonster: true,
-                isBoss: false,
-                gender: "male",
-                skin: "monster_wolf_1",
-                weaponImg: ""
-            },
-            {
-                id: "wolf_boss",
-                name: "Huyết Lang Vương (Boss)",
-                level: 10,
-                type: "ranged_weapon", // Đứng xa bắn như người
-                bossSkillType: "ranged", // "ranged": bắn vũ khí, "aoe": đánh lan toàn đội
-                hp: 450,
-                maxHp: 450,
-                damage: 25,
-                x: 1650, y: 350,
-                isMonster: true,
-                isBoss: true,
-                gender: "male",
-                skin: "monster_boss_wolf",
-                weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
-            }
-        ]
-    },
-    "linh_son_2": {
-        name: "Ải 2: Cửu U Hắc Báo",
-        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen1.webp",
-        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen2.webp",
-        monsters: [
-            {
-                id: "panther_minion_1",
-                name: "Hắc Báo Binh",
-                level: 8,
-                type: "melee",
-                hp: 200,
-                maxHp: 200,
-                damage: 15,
-                attackRange: 50,
-                moveSpeed: 90,
-                x: 1350, y: 350,
-                isMonster: true,
-                isBoss: false,
-                gender: "male",
-                skin: "monster_panther",
-                weaponImg: ""
-            },
-            {
-                id: "panther_boss",
-                name: "Cửu U Ma Báo (Boss AoE)",
-                level: 20,
-                type: "aoe_all", // Đứng xa gầm 1 phát toàn bộ người chơi mất máu
-                bossSkillType: "aoe",
-                hp: 800,
-                maxHp: 800,
-                damage: 35,
-                x: 1650, y: 350,
-                isMonster: true,
-                isBoss: true,
-                gender: "male",
-                skin: "monster_boss_panther",
-                weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
-            }
-        ]
-    }
-};
+        "linh_son_1": {
+            name: "Ải 1: Yêu Lang Cổ Mộ",
+            mapId: "co_mo", // Dùng map Cổ Mộ mới
+            monsters: [
+                {
+                    id: "wolf_minion_1",
+                    name: "Huyết Lang (Nhỏ)",
+                    level: 3,
+                    type: "melee",
+                    hp: 120,
+                    maxHp: 120,
+                    damage: 8,
+                    attackRange: 50,
+                    moveSpeed: 80,
+                    x: 1300, y: 350,
+                    isMonster: true,
+                    isBoss: false,
+                    gender: "male",
+                    skin: "monster_wolf_1",
+                    weaponImg: ""
+                },
+                {
+                    id: "wolf_boss",
+                    name: "Huyết Lang Vương (Boss)",
+                    level: 10,
+                    type: "ranged_weapon",
+                    bossSkillType: "ranged",
+                    hp: 450,
+                    maxHp: 450,
+                    damage: 25,
+                    x: 1650, y: 350,
+                    isMonster: true,
+                    isBoss: true,
+                    gender: "male",
+                    skin: "monster_boss_wolf",
+                    weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
+                }
+            ]
+        },
+        "linh_son_2": {
+            name: "Ải 2: Cửu U Hắc Báo",
+            mapId: "co_mo",
+            monsters: [
+                {
+                    id: "panther_minion_1",
+                    name: "Hắc Báo Binh",
+                    level: 8,
+                    type: "melee",
+                    hp: 200,
+                    maxHp: 200,
+                    damage: 15,
+                    attackRange: 50,
+                    moveSpeed: 90,
+                    x: 1350, y: 350,
+                    isMonster: true,
+                    isBoss: false,
+                    gender: "male",
+                    skin: "monster_panther",
+                    weaponImg: ""
+                },
+                {
+                    id: "panther_boss",
+                    name: "Cửu U Ma Báo (Boss AoE)",
+                    level: 20,
+                    type: "aoe_all",
+                    bossSkillType: "aoe",
+                    hp: 800,
+                    maxHp: 800,
+                    damage: 35,
+                    x: 1650, y: 350,
+                    isMonster: true,
+                    isBoss: true,
+                    gender: "male",
+                    skin: "monster_boss_panther",
+                    weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
+                }
+            ]
+        }
+    };
 
     function loadSocketIO(callback) {
         if (typeof io !== "undefined") {
@@ -440,6 +451,20 @@ const DUNGEON_CONFIGS = {
             const isDungeonMode = Boolean(matchData && matchData.mode === "phoban");
             const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
 
+            // Xác định mapId: nếu đi Phó bản lấy map của Ải, nếu PvP lấy theo matchData.mapId được chọn ở sảnh (mặc định 'co_mo')
+            let selectedMapKey = "co_mo";
+            if (isDungeonMode && currentDungeon && currentDungeon.mapId) {
+                selectedMapKey = currentDungeon.mapId;
+            } else if (matchData && matchData.mapId) {
+                selectedMapKey = matchData.mapId;
+            }
+            const activeMapData = GAME_MAPS_CONFIG[selectedMapKey] || GAME_MAPS_CONFIG["co_mo"];
+
+            const GRAVITY = 0.25;
+            // Nếu chọn map Cổ Mộ (dù ở PvP hay Phó Bản) đều chạy khổ rộng 1800px; map Linh Sơn chạy 900px
+            const WORLD_WIDTH = (selectedMapKey === "co_mo" || isDungeonMode) ? 1800 : 900;
+            const GROUND_Y = 410;
+
             const GRAVITY = 0.25;
             const WORLD_WIDTH = isDungeonMode ? 1800 : 900;
             const GROUND_Y = 410;
@@ -489,22 +514,17 @@ const DUNGEON_CONFIGS = {
             const groundImg = new Image();
             groundImg.crossOrigin = "anonymous";
             groundImg.onload = function() {
-                // Khi ảnh đất tải xong, xóa nền tạm và vẽ ảnh đất thật phủ kín 1800px
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
             };
             groundImg.onerror = function() {
                 drawFallbackGround();
             };
-            groundImg.src = (isDungeonMode && currentDungeon && currentDungeon.ground)
-                ? currentDungeon.ground
-                : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
+            groundImg.src = activeMapData.ground;
 
             const bgImg = new Image();
             bgImg.crossOrigin = "anonymous";
-            bgImg.src = (isDungeonMode && currentDungeon && currentDungeon.bg)
-                ? currentDungeon.bg
-                : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp';
+            bgImg.src = activeMapData.bg;
 
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
@@ -521,6 +541,9 @@ const DUNGEON_CONFIGS = {
                 return GROUND_Y;
             }
             function digHole(x, y, radius) {
+                // Phó bản cấm hoàn toàn việc đào đất; PvP vẫn đào bình thường
+                if (isDungeonMode) return;
+
                 terrainCtx.save();
                 terrainCtx.globalCompositeOperation = 'destination-out';
                 terrainCtx.beginPath();
