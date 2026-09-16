@@ -496,24 +496,22 @@ const DUNGEON_CONFIGS = {
             terrainCanvas.height = canvas.height;
             const terrainCtx = terrainCanvas.getContext('2d', { willReadFrequently: true });
 
-            function drawFallbackGround() {
-                terrainCtx.fillStyle = '#2d8a4e';
-                terrainCtx.fillRect(0, GROUND_Y, WORLD_WIDTH, 15);
-                terrainCtx.fillStyle = '#5c3a21';
-                terrainCtx.fillRect(0, GROUND_Y + 15, WORLD_WIDTH, canvas.height - (GROUND_Y + 15));
-            }
+            // Mặt sàn vật lý của gạch đá nằm ở mốc Y = 350
+            const SOLID_GROUND_Y = 350;
 
-            // Vẽ nền đất tạm thời
-            drawFallbackGround();
+            function fillSolidGround() {
+                // Tô một lớp đất đặc từ Y = 350 xuống hết đáy canvas để đạn và nhân vật luôn chạm đất
+                terrainCtx.fillStyle = 'rgba(92, 58, 33, 1)';
+                terrainCtx.fillRect(0, SOLID_GROUND_Y, WORLD_WIDTH, canvas.height - SOLID_GROUND_Y);
+            }
+            fillSolidGround();
 
             const groundImg = new Image();
-            groundImg.crossOrigin = "anonymous";
             groundImg.onload = function() {
+                // Khi ảnh hoa văn gạch đá tải xong, vẽ đè lên lớp sàn vật lý
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
+                fillSolidGround();
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
-            };
-            groundImg.onerror = function() {
-                drawFallbackGround();
             };
             groundImg.src = activeMapData.ground;
 
@@ -522,18 +520,17 @@ const DUNGEON_CONFIGS = {
 
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
-                const start = 200;
                 try {
-                    const imgData = terrainCtx.getImageData(checkX, start, 1, canvas.height - start).data;
-                    for (let y = 0; y < canvas.height - start; y++) {
+                    const imgData = terrainCtx.getImageData(checkX, 200, 1, canvas.height - 200).data;
+                    for (let y = 0; y < canvas.height - 200; y++) {
                         if (imgData[y * 4 + 3] > 50) {
-                            return start + y;
+                            return 200 + y;
                         }
                     }
                 } catch (e) {
-                    return GROUND_Y;
+                    return SOLID_GROUND_Y;
                 }
-                return GROUND_Y;
+                return SOLID_GROUND_Y;
             }
 
             function digHole(x, y, radius) {
@@ -1673,19 +1670,18 @@ const DUNGEON_CONFIGS = {
                     b.rotation += (b.vx >= 0 ? 0.08 : -0.08);
 
                     let hitTerrain = false;
+
+                    // 1. Kiểm tra va chạm theo pixel địa hình
                     if (b.x >= 0 && b.x < WORLD_WIDTH && b.y >= 0 && b.y < canvas.height) {
                         try {
                             const pixel = terrainCtx.getImageData(Math.floor(b.x), Math.floor(b.y), 1, 1).data;
                             if (pixel[3] > 50) hitTerrain = true;
-                        } catch (e) {
-                            // Nếu trình duyệt chặn đọc pixel, dùng mốc cao độ mặt đất
-                            if (b.y >= GROUND_Y) hitTerrain = true;
-                        }
+                        } catch (e) { }
+                    }
 
-                        // Kiểm tra kép an toàn: Khi ở phó bản, mặt đá cố định ở Y >= GROUND_Y
-                        if (isDungeonMode && b.y >= GROUND_Y) {
-                            hitTerrain = true;
-                        }
+                    // 2. Chặn va chạm cứng: Đạn rơi tới cao độ mặt sàn SOLID_GROUND_Y (350px) là nổ ngay
+                    if (b.y >= SOLID_GROUND_Y) {
+                        hitTerrain = true;
                     }
 
                     if (hitTerrain || b.y >= canvas.height || b.x < 0 || b.x > WORLD_WIDTH) {
