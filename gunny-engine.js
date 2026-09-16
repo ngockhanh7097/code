@@ -506,11 +506,11 @@ const DUNGEON_CONFIGS = {
             }
             fillSolidGround();
 
+            // Nạp trực tiếp ảnh đất vào terrainCanvas để đọc chính xác từng pixel gồ ghề của mặt đá
             const groundImg = new Image();
+            groundImg.crossOrigin = "anonymous";
             groundImg.onload = function() {
-                // Khi ảnh hoa văn gạch đá tải xong, vẽ đè lên lớp sàn vật lý
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
-                fillSolidGround();
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
             };
             groundImg.src = activeMapData.ground;
@@ -518,19 +518,25 @@ const DUNGEON_CONFIGS = {
             const bgImg = new Image();
             bgImg.src = activeMapData.bg;
 
+            const bgImg = new Image();
+            bgImg.src = activeMapData.bg;
+
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
+                // Quét từ trên xuống bắt đầu từ Y = 280 để đón chính xác từng gờ đá lồi lõm
+                const start = 280;
                 try {
-                    const imgData = terrainCtx.getImageData(checkX, 200, 1, canvas.height - 200).data;
-                    for (let y = 0; y < canvas.height - 200; y++) {
-                        if (imgData[y * 4 + 3] > 50) {
-                            return 200 + y;
+                    const imgData = terrainCtx.getImageData(checkX, start, 1, canvas.height - start).data;
+                    for (let y = 0; y < canvas.height - start; y++) {
+                        // Pixel có độ đậm Alpha > 80 được tính là mặt đá gồ ghề
+                        if (imgData[y * 4 + 3] > 80) {
+                            return start + y;
                         }
                     }
                 } catch (e) {
-                    return SOLID_GROUND_Y;
+                    return 395; // Cao độ mặt đá fallback an toàn
                 }
-                return SOLID_GROUND_Y;
+                return 395;
             }
 
             function digHole(x, y, radius) {
@@ -1671,17 +1677,15 @@ const DUNGEON_CONFIGS = {
 
                     let hitTerrain = false;
 
-                    // 1. Kiểm tra va chạm theo pixel địa hình
+                    let hitTerrain = false;
                     if (b.x >= 0 && b.x < WORLD_WIDTH && b.y >= 0 && b.y < canvas.height) {
                         try {
                             const pixel = terrainCtx.getImageData(Math.floor(b.x), Math.floor(b.y), 1, 1).data;
-                            if (pixel[3] > 50) hitTerrain = true;
-                        } catch (e) { }
-                    }
-
-                    // 2. Chặn va chạm cứng: Đạn rơi tới cao độ mặt sàn SOLID_GROUND_Y (350px) là nổ ngay
-                    if (b.y >= SOLID_GROUND_Y) {
-                        hitTerrain = true;
+                            if (pixel[3] > 80) hitTerrain = true;
+                        } catch (e) {
+                            // Fallback nếu lỗi CORS: chạm mặt đá ở Y >= 395 là nổ
+                            if (b.y >= 395) hitTerrain = true;
+                        }
                     }
 
                     if (hitTerrain || b.y >= canvas.height || b.x < 0 || b.x > WORLD_WIDTH) {
