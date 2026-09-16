@@ -437,11 +437,10 @@ const DUNGEON_CONFIGS = {
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
-            const isDungeonMode = matchData && matchData.mode === "phoban";
+            const isDungeonMode = Boolean(matchData && matchData.mode === "phoban");
             const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
 
             const GRAVITY = 0.25;
-            // Map phó bản mở rộng gấp đôi (1800px), PvP giữ 900px
             const WORLD_WIDTH = isDungeonMode ? 1800 : 900;
             const GROUND_Y = 410;
             const BARREL_LEN = 35;
@@ -449,10 +448,10 @@ const DUNGEON_CONFIGS = {
             const BASE_DAMAGE = 10;
             const CRIT_MULTIPLIER = 1.5;
             const BUFF_COSTS = {
-                add1: 90,   // +1 Đạn: 90 Thể lực
-                dame50: 50, // +50% Dame: 50 Thể lực
-                dame20: 20, // +20% Dame: 20 Thể lực
-                dame10: 10  // +10% Dame: 10 Thể lực
+                add1: 90,
+                dame50: 50,
+                dame20: 20,
+                dame10: 10
             };
 
             // Ảnh icon hiển thị trên đầu nhân vật
@@ -475,17 +474,39 @@ const DUNGEON_CONFIGS = {
             const terrainCanvas = document.createElement('canvas');
             terrainCanvas.width = WORLD_WIDTH;
             terrainCanvas.height = canvas.height;
-            const terrainCtx = terrainCanvas.getContext('2d', { willReadFrequently: true });
+            const terrainCtx = terrainCanvas.getContext('2d');
+
+            function drawFallbackGround() {
+                terrainCtx.fillStyle = '#2d8a4e';
+                terrainCtx.fillRect(0, GROUND_Y, WORLD_WIDTH, 15);
+                terrainCtx.fillStyle = '#5c3a21';
+                terrainCtx.fillRect(0, GROUND_Y + 15, WORLD_WIDTH, canvas.height - (GROUND_Y + 15));
+            }
+
+            function initTerrain() {
+                terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
+                try {
+                    if (groundImg.complete && groundImg.naturalWidth > 0) {
+                        terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
+                    } else {
+                        drawFallbackGround();
+                    }
+                } catch (e) {
+                    drawFallbackGround();
+                }
+            }
+
+            // Vẽ nền tạm ngay lập tức để không bao giờ bị đen màn hình trong lúc chờ ảnh tải
+            drawFallbackGround();
 
             const groundImg = new Image();
-            groundImg.crossOrigin = "anonymous";
+            groundImg.onload = () => initTerrain();
+            groundImg.onerror = () => drawFallbackGround();
             groundImg.src = (isDungeonMode && currentDungeon && currentDungeon.ground)
                 ? currentDungeon.ground
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
-            groundImg.onload = () => initTerrain();
 
             const bgImg = new Image();
-            bgImg.crossOrigin = "anonymous";
             bgImg.src = (isDungeonMode && currentDungeon && currentDungeon.bg)
                 ? currentDungeon.bg
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson.webp';
@@ -519,10 +540,12 @@ const DUNGEON_CONFIGS = {
                     for (let y = 0; y < canvas.height - start; y++) {
                         if (imgData[y * 4 + 3] > 50) return start + y;
                     }
-                } catch (e) {}
-                return canvas.height + 100;
+                } catch (e) {
+                    // Fallback an toàn nếu dính lỗi đọc pixel: trả về cao độ đất mặc định
+                    return GROUND_Y;
+                }
+                return GROUND_Y;
             }
-
             function digHole(x, y, radius) {
                 terrainCtx.save();
                 terrainCtx.globalCompositeOperation = 'destination-out';
