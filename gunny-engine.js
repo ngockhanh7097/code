@@ -507,6 +507,7 @@ const DUNGEON_CONFIGS = {
             drawFallbackGround();
 
             const groundImg = new Image();
+            groundImg.crossOrigin = "anonymous";
             groundImg.onload = function() {
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
@@ -521,12 +522,10 @@ const DUNGEON_CONFIGS = {
 
             function getGroundYAt(x, startY) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
-                // Quét bắt đầu từ Y = 200 để đón trúng mặt trên của khối đất/đá
                 const start = 200;
                 try {
                     const imgData = terrainCtx.getImageData(checkX, start, 1, canvas.height - start).data;
                     for (let y = 0; y < canvas.height - start; y++) {
-                        // Pixel có alpha > 50 coi là có đất
                         if (imgData[y * 4 + 3] > 50) {
                             return start + y;
                         }
@@ -1678,7 +1677,15 @@ const DUNGEON_CONFIGS = {
                         try {
                             const pixel = terrainCtx.getImageData(Math.floor(b.x), Math.floor(b.y), 1, 1).data;
                             if (pixel[3] > 50) hitTerrain = true;
-                        } catch (e) { }
+                        } catch (e) {
+                            // Nếu trình duyệt chặn đọc pixel, dùng mốc cao độ mặt đất
+                            if (b.y >= GROUND_Y) hitTerrain = true;
+                        }
+
+                        // Kiểm tra kép an toàn: Khi ở phó bản, mặt đá cố định ở Y >= GROUND_Y
+                        if (isDungeonMode && b.y >= GROUND_Y) {
+                            hitTerrain = true;
+                        }
                     }
 
                     if (hitTerrain || b.y >= canvas.height || b.x < 0 || b.x > WORLD_WIDTH) {
