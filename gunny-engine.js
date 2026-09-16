@@ -59,8 +59,8 @@ const DUNGEON_CONFIGS = {
     },
     "linh_son_2": {
         name: "Ải 2: Cửu U Hắc Báo",
-        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen1.webp",
-        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map-nen2.webp",
+        bg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen1.webp",
+        ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen2.webp",
         monsters: [
             {
                 id: "panther_minion_1",
@@ -500,8 +500,11 @@ const DUNGEON_CONFIGS = {
             drawFallbackGround();
 
             const groundImg = new Image();
-            groundImg.onload = () => initTerrain();
-            groundImg.onerror = () => drawFallbackGround();
+            groundImg.onload = function() {
+                // Xóa nền đất tạm cũ và vẽ toàn bộ ảnh đất mới lên đúng chiều dài 1800px
+                terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
+                terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
+            };
             groundImg.src = (isDungeonMode && currentDungeon && currentDungeon.ground)
                 ? currentDungeon.ground
                 : 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/linhson-chan.webp';
@@ -1813,10 +1816,15 @@ const DUNGEON_CONFIGS = {
                 ctx.save();
                 ctx.translate(-cameraX, 0);
 
-                ctx.fillStyle = '#182238';
-                ctx.fillRect(0, 0, WORLD_WIDTH, canvas.height);
+                // 1. Vẽ ảnh nền trời / lâu đài
+                if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+                    ctx.drawImage(bgImg, 0, 0, WORLD_WIDTH, canvas.height);
+                } else {
+                    ctx.fillStyle = '#0a0e17';
+                    ctx.fillRect(0, 0, WORLD_WIDTH, canvas.height);
+                }
 
-                if (bgImg.complete && bgImg.naturalWidth !== 0) ctx.drawImage(bgImg, 0, 0, WORLD_WIDTH, canvas.height);
+                // 2. Vẽ nền đất (nếu ảnh đất tải xong sẽ tự đè lên nền tạm)
                 ctx.drawImage(terrainCanvas, 0, 0);
 
                 gamePlayers.forEach((pl, idx) => {
