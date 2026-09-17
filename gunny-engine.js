@@ -271,33 +271,109 @@ const DUNGEON_CONFIGS = {
     left: 15px !important;
 }
                 #gunny-game-wrapper .ui-panel {
-                    position: absolute; bottom: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between;
+                    position: absolute; bottom: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between;
                     align-items: flex-end; background: transparent !important; border: none !important; box-shadow: none !important;
                     padding: 0; gap: 8px; z-index: 10; pointer-events: none;
                 }
                 #gunny-game-wrapper .ui-panel * { pointer-events: auto; }
-                #gunny-game-wrapper #turn-indicator, #gunny-game-wrapper .detail-info, #gunny-game-wrapper .player-info strong {
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.95), 0 -1px 3px rgba(0,0,0,0.9), 1px 0 3px rgba(0,0,0,0.9), -1px 0 3px rgba(0,0,0,0.9);
+                #gunny-game-wrapper #turn-indicator {
+                    text-shadow: 0 2px 4px rgba(0,0,0,0.95), 0 -1px 3px rgba(0,0,0,0.9);
                 }
-                #gunny-game-wrapper .player-info { display: flex; flex-direction: column; gap: 3px; width: 170px; }
-                #gunny-game-wrapper .hp-bar-bg { width: 100%; height: 11px; background: #111; border-radius: 5px; overflow: hidden; border: 1px solid #fff; }
-                #gunny-game-wrapper .hp-bar { height: 100%; width: 100%; transition: width 0.2s ease-out; }
-                #gunny-game-wrapper .p1-hp { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
-                #gunny-game-wrapper .p2-hp { background: linear-gradient(90deg, #11998e, #38ef7d); }
-                #gunny-game-wrapper .sta-bar-bg { width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; border: 1px solid #ffeaa7; margin-top: 1px; }
-                #gunny-game-wrapper .sta-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #f1c40f, #e67e22); transition: width 0.1s linear; }
-                #gunny-game-wrapper .pow-bar-bg { width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; border: 1px solid #ff7675; margin-top: 1px; }
-                #gunny-game-wrapper .pow-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff7675, #d63031, #e84393); transition: width 0.2s ease-out; }
-                
-                #gunny-game-wrapper .controls-center { display: flex; flex-direction: column; align-items: center; flex: 1; padding: 0 4px; }
-                #gunny-game-wrapper .big-power-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+                /* 🎮 VÒNG TRÒN ĐIỀU HƯỚNG GÓC TRÁI DƯỚI (CHUẨN GUNNY GỐC) */
+                #gunny-game-wrapper .gunny-dpad-wheel {
+                    position: relative;
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 50%;
+                    background: radial-gradient(circle, rgba(15, 23, 42, 0.5) 0%, rgba(0, 0, 0, 0.7) 100%);
+                    border: 2px solid rgba(255, 211, 105, 0.45);
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.75), inset 0 0 10px rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 2px;
+                    margin-left: 4px;
+                    flex-shrink: 0;
+                }
+                #gunny-game-wrapper .gunny-dpad-center {
+                    position: absolute;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 50%;
+                    background: rgba(10, 15, 26, 0.9);
+                    border: 1.5px solid rgba(255, 211, 105, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
+                    pointer-events: none;
+                }
+                #gunny-game-wrapper #dpad-angle-display {
+                    font-family: 'Arial Black', Impact, sans-serif;
+                    font-size: 13px;
+                    font-weight: 900;
+                    color: #ffd369;
+                    text-shadow: 0 1px 3px #000;
+                }
+                #gunny-game-wrapper .dpad-touch-arrow {
+                    position: absolute;
+                    background: rgba(255, 211, 105, 0.12);
+                    border: 1px solid rgba(255, 211, 105, 0.35);
+                    color: #ffd369;
+                    font-size: 14px;
+                    font-weight: 900;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    user-select: none;
+                    transition: all 0.1s;
+                }
+                #gunny-game-wrapper .dpad-touch-arrow:hover,
+                #gunny-game-wrapper .dpad-touch-arrow:active {
+                    background: #ffd369;
+                    color: #000;
+                    box-shadow: 0 0 8px #ffd369;
+                }
+                #gunny-game-wrapper .dpad-touch-arrow.btn-up    { top: 4px; left: 50%; transform: translateX(-50%); width: 34px; height: 22px; }
+                #gunny-game-wrapper .dpad-touch-arrow.btn-down  { bottom: 4px; left: 50%; transform: translateX(-50%); width: 34px; height: 22px; }
+                #gunny-game-wrapper .dpad-touch-arrow.btn-left  { left: 4px; top: 50%; transform: translateY(-50%); width: 22px; height: 34px; }
+                #gunny-game-wrapper .dpad-touch-arrow.btn-right { right: 4px; top: 50%; transform: translateY(-50%); width: 22px; height: 34px; }
+
+                /* 📊 CỤM GIỮA: THANH LỰC PHÍA TRÊN + THANH MÁU & THỂ LỰC PHÍA DƯỚI */
+                #gunny-game-wrapper .controls-center {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    flex: 1;
+                    padding: 0 8px;
+                    gap: 5px;
+                }
+                #gunny-game-wrapper .big-power-wrap {
+                    width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                }
                 #gunny-game-wrapper .big-power-container {
-                    width: 100%; height: 22px; background: #090e17; border-radius: 6px; padding: 0; border: 1.5px solid #ffd369;
-                    box-shadow: 0 0 10px rgba(255, 211, 105, 0.35); position: relative; overflow: hidden;
+                    width: 100%;
+                    height: 20px;
+                    background: #090e17;
+                    border-radius: 6px;
+                    border: 1.5px solid #ffd369;
+                    box-shadow: 0 0 10px rgba(255, 211, 105, 0.35);
+                    position: relative;
+                    overflow: hidden;
                 }
                 #gunny-game-wrapper .big-power-fill {
-                    height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, #ffdd00, #ff8c00, #ff0044);
-                    box-shadow: 0 0 15px rgba(255, 100, 0, 0.8); transition: width 0.05s linear;
+                    height: 100%;
+                    width: 0%;
+                    border-radius: 4px;
+                    background: linear-gradient(90deg, #ffdd00, #ff8c00, #ff0044);
+                    box-shadow: 0 0 15px rgba(255, 100, 0, 0.8);
+                    transition: width 0.05s linear;
                 }
                 #gunny-game-wrapper .ruler-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
                 #gunny-game-wrapper .ruler-tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.25); }
@@ -307,80 +383,90 @@ const DUNGEON_CONFIGS = {
                     font-size: 8px; font-weight: bold; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px #000;
                 }
 
-                /* 🕒 SỐ ĐẾM NGƯỢC THỜI GIAN */
-                #gunny-game-wrapper #top-turn-timer {
-                    position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
-                    font-family: 'Arial Black', Impact, sans-serif; font-size: 26px; font-weight: 900;
-                    letter-spacing: 1px; line-height: 1; z-index: 15; pointer-events: none;
-                    background: linear-gradient(180deg, #ffffff 0%, #ffe600 30%, #ff8c00 70%, #ff3700 100%);
-                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                    filter: drop-shadow(0 0 6px rgba(0,0,0,0.9)) drop-shadow(0 2px 4px #000);
+                /* 🩸 THANH MÁU & THỂ LỰC THEO PHONG CÁCH GUNNY MOBILE */
+                #gunny-game-wrapper .status-bars-gunny-row {
+                    display: flex;
+                    width: 100%;
+                    gap: 8px;
+                    align-items: center;
+                }
+                #gunny-game-wrapper .gunny-stat-box {
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                #gunny-game-wrapper .gunny-stat-label {
+                    font-family: 'Arial Black', Impact, sans-serif;
+                    font-size: 11px;
+                    font-weight: 900;
+                    letter-spacing: 0.5px;
+                    text-shadow: 0 1px 3px #000;
+                    flex-shrink: 0;
+                }
+                #gunny-game-wrapper .gunny-bar-frame {
+                    position: relative;
+                    flex: 1;
+                    height: 16px;
+                    background: #11141d;
+                    border: 1.5px solid #d4af37;
+                    border-radius: 8px;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.85), 0 2px 5px rgba(0,0,0,0.6);
+                    overflow: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                #gunny-game-wrapper .gunny-bar-fill {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    height: 100%;
+                    width: 100%;
+                    border-radius: 6px;
+                    transition: width 0.2s ease-out;
+                }
+                #gunny-game-wrapper .hp-fill-gunny {
+                    background: linear-gradient(180deg, #ff8a80 0%, #d50000 45%, #b71c1c 100%);
+                    box-shadow: 0 0 8px rgba(213, 0, 0, 0.5);
+                }
+                #gunny-game-wrapper .sta-fill-gunny {
+                    background: linear-gradient(180deg, #b9f6ca 0%, #00c853 45%, #1b5e20 100%);
+                    box-shadow: 0 0 8px rgba(0, 200, 83, 0.5);
+                }
+                #gunny-game-wrapper .gunny-bar-text {
+                    position: relative;
+                    z-index: 2;
+                    font-family: 'Segoe UI', Tahoma, sans-serif;
+                    font-size: 10px;
+                    font-weight: 900;
+                    color: #ffffff;
+                    letter-spacing: 0.5px;
+                    text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000;
+                    pointer-events: none;
                 }
 
-                #gunny-game-wrapper .btn-pass-turn {
-                    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-                    background: rgba(233, 69, 96, 0.85); border: 1.5px solid #ff5470; color: #fff;
-                    padding: 3px 12px; font-size: 11px; font-weight: bold; border-radius: 12px;
-                    cursor: pointer; z-index: 15; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-                    transition: 0.2s; pointer-events: auto;
-                }
-                #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: translateX(-50%) scale(1.05); }
-                #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
-
-                /* 🎯 CỘT 4 NÚT SKILL DỌC SÁT MÉP PHẢI */
-                #gunny-game-wrapper .right-skill-column {
-                    position: absolute; top: 55px; right: 12px;
-                    display: flex; flex-direction: column; gap: 6px;
-                    z-index: 20; pointer-events: auto;
-                }
-                #gunny-game-wrapper .gunny-skill-icon-btn {
-                    position: relative; width: 42px; height: 42px;
-                    background: rgba(0, 0, 0, 0.55); border: 1.5px solid rgba(255, 211, 105, 0.6);
-                    border-radius: 8px; cursor: pointer; padding: 2px; display: flex;
-                    align-items: center; justify-content: center; backdrop-filter: blur(4px);
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
-                }
-                #gunny-game-wrapper .gunny-skill-icon-btn:hover:not(:disabled) {
-                    transform: scale(1.1); border-color: #ffd369; box-shadow: 0 0 12px #ffd369;
-                }
-                #gunny-game-wrapper .gunny-skill-icon-btn:disabled {
-                    opacity: 0.35; cursor: not-allowed; filter: grayscale(100%);
-                }
-                #gunny-game-wrapper .gunny-skill-icon-btn.active {
-                    border-color: #00ffcc !important; box-shadow: 0 0 15px #00ffcc !important;
-                    background: rgba(0, 255, 204, 0.25) !important;
-                }
-                #gunny-game-wrapper .gunny-skill-icon-btn img {
-                    width: 100%; height: 100%; object-fit: contain; pointer-events: none;
-                }
-                #gunny-game-wrapper .skill-badge-count {
-                    position: absolute; bottom: -2px; right: -2px;
-                    background: #ff0055; color: #fff; font-size: 10px; font-weight: 900;
-                    border-radius: 10px; padding: 0 4px; border: 1px solid #fff;
-                    display: none;
-                }
-
-                /* 🎮 CỤM ĐIỀU KHIỂN GÓC PHẢI DƯỚI (POW + BẮN + 4 HƯỚNG) */
+                /* 🎯 CỤM BẮN BÊN PHẢI: POW VÀ NÚT BẮN TO */
                 #gunny-game-wrapper .bottom-right-controls {
-                    display: flex; align-items: center; gap: 10px;
-                    margin-bottom: 2px; margin-right: 4px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 2px;
+                    margin-right: 4px;
+                    flex-shrink: 0;
                 }
 
-                /* Nút POW kiểu Gunny */
-                /* Hiệu ứng xung nhịp khi POW đầy 100% */
                 @keyframes powPulseGlow {
                     from { box-shadow: 0 0 6px #ff7675; transform: scale(1); }
                     to { box-shadow: 0 0 16px #ff0055, 0 0 25px rgba(255, 0, 85, 0.6); transform: scale(1.05); }
                 }
 
-                /* Hiệu ứng phát sáng vàng/lửa rực rỡ khi BẬT POW */
                 @keyframes powActiveShine {
                     0% { box-shadow: 0 0 12px #ffdd00, inset 0 0 8px #ff8c00; filter: brightness(1.1); }
                     50% { box-shadow: 0 0 25px #ff5500, 0 0 35px #ffcc00, inset 0 0 12px #ff0055; filter: brightness(1.3); }
                     100% { box-shadow: 0 0 12px #ffdd00, inset 0 0 8px #ff8c00; filter: brightness(1.1); }
                 }
 
-                /* NÚT POW ĐÃ XÓA VIỀN ĐỎ XẤU */
                 #gunny-game-wrapper .gunny-pow-slot-btn {
                     position: relative; width: 48px; height: 48px;
                     background: rgba(0, 0, 0, 0.6); border: 1.5px solid rgba(255, 211, 105, 0.5);
@@ -394,30 +480,29 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .gunny-pow-slot-btn:disabled {
                     opacity: 0.35; cursor: not-allowed; filter: grayscale(100%);
                 }
-                /* Khi đầy 100% nộ: phát sáng nhịp tim, KHÔNG ĐỔI VIỀN ĐỎ */
                 #gunny-game-wrapper .gunny-pow-slot-btn.ready {
                     border-color: #ffd369 !important;
                     animation: powPulseGlow 0.7s infinite alternate;
                 }
-                /* Khi ĐƯỢC BẬT: phát sáng hào quang lửa xung quanh, KHÔNG DÙNG VIỀN ĐỎ */
                 #gunny-game-wrapper .gunny-pow-slot-btn.active {
                     border-color: #ffeaa7 !important;
                     background: rgba(255, 100, 0, 0.35) !important;
                     animation: powActiveShine 1s infinite alternate !important;
                 }
 
-                /* KHỐI NÚT BẮN TO BỌC NGOÀI (ĐƯỜNG KÍNH 88px) */
-                #gunny-game-wrapper .dpad-fire-cluster {
-                    position: relative; width: 88px; height: 88px;
-                    display: flex; align-items: center; justify-content: center;
-                }
-
-                /* NÚT BẮN PHÓNG TO TOÀN KHUNG */
                 #gunny-game-wrapper .btn-dpad-fire {
-                    position: absolute; width: 100%; height: 100%; border-radius: 50%;
-                    background: transparent; border: none; cursor: pointer; padding: 0;
-                    z-index: 5; transition: transform 0.1s; display: flex; align-items: center; justify-content: center;
+                    width: 78px;
+                    height: 78px;
+                    border-radius: 50%;
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                     filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));
+                    transition: transform 0.1s;
                 }
                 #gunny-game-wrapper .btn-dpad-fire img {
                     width: 100%; height: 100%; object-fit: contain; pointer-events: none;
@@ -426,29 +511,13 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .btn-dpad-fire:active:not(:disabled) { transform: scale(0.96); }
                 #gunny-game-wrapper .btn-dpad-fire:disabled { filter: grayscale(100%); opacity: 0.4; cursor: not-allowed; }
 
-                /* 4 NÚT HƯỚNG NẰM GỌN BÊN TRONG 4 MÉP CỦA NÚT BẮN */
-                #gunny-game-wrapper .dpad-arrow-btn {
-                    position: absolute; width: 22px; height: 22px;
-                    background: rgba(9, 14, 23, 0.85); border: 1.5px solid #ffd369;
-                    color: #ffd369; font-size: 11px; font-weight: 900; border-radius: 5px;
-                    display: flex; align-items: center; justify-content: center;
-                    cursor: pointer; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.8);
-                    transition: transform 0.1s, background 0.15s;
-                }
-                #gunny-game-wrapper .dpad-arrow-btn:hover { background: #ffd369; color: #111; transform: scale(1.15); }
-                #gunny-game-wrapper .dpad-arrow-btn:active { transform: scale(0.9); }
-                #gunny-game-wrapper .dpad-up    { top: 2px; left: 50%; transform: translateX(-50%); }
-                #gunny-game-wrapper .dpad-down  { bottom: 2px; left: 50%; transform: translateX(-50%); }
-                #gunny-game-wrapper .dpad-left  { left: 2px; top: 50%; transform: translateY(-50%); }
-                #gunny-game-wrapper .dpad-right { right: 2px; top: 50%; transform: translateY(-50%); }
-
                 #gunny-game-wrapper .guide { margin-top: 8px; font-size: 12px; color: #bbb; text-align: center; }
             </style>
 
             <div id="game-container">
                 <!-- 📱 NÚT PHONE XOAY NGANG MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE3</span>
+                    📱 <span id="fs-text">PHONE4</span>
                 </button>
 
                 <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
@@ -483,16 +552,22 @@ const DUNGEON_CONFIGS = {
                 </div>
 
                 <div class="ui-panel">
-                    <div id="active-player-panel" class="player-info">
-                        <strong id="active-player-name" style="color: #ff5470; font-size: 14px;">Player 1</strong>
-                        <div class="hp-bar-bg"><div id="active-hp-bar" class="hp-bar p1-hp"></div></div>
-                        <div class="sta-bar-bg"><div id="active-sta-bar" class="sta-bar"></div></div>
-                        <div class="pow-bar-bg"><div id="active-pow-bar" class="pow-bar"></div></div>
-                        <div class="detail-info" id="active-stats" style="font-size: 11px; font-weight: bold;">HP: 100/100 | TL: 100</div>
+                    <!-- 🎮 1. VÒNG TRÒN D-PAD ĐIỀU HƯỚNG GÓC TRÁI (THAY THẾ TOÀN BỘ KHỐI MÁU CŨ) -->
+                    <div class="gunny-dpad-wheel">
+                        <button id="dpad-btn-up" class="dpad-touch-arrow btn-up" title="Tăng góc">▲</button>
+                        <button id="dpad-btn-down" class="dpad-touch-arrow btn-down" title="Hạ góc">▼</button>
+                        <button id="dpad-btn-left" class="dpad-touch-arrow btn-left" title="Đi trái">◀</button>
+                        <button id="dpad-btn-right" class="dpad-touch-arrow btn-right" title="Đi phải">▶</button>
+                        <div class="gunny-dpad-center">
+                            <span id="dpad-angle-display">45°</span>
+                        </div>
                     </div>
 
+                    <!-- 📊 2. CỤM GIỮA: LƯỢT + THANH LỰC PHÍA TRÊN + THANH MÁU & THỂ LỰC PHÍA DƯỚI -->
                     <div class="controls-center">
-                        <h2 id="turn-indicator" style="color: #ff5470; font-size: 15px; margin-bottom: 3px;">LƯỢT: PLAYER 1</h2>
+                        <h2 id="turn-indicator" style="color: #ff5470; font-size: 14px; margin-bottom: 2px;">LƯỢT: PLAYER 1</h2>
+                        
+                        <!-- Thanh đo lực bắn nằm trên -->
                         <div class="big-power-wrap">
                             <div class="big-power-container">
                                 <div id="power-bar-fill" class="big-power-fill"></div>
@@ -500,25 +575,39 @@ const DUNGEON_CONFIGS = {
                                 <div id="ruler-ticks" class="ruler-ticks"></div>
                             </div>
                         </div>
+
+                        <!-- 🩸 Thanh Máu & Thể Lực nằm ngay bên dưới thanh lực -->
+                        <div class="status-bars-gunny-row">
+                            <!-- Thanh HP -->
+                            <div class="gunny-stat-box">
+                                <span class="gunny-stat-label" style="color: #ff4d4d;">HP</span>
+                                <div class="gunny-bar-frame">
+                                    <div id="active-hp-bar" class="gunny-bar-fill hp-fill-gunny"></div>
+                                    <span id="gunny-hp-text" class="gunny-bar-text">100 / 100</span>
+                                </div>
+                            </div>
+                            <!-- Thanh Thể Lực -->
+                            <div class="gunny-stat-box">
+                                <span class="gunny-stat-label" style="color: #2ecc71;">Thể lực</span>
+                                <div class="gunny-bar-frame">
+                                    <div id="active-sta-bar" class="gunny-bar-fill sta-fill-gunny"></div>
+                                    <span id="gunny-sta-text" class="gunny-bar-text">100 / 100</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- 🎮 CỤM GÓC PHẢI DƯỚI -->
+                    <!-- 🎯 3. CỤM BẮN PHẢI: NÚT POW & NÚT BẮN TO (ĐÃ BỎ 4 NÚT HƯỚNG) -->
                     <div class="bottom-right-controls">
                         <button id="active-pow-btn" class="gunny-pow-slot-btn" title="Kích hoạt POW (100%)">
                             <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-btnpow.webp" alt="POW" />
                         </button>
 
-                        <div class="dpad-fire-cluster">
-                            <button id="dpad-btn-up" class="dpad-arrow-btn dpad-up" title="Nâng góc">▲</button>
-                            <button id="dpad-btn-down" class="dpad-arrow-btn dpad-down" title="Hạ góc">▼</button>
-                            <button id="dpad-btn-left" class="dpad-arrow-btn dpad-left" title="Đi trái">◀</button>
-                            <button id="dpad-btn-right" class="dpad-arrow-btn dpad-right" title="Đi phải">▶</button>
-                            
-                            <button id="btn-touch-fire" class="btn-dpad-fire" title="Giữ để tích lực - Thả để bắn">
-                                <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-btnban.webp" alt="BẮN" />
-                            </button>
-                        </div>
+                        <button id="btn-touch-fire" class="btn-dpad-fire" title="Giữ để tích lực - Thả để bắn">
+                            <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-btnban.webp" alt="BẮN" />
+                        </button>
                     </div>
+                </div>
                 </div>
                 <div class="guide">
                     <strong>Cách chơi:</strong> <strong>[A / D]</strong> hoặc <strong>[◀ / ▶]</strong>: Di chuyển | <strong>[W / S]</strong> hoặc <strong>[▲ / ▼]</strong>: Chỉnh góc | Giữ <strong>[SPACE]</strong> hoặc <strong>[NÚT BẮN]</strong>: Bắn.
@@ -2380,19 +2469,17 @@ const DUNGEON_CONFIGS = {
 
             function updateUI() {
                 const p = getActivePlayer();
-                const nameElem = document.getElementById('active-player-name');
                 const turnElem = document.getElementById('turn-indicator');
                 const hpBar = document.getElementById('active-hp-bar');
                 const btnPow = document.getElementById('active-pow-btn');
 
-                if (!nameElem || !turnElem || !hpBar || !btnPow) return;
+                if (!p || !turnElem || !hpBar || !btnPow) return;
 
-                nameElem.innerText = `${p.name} (Đội ${p.team})`;
-                nameElem.style.color = p.team === 1 ? '#ff5470' : '#4ecca3';
                 turnElem.innerText = `LƯỢT: ${p.name.toUpperCase()}`;
                 turnElem.style.color = p.team === 1 ? '#ff5470' : '#4ecca3';
-                hpBar.className = `hp-bar ${p.team === 1 ? 'p1-hp' : 'p2-hp'}`;
-                hpBar.style.width = ((p.hp / p.maxHp) * 100) + '%';
+
+                // Tỷ lệ % thanh máu đỏ
+                hpBar.style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
 
                 const canUseSkill = !isFiring && isMyTurn();
                 const btnAdd1 = document.getElementById('btn-skill-add1');
@@ -2408,11 +2495,9 @@ const DUNGEON_CONFIGS = {
                 const isPowReady = p.pow >= 100;
                 const canPlay = !isFiring && isMyTurn();
 
-                if (btnPow) {
-                    btnPow.disabled = (!p.isPowActive && !isPowReady) || !canPlay;
-                    btnPow.classList.toggle('ready', isPowReady);
-                    btnPow.classList.toggle('active', p.isPowActive);
-                }
+                btnPow.disabled = (!p.isPowActive && !isPowReady) || !canPlay;
+                btnPow.classList.toggle('ready', isPowReady);
+                btnPow.classList.toggle('active', p.isPowActive);
 
                 const btnFire = document.getElementById('btn-touch-fire');
                 if (btnFire) {
@@ -2425,6 +2510,13 @@ const DUNGEON_CONFIGS = {
                 const p = getActivePlayer();
                 if (!p) return;
 
+                // 1. Cập nhật góc vào tâm vòng tròn D-Pad
+                const angleDisplay = document.getElementById('dpad-angle-display');
+                if (angleDisplay) {
+                    angleDisplay.innerText = `${p.angle}°`;
+                }
+
+                // 2. Cập nhật thanh tích lực
                 const curPower = Math.round(chargePower);
                 if (curPower !== lastRenderedPower) {
                     lastRenderedPower = curPower;
@@ -2432,12 +2524,20 @@ const DUNGEON_CONFIGS = {
                     if (powerFill) powerFill.style.width = curPower + '%';
                 }
 
+                // 3. Cập nhật độ dài và chữ số dạng [Hiện tại / Tối đa] cho HP & Thể Lực
                 const staBar = document.getElementById('active-sta-bar');
-                const powBar = document.getElementById('active-pow-bar');
-                const statsEl = document.getElementById('active-stats');
-                if (staBar) staBar.style.width = Math.max(0, (p.stamina / p.maxStamina) * 100) + '%';
-                if (powBar) powBar.style.width = Math.max(0, p.pow) + '%';
-                if (statsEl) statsEl.innerText = `HP: ${Math.ceil(p.hp)}/${p.maxHp} | Góc: ${p.angle}° | TL: ${Math.floor(p.stamina)}`;
+                const hpText = document.getElementById('gunny-hp-text');
+                const staText = document.getElementById('gunny-sta-text');
+
+                if (staBar) {
+                    staBar.style.width = Math.max(0, (p.stamina / p.maxStamina) * 100) + '%';
+                }
+                if (hpText) {
+                    hpText.innerText = `${Math.ceil(p.hp)} / ${p.maxHp}`;
+                }
+                if (staText) {
+                    staText.innerText = `${Math.floor(p.stamina)} / ${p.maxStamina}`;
+                }
             }
 
             initRuler();
