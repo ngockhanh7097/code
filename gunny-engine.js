@@ -660,7 +660,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE</span>
+                    📱 <span id="fs-text">PHONE1</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -677,11 +677,11 @@ const DUNGEON_CONFIGS = {
                     <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
                 </div>
 
-                <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN -->
-                <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999999 !important; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
-                    <div style="font-size: 22px; font-weight: 900; color: #ffd369; text-shadow: 0 0 10px #ffaa00; margin-bottom: 4px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
-                    <div id="card-countdown-timer" style="font-size: 14px; font-weight: bold; color: #ff5470; margin-bottom: 15px;">Thời gian chọn thẻ: 10s</div>
-                    <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;"></div>
+                <!-- 🃏 BẢNG LẬT THẺ BÀI (ĐÃ CHỈNH NHỎ CHỮ VÀ ĐẨY RƯƠNG LÊN TRÊN) -->
+                <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 999999 !important; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 10px; backdrop-filter: blur(6px);">
+                    <div id="endgame-cards-title" style="font-size: 15px; font-weight: 900; color: #ffd369; text-shadow: 0 0 8px #ffaa00; margin-bottom: 2px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
+                    <div id="card-countdown-timer" style="font-size: 12px; font-weight: bold; color: #ff5470; margin-bottom: 6px;">Thời gian chọn thẻ: 10s</div>
+                    <div id="cards-grid-box" style="display: grid; justify-content: center; margin-top: 2px;"></div>
                 </div>
 
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
@@ -1515,8 +1515,8 @@ const DUNGEON_CONFIGS = {
                     checkGameOver(true, data.leaverName);
                 });
 
-                socket.on('cards_board_ready', ({ cards }) => {
-                    renderCardsBoardUI(cards);
+                socket.on('cards_board_ready', ({ cards, isDungeon }) => {
+                    renderCardsBoardUI(cards, isDungeon);
                 });
 
                 socket.on('card_opened', ({ cardIndex, playerName, reward }) => {
@@ -1992,42 +1992,75 @@ const DUNGEON_CONFIGS = {
             let myHasPickedCard = false;
 
             function initLocalCardBoard() {
+                const isDungeon = Boolean(isDungeonMode);
+                const totalCards = isDungeon ? 12 : 9;
                 const localCards = [];
-                for (let i = 0; i < 9; i++) {
+
+                const ironWeapons = ["kiem_sat", "riu_sat", "dinh_sat"];
+                const bronzeWeapons = ["kiem_dong", "riu_dong", "dinh_dong"];
+                const dungeonId = (matchData && matchData.dungeonId) || "linh_son_1";
+
+                for (let i = 0; i < totalCards; i++) {
+                    let rewardItem = null;
+                    if (!isDungeon) {
+                        rewardItem = { type: "kiemkhi", amount: Math.floor(Math.random() * 50) + 1 };
+                    } else if (dungeonId === "linh_son_1") {
+                        const roll = Math.random() * 100;
+                        if (roll < 9) {
+                            rewardItem = { type: "weapon", weaponKey: ironWeapons[Math.floor(Math.random() * ironWeapons.length)], amount: 1 };
+                        } else {
+                            const vals = [5, 10, 15, 20];
+                            rewardItem = { type: "kiemkhi", amount: vals[Math.floor(Math.random() * vals.length)] };
+                        }
+                    } else {
+                        const roll = Math.random() * 100;
+                        if (roll < 3) {
+                            rewardItem = { type: "weapon", weaponKey: bronzeWeapons[Math.floor(Math.random() * bronzeWeapons.length)], amount: 1 };
+                        } else if (roll < 18) {
+                            rewardItem = { type: "weapon", weaponKey: ironWeapons[Math.floor(Math.random() * ironWeapons.length)], amount: 1 };
+                        } else {
+                            const vals = [10, 20, 30, 40];
+                            rewardItem = { type: "kiemkhi", amount: vals[Math.floor(Math.random() * vals.length)] };
+                        }
+                    }
+
                     localCards.push({
                         id: i,
-                        reward: Math.floor(Math.random() * 50) + 1,
+                        reward: rewardItem,
                         openedBy: null
                     });
                 }
-                renderCardsBoardUI(localCards);
+                renderCardsBoardUI(localCards, isDungeon);
             }
 
-            function renderCardsBoardUI(cards) {
+            function renderCardsBoardUI(cards, isDungeonParam) {
                 const overlay = document.getElementById("endgame-cards-overlay");
                 const grid = document.getElementById("cards-grid-box");
                 const timerEl = document.getElementById("card-countdown-timer");
                 if (!overlay || !grid) return;
 
-                // Lưu danh sách cards vào biến cục bộ để cập nhật trạng thái
                 let currentCardsList = cards;
+                const isDungeon = (typeof isDungeonParam !== "undefined") ? isDungeonParam : Boolean(isDungeonMode);
 
                 overlay.style.display = "flex";
-                overlay.style.padding = "6px 0";
                 grid.innerHTML = "";
-                // Tinh chỉnh lưới vừa khít màn hình điện thoại (88px x 118px)
-                grid.style.gridTemplateColumns = "repeat(3, 88px)";
-                grid.style.gridGap = "8px";
+
+                // Phó bản: 4 cột x 3 hàng (12 rương) | PvP: 3 cột x 3 hàng (9 rương)
+                grid.style.gridTemplateColumns = isDungeon ? "repeat(4, 82px)" : "repeat(3, 86px)";
+                grid.style.gridGap = isDungeon ? "6px" : "8px";
 
                 myHasPickedCard = false;
                 cardTimeRemaining = 10;
 
-                for (let i = 0; i < 9; i++) {
+                const cardW = isDungeon ? "82px" : "86px";
+                const cardH = isDungeon ? "110px" : "114px";
+
+                for (let i = 0; i < currentCardsList.length; i++) {
                     const cardData = currentCardsList[i];
                     const cardDiv = document.createElement("div");
                     cardDiv.id = `card-slot-${i}`;
                     cardDiv.style.cssText = `
-                        width: 88px; height: 118px; border-radius: 8px; cursor: pointer;
+                        width: ${cardW}; height: ${cardH}; border-radius: 8px; cursor: pointer;
                         position: relative; transition: transform 0.2s; box-shadow: 0 3px 8px rgba(0,0,0,0.6);
                     `;
                     cardDiv.innerHTML = `
@@ -2063,10 +2096,10 @@ const DUNGEON_CONFIGS = {
                     if (cardTimeRemaining <= 0) {
                         clearInterval(cardFlipTimer);
 
-                        // Tự động lật ngẫu nhiên 1 ô cho người chơi nếu chưa chọn thẻ nào
+                        // 1. Tự động bốc thẻ ngẫu nhiên nếu người chơi chưa chọn
                         if (!myHasPickedCard) {
                             let availableIndices = [];
-                            for (let idx = 0; idx < 9; idx++) {
+                            for (let idx = 0; idx < currentCardsList.length; idx++) {
                                 if (!currentCardsList[idx].openedBy) {
                                     availableIndices.push(idx);
                                 }
@@ -2087,22 +2120,25 @@ const DUNGEON_CONFIGS = {
                             }
                         }
 
-                        // Lật mở tất cả các thẻ bài còn lại
+                        if (timerEl) timerEl.innerText = `Đang tổng kết phần thưởng...`;
+
+                        // 2. Chờ 2 giây (2000ms) sau khi chọn bài xong rồi mới lật hết toàn bộ thẻ
                         setTimeout(() => {
                             currentCardsList.forEach((c, idx) => {
                                 revealSingleCardUI(idx, c.openedBy || "", c.reward);
                             });
-                        }, 250);
 
-                        setTimeout(() => {
-                            if (window.database && roomId) {
-                                window.database.ref('pvp_rooms/' + roomId).update({
-                                    status: "WAITING",
-                                    matchData: null
-                                });
-                            }
-                            if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
-                        }, 4000);
+                            // Sau khi lật hết, đợi thêm 4 giây để xem bài rồi thoát ra sảnh
+                            setTimeout(() => {
+                                if (window.database && roomId) {
+                                    window.database.ref('pvp_rooms/' + roomId).update({
+                                        status: "WAITING",
+                                        matchData: null
+                                    });
+                                }
+                                if (typeof closeGunnyGameModal === "function") closeGunnyGameModal();
+                            }, 4000);
+                        }, 2000);
                     }
                 }, 1000);
             }
@@ -2114,21 +2150,41 @@ const DUNGEON_CONFIGS = {
                 cardEl.style.cursor = "default";
                 cardEl.style.transform = "scale(1)";
 
-                // Giữ lại tên người chơi nếu ô này đã được chọn trước đó
                 let finalName = playerName;
                 const existingLabel = cardEl.querySelector('.card-owner-name-tag');
                 if (!finalName && existingLabel && existingLabel.innerText.trim() !== "Chưa lật") {
                     finalName = existingLabel.innerText.trim();
                 }
 
-                const KIEMKHI_ICON_URL = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
+                // Xử lý loại phần thưởng (Kiếm khí hoặc Vũ khí)
+                let itemImg = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
+                let itemText = "+0";
+                let isWeaponReward = false;
+                let weaponKey = "";
+
+                if (typeof reward === "object" && reward !== null) {
+                    if (reward.type === "weapon") {
+                        isWeaponReward = true;
+                        weaponKey = reward.weaponKey;
+                        if (WEAPON_INFO_REGISTRY[weaponKey]) {
+                            itemImg = WEAPON_INFO_REGISTRY[weaponKey].img;
+                            itemText = WEAPON_INFO_REGISTRY[weaponKey].name;
+                        }
+                    } else {
+                        itemImg = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
+                        itemText = `+${reward.amount}`;
+                    }
+                } else {
+                    // Fallback số nguyên cũ
+                    itemText = `+${reward}`;
+                }
 
                 cardEl.innerHTML = `
                     <div style="width: 100%; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1.5px solid #ffcc00; box-shadow: 0 0 8px rgba(255,204,0,0.5);">
                         <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-matsau.webp" style="width: 100%; height: 100%; object-fit: cover;" />
-                        <div style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                            <img src="${KIEMKHI_ICON_URL}" style="width: 38px; height: 38px; object-fit: contain; filter: drop-shadow(0 0 5px #00ffff);" />
-                            <span style="color: #00ffff; font-weight: 900; font-size: 12px; text-shadow: 0 1px 3px #000;">+${reward}</span>
+                        <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; width: 90%;">
+                            <img src="${itemImg}" style="width: 38px; height: 38px; object-fit: contain; filter: drop-shadow(0 0 5px ${isWeaponReward ? '#ffd369' : '#00ffff'});" />
+                            <span style="color: ${isWeaponReward ? '#ffd369' : '#00ffff'}; font-weight: 900; font-size: ${isWeaponReward ? '10px' : '12px'}; text-shadow: 0 1px 3px #000; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${itemText}</span>
                         </div>
                         <div class="card-owner-name-tag" style="position: absolute; bottom: 4px; left: 3px; right: 3px; background: rgba(0,0,0,0.88); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px; text-align: center; font-size: 9px; font-weight: bold; color: #ffd369; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${finalName ? finalName : "Chưa lật"}
@@ -2136,10 +2192,17 @@ const DUNGEON_CONFIGS = {
                     </div>
                 `;
 
+                // Cộng quà vào túi đồ tài khoản
                 if (finalName && finalName.toLowerCase() === (window.currentUser || "").toLowerCase()) {
                     if (typeof userStats !== "undefined") {
                         if (!userStats.inventory) userStats.inventory = {};
-                        userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + reward;
+
+                        if (isWeaponReward) {
+                            userStats.inventory[weaponKey] = (userStats.inventory[weaponKey] || 0) + 1;
+                        } else {
+                            const addAmount = (typeof reward === "object") ? reward.amount : reward;
+                            userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + addAmount;
+                        }
 
                         if (typeof pushSecureUserData === "function") {
                             pushSecureUserData(window.currentUser).then(() => {
@@ -2198,7 +2261,7 @@ const DUNGEON_CONFIGS = {
 
                     // Gọi mở bảng lật thẻ ngay lập tức
                     if (socket && socket.connected) {
-                        socket.emit('match_finished_cards');
+                        socket.emit('match_finished_cards', {     mode: isDungeonMode ? "phoban" : "pvp",     dungeonId: (matchData && matchData.dungeonId) || "linh_son_1" });
                     } else {
                         initLocalCardBoard();
                     }
@@ -2206,7 +2269,7 @@ const DUNGEON_CONFIGS = {
                 }
 
                     if (socket && socket.connected) {
-                        socket.emit('match_finished_cards');
+                        socket.emit('match_finished_cards', {     mode: isDungeonMode ? "phoban" : "pvp",     dungeonId: (matchData && matchData.dungeonId) || "linh_son_1" });
                     } else {
                         initLocalCardBoard();
                     }
