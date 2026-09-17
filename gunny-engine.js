@@ -171,21 +171,19 @@ const DUNGEON_CONFIGS = {
 
                 /* 🏳️ NÚT RÚT LUI GÓC PHẢI TRÊN */
                 #gunny-game-wrapper .btn-ingame-surrender {
+                    display: none; /* Ẩn ở chế độ cửa sổ bình thường */
                     position: absolute;
                     top: 10px;
-                    right: 60px;
-                    background: rgba(217, 48, 37, 0.85);
+                    right: 15px;
+                    background: rgba(217, 48, 37, 0.9);
                     border: 1.5px solid #ff4d4d;
                     color: #fff;
                     font-size: 11px;
                     font-weight: 900;
-                    padding: 4px 10px;
+                    padding: 5px 12px;
                     border-radius: 6px;
                     cursor: pointer;
-                    z-index: 35;
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
+                    z-index: 40;
                     backdrop-filter: blur(4px);
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
                     transition: transform 0.15s, background 0.2s;
@@ -194,6 +192,12 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .btn-ingame-surrender:hover {
                     background: #ff4d4d;
                     transform: scale(1.05);
+                }
+                /* 📱 CHỈ KHI BẬT PHONE / TOÀN MÀN HÌNH MỚI HIỆN NÚT RÚT LUI NÀY */
+                #gunny-game-wrapper.phone-landscape-mode .btn-ingame-surrender {
+                    display: flex !important;
+                    align-items: center;
+                    gap: 4px;
                 }
 
                 /* 📱 CHỐNG ZOOM KHI NHẤP NHANH */
@@ -271,22 +275,22 @@ const DUNGEON_CONFIGS = {
                     border-radius: 0 !important;
                 }
 
-                /* 🕒 CỤM ĐẾM LÙI & BỎ LƯỢT TRÊN ĐẦU (VỊ TRÍ CHUẨN CỐ ĐỊNH) */
+                /* 🕒 CỤM ĐẾM LÙI & BỎ LƯỢT: HẠ XUỐNG DƯỚI Ô GIÓ (KHÔNG BỊ CHÈN NỮA) */
                 #gunny-game-wrapper .top-turn-group {
                     position: absolute;
-                    top: 10px;
+                    top: 54px; /* Hạ thấp để nằm ngay bên dưới ô Gió */
                     left: 50%;
                     transform: translateX(-50%);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 3px;
+                    gap: 4px;
                     z-index: 30;
                     pointer-events: none;
                 }
                 #gunny-game-wrapper #top-turn-timer {
                     font-family: 'Arial Black', Impact, sans-serif;
-                    font-size: 26px;
+                    font-size: 24px;
                     font-weight: 900;
                     letter-spacing: 1px;
                     line-height: 1;
@@ -643,7 +647,7 @@ const DUNGEON_CONFIGS = {
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
-                <button id="btn-ingame-surrender" class="btn-ingame-surrender" type="button" onclick="confirmExitGunnyGame()" title="Đầu hàng rút lui">
+                <button id="btn-ingame-surrender" class="btn-ingame-surrender" type="button" onclick="if(confirm('Đạo hữu có chắc chắn muốn bỏ cuộc và rút lui?')) { if(typeof closeGunnyGameModal === 'function') closeGunnyGameModal(); }" title="Đầu hàng rút lui">
                     ✕ Rút lui
                 </button>
 
@@ -1056,14 +1060,26 @@ const DUNGEON_CONFIGS = {
                 return { dx: Math.cos(rad) * player.facing, dy: -Math.sin(rad) };
             }
 
-            // 💨 CẬP NHẬT Ô HIỂN THỊ GIÓ TURN TRƯỚC
+            // 🛑 HÀM DỪNG TOÀN BỘ HÀNH ĐỘNG VÀ XÓA SẠCH PHÍM KẸT KHI CHUYỂN TURN
+            function clearAllInputKeys() {
+                for (let k in keys) {
+                    keys[k] = false;
+                }
+                isCharging = false;
+            }
+
+            // 💨 CẬP NHẬT Ô HIỂN THỊ GIÓ TURN TRƯỚC (CỦA CHÍNH BẢN THÂN NGƯỜI BẮN)
             function updatePrevWindUI() {
                 const prevWindEl = document.getElementById("prev-wind-box");
                 if (!prevWindEl) return;
-                if (isMyTurn() && prevWind !== null) {
-                    let arrow = prevWind > 0.005 ? '➔' : (prevWind < -0.005 ? '⬅' : '●');
-                    let speed = (Math.abs(prevWind) * 100).toFixed(1);
-                    let color = prevWind > 0.005 ? '#38ef7d' : (prevWind < -0.005 ? '#ff4b2b' : '#ffd369');
+                const activeP = getActivePlayer();
+
+                // Chỉ hiển thị cho người chơi hiện tại và khi chính họ đã từng có turn trước đó
+                if (isMyTurn() && activeP && activeP.myLastTurnWind !== undefined && activeP.myLastTurnWind !== null) {
+                    let lastW = activeP.myLastTurnWind;
+                    let arrow = lastW > 0.005 ? '➔' : (lastW < -0.005 ? '⬅' : '●');
+                    let speed = (Math.abs(lastW) * 100).toFixed(1);
+                    let color = lastW > 0.005 ? '#38ef7d' : (lastW < -0.005 ? '#ff4b2b' : '#ffd369');
                     prevWindEl.innerHTML = `Turn trước: <span style="color:${color}; font-weight:900;">${arrow} ${speed}</span>`;
                     prevWindEl.style.display = "block";
                 } else {
@@ -1451,11 +1467,16 @@ const DUNGEON_CONFIGS = {
                 });
 
                 socket.on('turn_changed', (data) => {
-                    prevWind = wind; // 💨 Lưu lại gió turn trước khi nhận gió mới
-                    currentPlayerIndex = data.nextIndex;
-                    wind = data.wind;
-                    resetTurnState();
-                });
+    // Lưu lại gió cho người chơi vừa kết thúc lượt của họ
+    const prevShooter = getActivePlayer();
+    if (prevShooter) {
+        prevShooter.myLastTurnWind = wind;
+    }
+
+    currentPlayerIndex = data.nextIndex;
+    wind = data.wind;
+    resetTurnState();
+});
 
                 socket.on('player_left', (data) => {
                     const overlay = document.getElementById("endgame-cards-overlay");
@@ -1552,7 +1573,11 @@ const DUNGEON_CONFIGS = {
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
+            // Hàm chuyển lượt Server
             function triggerNextTurnServer() {
+                // Dừng ngay mọi chuyển động để tránh kẹt phím sang turn kế tiếp
+                clearAllInputKeys();
+
                 let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
                 let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
 
@@ -1575,6 +1600,12 @@ const DUNGEON_CONFIGS = {
                     return;
                 }
 
+                // 💨 Lưu lại lực gió của turn này cho CHÍNH người vừa bắn
+                const currentShooter = getActivePlayer();
+                if (currentShooter) {
+                    currentShooter.myLastTurnWind = wind;
+                }
+
                 let newWind = (Math.random() * 0.06 - 0.03);
 
                 if (socket && socket.connected) {
@@ -1583,7 +1614,6 @@ const DUNGEON_CONFIGS = {
                         nextWind: newWind
                     });
                 } else {
-                    prevWind = wind;
                     currentPlayerIndex = nextIdx;
                     wind = newWind;
                     resetTurnState();
@@ -1591,15 +1621,20 @@ const DUNGEON_CONFIGS = {
             }
 
             function resetTurnState() {
+                // Xóa sạch toàn bộ phím bấm để dừng mọi hành động di chuyển
+                clearAllInputKeys();
                 isFiring = false;
-                isCharging = false;
                 chargePower = 0;
                 chargeDir = 1;
+
                 const activeP = getActivePlayer();
-                activeP.stamina = activeP.maxStamina;
-                activeP.extraBulletsCount = 0;
-                activeP.damageBonusPercent = 0;
-                activeP.activeBuffs = [];
+                if (activeP) {
+                    activeP.stamina = activeP.maxStamina;
+                    activeP.extraBulletsCount = 0;
+                    activeP.damageBonusPercent = 0;
+                    activeP.activeBuffs = [];
+                }
+
                 updateUI();
                 updatePrevWindUI();
                 startTurnTimer();
