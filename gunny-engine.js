@@ -2668,17 +2668,6 @@ const DUNGEON_CONFIGS = {
                 // Tỷ lệ % thanh máu đỏ
                 hpBar.style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
 
-                const canUseSkill = !isFiring && isMyTurn();
-                const btnAdd1 = document.getElementById('btn-skill-add1');
-                const btnDame50 = document.getElementById('btn-skill-dame50');
-                const btnDame20 = document.getElementById('btn-skill-dame20');
-                const btnDame10 = document.getElementById('btn-skill-dame10');
-
-                if (btnAdd1) btnAdd1.disabled = (p.stamina < BUFF_COSTS.add1) || !canUseSkill;
-                if (btnDame50) btnDame50.disabled = (p.stamina < BUFF_COSTS.dame50) || !canUseSkill;
-                if (btnDame20) btnDame20.disabled = (p.stamina < BUFF_COSTS.dame20) || !canUseSkill;
-                if (btnDame10) btnDame10.disabled = (p.stamina < BUFF_COSTS.dame10) || !canUseSkill;
-
                 const isPowReady = p.pow >= 100;
                 const canPlay = !isFiring && isMyTurn();
 
@@ -2725,6 +2714,18 @@ const DUNGEON_CONFIGS = {
                 if (staText) {
                     staText.innerText = `${Math.floor(p.stamina)} / ${p.maxStamina}`;
                 }
+               // 4. Đồng bộ mờ nút Buff theo thể lực tiêu hao thời gian thực (Gunny Mobile)
+                const canUseSkillRealtime = !isFiring && isMyTurn() && !isGameOver;
+                const btnAdd1 = document.getElementById('btn-skill-add1');
+                const btnDame50 = document.getElementById('btn-skill-dame50');
+                const btnDame20 = document.getElementById('btn-skill-dame20');
+                const btnDame10 = document.getElementById('btn-skill-dame10');
+
+                if (btnAdd1) btnAdd1.disabled = (p.stamina < BUFF_COSTS.add1) || !canUseSkillRealtime;
+                if (btnDame50) btnDame50.disabled = (p.stamina < BUFF_COSTS.dame50) || !canUseSkillRealtime;
+                if (btnDame20) btnDame20.disabled = (p.stamina < BUFF_COSTS.dame20) || !canUseSkillRealtime;
+                if (btnDame10) btnDame10.disabled = (p.stamina < BUFF_COSTS.dame10) || !canUseSkillRealtime;
+            }
             }
 
             initRuler();
