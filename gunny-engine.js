@@ -660,7 +660,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE2</span>
+                    📱 <span id="fs-text">PHONE</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -678,7 +678,7 @@ const DUNGEON_CONFIGS = {
                 </div>
 
                 <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN -->
-                <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
+                <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999999 !important; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
                     <div style="font-size: 22px; font-weight: 900; color: #ffd369; text-shadow: 0 0 10px #ffaa00; margin-bottom: 4px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
                     <div id="card-countdown-timer" style="font-size: 14px; font-weight: bold; color: #ff5470; margin-bottom: 15px;">Thời gian chọn thẻ: 10s</div>
                     <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;"></div>
@@ -2009,30 +2009,40 @@ const DUNGEON_CONFIGS = {
                 const timerEl = document.getElementById("card-countdown-timer");
                 if (!overlay || !grid) return;
 
+                // Lưu danh sách cards vào biến cục bộ để cập nhật trạng thái
+                let currentCardsList = cards;
+
                 overlay.style.display = "flex";
+                overlay.style.padding = "6px 0";
                 grid.innerHTML = "";
+                // Tinh chỉnh lưới vừa khít màn hình điện thoại (88px x 118px)
+                grid.style.gridTemplateColumns = "repeat(3, 88px)";
+                grid.style.gridGap = "8px";
+
                 myHasPickedCard = false;
                 cardTimeRemaining = 10;
 
                 for (let i = 0; i < 9; i++) {
-                    const cardData = cards[i];
+                    const cardData = currentCardsList[i];
                     const cardDiv = document.createElement("div");
                     cardDiv.id = `card-slot-${i}`;
                     cardDiv.style.cssText = `
-                        width: 105px; height: 145px; border-radius: 8px; cursor: pointer;
-                        position: relative; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+                        width: 88px; height: 118px; border-radius: 8px; cursor: pointer;
+                        position: relative; transition: transform 0.2s; box-shadow: 0 3px 8px rgba(0,0,0,0.6);
                     `;
                     cardDiv.innerHTML = `
                         <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-mattruoc.webp" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; pointer-events: none;" />
                     `;
 
-                    cardDiv.onmouseover = () => { if (!myHasPickedCard && !cardData.openedBy) cardDiv.style.transform = "scale(1.06)"; };
+                    cardDiv.onmouseover = () => { if (!myHasPickedCard && !cardData.openedBy) cardDiv.style.transform = "scale(1.05)"; };
                     cardDiv.onmouseout = () => { cardDiv.style.transform = "scale(1)"; };
 
                     cardDiv.onclick = () => {
                         if (myHasPickedCard || cardData.openedBy) return;
                         myHasPickedCard = true;
                         cardDiv.style.cursor = "default";
+                        cardData.openedBy = window.currentUser || "Player";
+
                         if (socket && socket.connected) {
                             socket.emit('pick_card', {
                                 cardIndex: i,
@@ -2052,9 +2062,37 @@ const DUNGEON_CONFIGS = {
 
                     if (cardTimeRemaining <= 0) {
                         clearInterval(cardFlipTimer);
-                        cards.forEach((c, idx) => {
-                            revealSingleCardUI(idx, c.openedBy || "", c.reward);
-                        });
+
+                        // Tự động lật ngẫu nhiên 1 ô cho người chơi nếu chưa chọn thẻ nào
+                        if (!myHasPickedCard) {
+                            let availableIndices = [];
+                            for (let idx = 0; idx < 9; idx++) {
+                                if (!currentCardsList[idx].openedBy) {
+                                    availableIndices.push(idx);
+                                }
+                            }
+                            if (availableIndices.length > 0) {
+                                let randomIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+                                myHasPickedCard = true;
+                                currentCardsList[randomIdx].openedBy = window.currentUser || "Player";
+
+                                if (socket && socket.connected) {
+                                    socket.emit('pick_card', {
+                                        cardIndex: randomIdx,
+                                        playerName: window.currentUser || "Player"
+                                    });
+                                } else {
+                                    revealSingleCardUI(randomIdx, window.currentUser || "Player", currentCardsList[randomIdx].reward);
+                                }
+                            }
+                        }
+
+                        // Lật mở tất cả các thẻ bài còn lại
+                        setTimeout(() => {
+                            currentCardsList.forEach((c, idx) => {
+                                revealSingleCardUI(idx, c.openedBy || "", c.reward);
+                            });
+                        }, 250);
 
                         setTimeout(() => {
                             if (window.database && roomId) {
@@ -2072,25 +2110,33 @@ const DUNGEON_CONFIGS = {
             function revealSingleCardUI(index, playerName, reward) {
                 const cardEl = document.getElementById(`card-slot-${index}`);
                 if (!cardEl) return;
+
                 cardEl.style.cursor = "default";
                 cardEl.style.transform = "scale(1)";
+
+                // Giữ lại tên người chơi nếu ô này đã được chọn trước đó
+                let finalName = playerName;
+                const existingLabel = cardEl.querySelector('.card-owner-name-tag');
+                if (!finalName && existingLabel && existingLabel.innerText.trim() !== "Chưa lật") {
+                    finalName = existingLabel.innerText.trim();
+                }
 
                 const KIEMKHI_ICON_URL = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/kiemkhi.webp";
 
                 cardEl.innerHTML = `
-                    <div style="width: 100%; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1.5px solid #ffcc00; box-shadow: 0 0 10px rgba(255,204,0,0.5);">
+                    <div style="width: 100%; height: 100%; position: relative; border-radius: 8px; overflow: hidden; border: 1.5px solid #ffcc00; box-shadow: 0 0 8px rgba(255,204,0,0.5);">
                         <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/the-matsau.webp" style="width: 100%; height: 100%; object-fit: cover;" />
-                        <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                            <img src="${KIEMKHI_ICON_URL}" style="width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 0 5px #00ffff);" />
-                            <span style="color: #00ffff; font-weight: 900; font-size: 13px; text-shadow: 0 1px 3px #000;">+${reward}</span>
+                        <div style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                            <img src="${KIEMKHI_ICON_URL}" style="width: 38px; height: 38px; object-fit: contain; filter: drop-shadow(0 0 5px #00ffff);" />
+                            <span style="color: #00ffff; font-weight: 900; font-size: 12px; text-shadow: 0 1px 3px #000;">+${reward}</span>
                         </div>
-                        <div style="position: absolute; bottom: 6px; left: 4px; right: 4px; background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px; text-align: center; font-size: 9px; font-weight: bold; color: #ffd369; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${playerName ? playerName : "Chưa lật"}
+                        <div class="card-owner-name-tag" style="position: absolute; bottom: 4px; left: 3px; right: 3px; background: rgba(0,0,0,0.88); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 2px; text-align: center; font-size: 9px; font-weight: bold; color: #ffd369; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${finalName ? finalName : "Chưa lật"}
                         </div>
                     </div>
                 `;
 
-                if (playerName && playerName.toLowerCase() === (window.currentUser || "").toLowerCase()) {
+                if (finalName && finalName.toLowerCase() === (window.currentUser || "").toLowerCase()) {
                     if (typeof userStats !== "undefined") {
                         if (!userStats.inventory) userStats.inventory = {};
                         userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + reward;
@@ -2103,7 +2149,6 @@ const DUNGEON_CONFIGS = {
                     }
                 }
             }
-
             function checkGameOver(isImmediateSurrender = false, leaverName = null) {
                 if (isGameOver) return;
 
@@ -2139,19 +2184,26 @@ const DUNGEON_CONFIGS = {
                     }
 
                     if (isDungeonMode) {
+                    // Cập nhật tiêu đề trên bảng lật thẻ theo kết quả Thắng/Thua
+                    const cardTitleEl = document.querySelector("#endgame-cards-overlay div:first-child");
+                    if (cardTitleEl) {
                         if (isBossDead) {
-                            alert("🎉 VƯỢT ẢI THÀNH CÔNG!\nYêu Vương đã bị tiêu diệt! Hãy mở phù bài đoạt cơ duyên!");
+                            cardTitleEl.innerText = "🎉 VƯỢT ẢI THÀNH CÔNG - THIÊN DUYÊN PHÙ BÀI";
+                            cardTitleEl.style.color = "#ffd369";
                         } else {
-                            alert("💀 TOÀN ĐỘI ĐÃ TỬ TRẬN!\nPhó bản thất bại, yêu ma quá hùng mạnh!");
+                            cardTitleEl.innerText = "💀 THẤT BẠI - AN ỦI PHÙ BÀI";
+                            cardTitleEl.style.color = "#ff5470";
                         }
-
-                        if (socket && socket.connected) {
-                            socket.emit('match_finished_cards');
-                        } else {
-                            initLocalCardBoard();
-                        }
-                        return;
                     }
+
+                    // Gọi mở bảng lật thẻ ngay lập tức
+                    if (socket && socket.connected) {
+                        socket.emit('match_finished_cards');
+                    } else {
+                        initLocalCardBoard();
+                    }
+                    return;
+                }
 
                     if (socket && socket.connected) {
                         socket.emit('match_finished_cards');
