@@ -140,7 +140,36 @@ const DUNGEON_CONFIGS = {
                     width: 900px; max-width: 100%; overflow: hidden;
                 }
                 #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; }
-                
+                /* 📱 NÚT TOÀN MÀN HÌNH GÓC TRÁI TRÊN CÙNG */
+               #gunny-game-wrapper .btn-fullscreen-toggle {
+                   position: absolute;
+                   top: 12px;
+                   left: 12px;
+                   background: rgba(9, 14, 23, 0.75);
+                   border: 1.5px solid rgba(255, 211, 105, 0.6);
+                   color: #ffd369;
+                   font-size: 11px;
+                   font-weight: bold;
+                   padding: 5px 10px;
+                   border-radius: 8px;
+                   cursor: pointer;
+                   z-index: 25;
+                   display: flex;
+                   align-items: center;
+                   gap: 5px;
+                   backdrop-filter: blur(4px);
+                   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+                   transition: all 0.2s ease;
+                   pointer-events: auto;
+               }
+               #gunny-game-wrapper .btn-fullscreen-toggle:hover {
+                   background: rgba(255, 211, 105, 0.25);
+                   border-color: #ffd369;
+                   transform: scale(1.05);
+               }
+               #gunny-game-wrapper .btn-fullscreen-toggle:active {
+                   transform: scale(0.95);
+               }
                 #gunny-game-wrapper .ui-panel {
                     position: absolute; bottom: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between;
                     align-items: flex-end; background: transparent !important; border: none !important; box-shadow: none !important;
@@ -317,6 +346,10 @@ const DUNGEON_CONFIGS = {
             </style>
 
             <div id="game-container">
+                 <!-- 📱 NÚT TOÀN MÀN HÌNH GÓC TRÁI TRÊN CÙNG -->
+                      <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Bật/Tắt Toàn Màn Hình">
+                          <span id="fs-icon">⛶</span> <span id="fs-text">TOÀN MÀN HÌNH</span>
+                      </button>
                 <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
                 <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
                     <div style="font-size: 22px; font-weight: 900; color: #ffd369; text-shadow: 0 0 10px #ffaa00; margin-bottom: 4px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
@@ -1396,6 +1429,62 @@ const DUNGEON_CONFIGS = {
             bindDpadButton('dpad-btn-down', 'KeyS');
             bindDpadButton('dpad-btn-left', 'KeyA');
             bindDpadButton('dpad-btn-right', 'KeyD');
+
+            // =========================================================================
+            // 📱 BỘ ĐIỀU KHIỂN TOÀN MÀN HÌNH CHO THIẾT BỊ DI ĐỘNG / TRÌNH DUYỆT
+            // =========================================================================
+            const btnFullscreen = document.getElementById('btn-fullscreen-toggle');
+            const fsText = document.getElementById('fs-text');
+            const fsIcon = document.getElementById('fs-icon');
+            
+            function isFullscreenActive() {
+                return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            }
+            
+            function updateFullscreenBtnUI() {
+                if (!fsText || !fsIcon) return;
+                if (isFullscreenActive()) {
+                    fsIcon.innerText = '🗗';
+                    fsText.innerText = 'THU NHỎ';
+                } else {
+                    fsIcon.innerText = '⛶';
+                    fsText.innerText = 'TOÀN MÀN HÌNH';
+                }
+            }
+            
+            if (btnFullscreen) {
+                btnFullscreen.onclick = function () {
+                    // Đối tượng phóng to là toàn bộ khung chứa game
+                    const targetElem = document.getElementById('game-container') || document.documentElement;
+            
+                    if (!isFullscreenActive()) {
+                        if (targetElem.requestFullscreen) {
+                            targetElem.requestFullscreen().catch(err => console.log(err));
+                        } else if (targetElem.webkitRequestFullscreen) { // Safari & Chrome Mobile cũ
+                            targetElem.webkitRequestFullscreen();
+                        } else if (targetElem.mozRequestFullScreen) {
+                            targetElem.mozRequestFullScreen();
+                        } else if (targetElem.msRequestFullscreen) {
+                            targetElem.msRequestFullscreen();
+                        }
+                    } else {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen().catch(err => console.log(err));
+                        } else if (document.webkitExitFullscreen) {
+                            document.webkitExitFullscreen();
+                        } else if (document.mozCancelFullScreen) {
+                            document.mozCancelFullScreen();
+                        } else if (document.msExitFullscreen) {
+                            document.msExitFullscreen();
+                        }
+                    }
+                };
+            }
+            
+            // Bắt sự kiện người dùng thoát bằng nút back của điện thoại hoặc phím Esc
+            document.addEventListener('fullscreenchange', updateFullscreenBtnUI);
+            document.addEventListener('webkitfullscreenchange', updateFullscreenBtnUI);
+            document.addEventListener('mozfullscreenchange', updateFullscreenBtnUI);
 
             function cleanupGameListeners() {
                 window.onkeydown = null;
