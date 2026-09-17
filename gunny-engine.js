@@ -250,29 +250,46 @@ const DUNGEON_CONFIGS = {
                     }
                 }
 
+                /* 🔄 KHI XOAY NGANG MÁY THẬT: BUNG CĂNG 100% KHÔNG ĐỂ VIỀN ĐEN 2 BÊN */
                 @media screen and (orientation: landscape) {
-                    #gunny-game-wrapper.phone-landscape-mode #game-container {
-                        position: absolute !important;
-                        top: 0 !important;
-                        left: 0 !important;
+                    #gunny-game-wrapper.phone-landscape-mode {
                         width: 100vw !important;
                         height: 100vh !important;
                         height: 100dvh !important;
-                        max-width: none !important;
-                        max-height: none !important;
+                    }
+                    #gunny-game-wrapper.phone-landscape-mode #game-container {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        height: 100dvh !important;
+                        max-width: 100vw !important;
+                        max-height: 100vh !important;
                         margin: 0 !important;
                         padding: 0 !important;
                         border-radius: 0 !important;
                         transform: none !important;
                         background: #000 !important;
                     }
-                }
-
-                #gunny-game-wrapper.phone-landscape-mode canvas {
-                    width: 100% !important;
-                    height: 100% !important;
-                    object-fit: fill !important;
-                    border-radius: 0 !important;
+                    #gunny-game-wrapper.phone-landscape-mode canvas {
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        height: 100dvh !important;
+                        object-fit: fill !important;
+                        border-radius: 0 !important;
+                    }
+                    /* Ép 2 nút bám sát mép viền ngoài cùng màn hình */
+                    #gunny-game-wrapper.phone-landscape-mode .btn-fullscreen-toggle {
+                        top: 10px !important;
+                        left: 12px !important;
+                    }
+                    #gunny-game-wrapper.phone-landscape-mode .btn-ingame-surrender {
+                        top: 10px !important;
+                        right: 12px !important;
+                    }
                 }
 
                 /* 🕒 CỤM ĐẾM LÙI & BỎ LƯỢT: HẠ XUỐNG DƯỚI Ô GIÓ (KHÔNG BỊ CHÈN NỮA) */
