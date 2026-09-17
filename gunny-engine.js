@@ -445,6 +445,66 @@ const DUNGEON_CONFIGS = {
                     text-shadow: 1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000;
                     pointer-events: none;
                 }
+                /* 🎯 CỘT 4 NÚT BUFF KỸ NĂNG CỐ ĐỊNH GÓC PHẢI */
+                #gunny-game-wrapper .right-skill-column {
+                    position: absolute !important;
+                    top: 55px !important;
+                    right: 10px !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 6px !important;
+                    z-index: 25 !important;
+                    pointer-events: auto !important;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn {
+                    position: relative !important;
+                    width: 40px !important;
+                    height: 40px !important;
+                    background: rgba(0, 0, 0, 0.6) !important;
+                    border: 1.5px solid rgba(255, 211, 105, 0.6) !important;
+                    border-radius: 8px !important;
+                    cursor: pointer !important;
+                    padding: 2px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    backdrop-filter: blur(4px) !important;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+                    transition: transform 0.15s, border-color 0.2s !important;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn img {
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: contain !important;
+                    pointer-events: none !important;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn:hover:not(:disabled) {
+                    transform: scale(1.1) !important;
+                    border-color: #ffd369 !important;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn:disabled {
+                    opacity: 0.35 !important;
+                    cursor: not-allowed !important;
+                    filter: grayscale(100%) !important;
+                }
+                #gunny-game-wrapper .gunny-skill-icon-btn.active {
+                    border-color: #00ffcc !important;
+                    box-shadow: 0 0 12px #00ffcc !important;
+                    background: rgba(0, 255, 204, 0.25) !important;
+                }
+                #gunny-game-wrapper .skill-badge-count {
+                    position: absolute !important;
+                    bottom: -2px !important;
+                    right: -2px !important;
+                    background: #ff0055 !important;
+                    color: #fff !important;
+                    font-size: 9px !important;
+                    font-weight: 900 !important;
+                    border-radius: 10px !important;
+                    padding: 0 4px !important;
+                    border: 1px solid #fff !important;
+                    display: none;
+                }
 
                 /* 🎯 CỤM BẮN BÊN PHẢI: POW VÀ NÚT BẮN TO */
                 #gunny-game-wrapper .bottom-right-controls {
@@ -517,24 +577,23 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE XOAY NGANG MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE4</span>
+                    📱 <span id="fs-text">PHONE5</span>
                 </button>
 
-                <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
+                <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN -->
                 <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
                     <div style="font-size: 22px; font-weight: 900; color: #ffd369; text-shadow: 0 0 10px #ffaa00; margin-bottom: 4px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
                     <div id="card-countdown-timer" style="font-size: 14px; font-weight: bold; color: #ff5470; margin-bottom: 15px;">Thời gian chọn thẻ: 10s</div>
-                    
-                    <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;">
-                        <!-- 9 Thẻ bài render tự động -->
-                    </div>
+                    <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;"></div>
                 </div>
+
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
                 
+                <!-- 🕒 ĐỒNG HỒ & BỎ LƯỢT Ở TRÊN -->
                 <div id="top-turn-timer">15</div>
                 <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
 
-                <!-- CỘT 4 NÚT SKILL PHẢI -->
+                <!-- 🎯 4 NÚT SKILL BUFF BÁM DỌC MÉP PHẢI (TÁCH BIỆT KHỎI THANH ĐÁY) -->
                 <div class="right-skill-column">
                     <button id="btn-skill-add1" class="gunny-skill-icon-btn" title="+1 Đạn (-90 TL)">
                         <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-add1.webp" alt="+1 Đạn" />
@@ -551,8 +610,9 @@ const DUNGEON_CONFIGS = {
                     </button>
                 </div>
 
+                <!-- 🕹️ THANH ĐIỀU KHIỂN DƯỚI ĐÁY -->
                 <div class="ui-panel">
-                    <!-- 🎮 1. VÒNG TRÒN D-PAD ĐIỀU HƯỚNG GÓC TRÁI (THAY THẾ TOÀN BỘ KHỐI MÁU CŨ) -->
+                    <!-- 1. VÒNG TRÒN D-PAD GÓC TRÁI -->
                     <div class="gunny-dpad-wheel">
                         <button id="dpad-btn-up" class="dpad-touch-arrow btn-up" title="Tăng góc">▲</button>
                         <button id="dpad-btn-down" class="dpad-touch-arrow btn-down" title="Hạ góc">▼</button>
@@ -563,11 +623,11 @@ const DUNGEON_CONFIGS = {
                         </div>
                     </div>
 
-                    <!-- 📊 2. CỤM GIỮA: LƯỢT + THANH LỰC PHÍA TRÊN + THANH MÁU & THỂ LỰC PHÍA DƯỚI -->
+                    <!-- 2. CỤM GIỮA: THANH LỰC PHÍA TRÊN + MÁU & THỂ LỰC PHÍA DƯỚI -->
                     <div class="controls-center">
-                        <h2 id="turn-indicator" style="color: #ff5470; font-size: 14px; margin-bottom: 2px;">LƯỢT: PLAYER 1</h2>
+                        <h2 id="turn-indicator" style="color: #ff5470; font-size: 13px; margin-bottom: 2px;">LƯỢT: PLAYER 1</h2>
                         
-                        <!-- Thanh đo lực bắn nằm trên -->
+                        <!-- Thanh đo lực -->
                         <div class="big-power-wrap">
                             <div class="big-power-container">
                                 <div id="power-bar-fill" class="big-power-fill"></div>
@@ -576,9 +636,8 @@ const DUNGEON_CONFIGS = {
                             </div>
                         </div>
 
-                        <!-- 🩸 Thanh Máu & Thể Lực nằm ngay bên dưới thanh lực -->
+                        <!-- Thanh Máu & Thể Lực -->
                         <div class="status-bars-gunny-row">
-                            <!-- Thanh HP -->
                             <div class="gunny-stat-box">
                                 <span class="gunny-stat-label" style="color: #ff4d4d;">HP</span>
                                 <div class="gunny-bar-frame">
@@ -586,7 +645,6 @@ const DUNGEON_CONFIGS = {
                                     <span id="gunny-hp-text" class="gunny-bar-text">100 / 100</span>
                                 </div>
                             </div>
-                            <!-- Thanh Thể Lực -->
                             <div class="gunny-stat-box">
                                 <span class="gunny-stat-label" style="color: #2ecc71;">Thể lực</span>
                                 <div class="gunny-bar-frame">
@@ -597,7 +655,7 @@ const DUNGEON_CONFIGS = {
                         </div>
                     </div>
 
-                    <!-- 🎯 3. CỤM BẮN PHẢI: NÚT POW & NÚT BẮN TO (ĐÃ BỎ 4 NÚT HƯỚNG) -->
+                    <!-- 3. CỤM BẮN GÓC PHẢI -->
                     <div class="bottom-right-controls">
                         <button id="active-pow-btn" class="gunny-pow-slot-btn" title="Kích hoạt POW (100%)">
                             <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-btnpow.webp" alt="POW" />
@@ -608,7 +666,7 @@ const DUNGEON_CONFIGS = {
                         </button>
                     </div>
                 </div>
-                </div>
+
                 <div class="guide">
                     <strong>Cách chơi:</strong> <strong>[A / D]</strong> hoặc <strong>[◀ / ▶]</strong>: Di chuyển | <strong>[W / S]</strong> hoặc <strong>[▲ / ▼]</strong>: Chỉnh góc | Giữ <strong>[SPACE]</strong> hoặc <strong>[NÚT BẮN]</strong>: Bắn.
                 </div>
