@@ -1,5 +1,5 @@
 /* =========================================================================
-   GUNNY ENGINE - SOCKET.IO REALTIME (BẢN CẬP NHẬT: +1 ĐẠN, BỎ LƯỢT, CHIBI AVATAR)
+   GUNNY ENGINE - SOCKET.IO REALTIME (BẢN TỐI ƯU HIỆU NĂNG - CHỐNG LAG / TRÀN BỘ NHỚ)
    ========================================================================= */
 
 (function () {
@@ -7,15 +7,13 @@
     let turnCountdownInterval = null;
     let socket = null;
 
-    // 🔴 HÃY ĐIỀN CHÍNH XÁC LINK SERVER RENDER CỦA BẠN VÀO ĐÂY:
     const SOCKET_SERVER_URL = "https://severgunny.onrender.com";
 
-    // Link ảnh chibi chuẩn theo giới tính
     const CHIBI_AVATARS = {
         male: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/namchibi2.webp',
         female: 'https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/nuchibi2.webp'
     };
-   // --- CẤU HÌNH TẤT CẢ MAP DÙNG CHUNG CHO CẢ PVP LẪN PHÓ BẢN ---
+
     const GAME_MAPS_CONFIG = {
         "linh_son": {
             name: "Linh Sơn Cổ Tự",
@@ -28,11 +26,11 @@
             ground: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-nen2.webp"
         }
     };
-    // --- CẤU HÌNH DỮ LIỆU PHÓ BẢN (DUNGEONS CONFIG) ---
-const DUNGEON_CONFIGS = {
+
+    const DUNGEON_CONFIGS = {
         "linh_son_1": {
             name: "Ải 1: Yêu Lang Cổ Mộ",
-            mapId: "co_mo", // Dùng map Cổ Mộ mới
+            mapId: "co_mo",
             monsters: [
                 {
                     id: "wolf_minion_1",
@@ -121,7 +119,7 @@ const DUNGEON_CONFIGS = {
         document.head.appendChild(script);
     }
 
-   function injectGunnyUI() {
+    function injectGunnyUI() {
         const mountPoint = document.getElementById('gunny-game-mount-point');
         if (!mountPoint) return;
 
@@ -178,7 +176,6 @@ const DUNGEON_CONFIGS = {
                     font-size: 8px; font-weight: bold; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px #000;
                 }
 
-                /* 🕒 SỐ ĐẾM NGƯỢC THỜI GIAN */
                 #gunny-game-wrapper #top-turn-timer {
                     position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
                     font-family: 'Arial Black', Impact, sans-serif; font-size: 26px; font-weight: 900;
@@ -198,7 +195,6 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: translateX(-50%) scale(1.05); }
                 #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
 
-                /* 🎯 CỘT 4 NÚT SKILL DỌC SÁT MÉP PHẢI */
                 #gunny-game-wrapper .right-skill-column {
                     position: absolute; top: 55px; right: 12px;
                     display: flex; flex-direction: column; gap: 6px;
@@ -231,27 +227,22 @@ const DUNGEON_CONFIGS = {
                     display: none;
                 }
 
-                /* 🎮 CỤM ĐIỀU KHIỂN GÓC PHẢI DƯỚI (POW + BẮN + 4 HƯỚNG) */
                 #gunny-game-wrapper .bottom-right-controls {
                     display: flex; align-items: center; gap: 10px;
                     margin-bottom: 2px; margin-right: 4px;
                 }
 
-                /* Nút POW kiểu Gunny */
-                /* Hiệu ứng xung nhịp khi POW đầy 100% */
                 @keyframes powPulseGlow {
                     from { box-shadow: 0 0 6px #ff7675; transform: scale(1); }
                     to { box-shadow: 0 0 16px #ff0055, 0 0 25px rgba(255, 0, 85, 0.6); transform: scale(1.05); }
                 }
 
-                /* Hiệu ứng phát sáng vàng/lửa rực rỡ khi BẬT POW */
                 @keyframes powActiveShine {
                     0% { box-shadow: 0 0 12px #ffdd00, inset 0 0 8px #ff8c00; filter: brightness(1.1); }
                     50% { box-shadow: 0 0 25px #ff5500, 0 0 35px #ffcc00, inset 0 0 12px #ff0055; filter: brightness(1.3); }
                     100% { box-shadow: 0 0 12px #ffdd00, inset 0 0 8px #ff8c00; filter: brightness(1.1); }
                 }
 
-                /* NÚT POW ĐÃ XÓA VIỀN ĐỎ XẤU */
                 #gunny-game-wrapper .gunny-pow-slot-btn {
                     position: relative; width: 48px; height: 48px;
                     background: rgba(0, 0, 0, 0.6); border: 1.5px solid rgba(255, 211, 105, 0.5);
@@ -265,25 +256,21 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .gunny-pow-slot-btn:disabled {
                     opacity: 0.35; cursor: not-allowed; filter: grayscale(100%);
                 }
-                /* Khi đầy 100% nộ: phát sáng nhịp tim, KHÔNG ĐỔI VIỀN ĐỎ */
                 #gunny-game-wrapper .gunny-pow-slot-btn.ready {
                     border-color: #ffd369 !important;
                     animation: powPulseGlow 0.7s infinite alternate;
                 }
-                /* Khi ĐƯỢC BẬT: phát sáng hào quang lửa xung quanh, KHÔNG DÙNG VIỀN ĐỎ */
                 #gunny-game-wrapper .gunny-pow-slot-btn.active {
                     border-color: #ffeaa7 !important;
                     background: rgba(255, 100, 0, 0.35) !important;
                     animation: powActiveShine 1s infinite alternate !important;
                 }
 
-                /* KHỐI NÚT BẮN TO BỌC NGOÀI (ĐƯỜNG KÍNH 88px) */
                 #gunny-game-wrapper .dpad-fire-cluster {
                     position: relative; width: 88px; height: 88px;
                     display: flex; align-items: center; justify-content: center;
                 }
 
-                /* NÚT BẮN PHÓNG TO TOÀN KHUNG */
                 #gunny-game-wrapper .btn-dpad-fire {
                     position: absolute; width: 100%; height: 100%; border-radius: 50%;
                     background: transparent; border: none; cursor: pointer; padding: 0;
@@ -297,7 +284,6 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .btn-dpad-fire:active:not(:disabled) { transform: scale(0.96); }
                 #gunny-game-wrapper .btn-dpad-fire:disabled { filter: grayscale(100%); opacity: 0.4; cursor: not-allowed; }
 
-                /* 4 NÚT HƯỚNG NẰM GỌN BÊN TRONG 4 MÉP CỦA NÚT BẮN */
                 #gunny-game-wrapper .dpad-arrow-btn {
                     position: absolute; width: 22px; height: 22px;
                     background: rgba(9, 14, 23, 0.85); border: 1.5px solid #ffd369;
@@ -317,21 +303,16 @@ const DUNGEON_CONFIGS = {
             </style>
 
             <div id="game-container">
-                <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
                 <div id="endgame-cards-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(6px);">
                     <div style="font-size: 22px; font-weight: 900; color: #ffd369; text-shadow: 0 0 10px #ffaa00; margin-bottom: 4px;">🎁 THIÊN DUYÊN PHÙ BÀI</div>
                     <div id="card-countdown-timer" style="font-size: 14px; font-weight: bold; color: #ff5470; margin-bottom: 15px;">Thời gian chọn thẻ: 10s</div>
-                    
-                    <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;">
-                        <!-- 9 Thẻ bài render tự động -->
-                    </div>
+                    <div id="cards-grid-box" style="display: grid; grid-template-columns: repeat(3, 105px); grid-gap: 14px; justify-content: center;"></div>
                 </div>
                 <canvas id="gameCanvas" width="900" height="500"></canvas>
                 
                 <div id="top-turn-timer">15</div>
                 <button id="btn-top-pass-turn" class="btn-pass-turn" type="button">⏭️ BỎ LƯỢT</button>
 
-                <!-- CỘT 4 NÚT SKILL PHẢI -->
                 <div class="right-skill-column">
                     <button id="btn-skill-add1" class="gunny-skill-icon-btn" title="+1 Đạn (-90 TL)">
                         <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-add1.webp" alt="+1 Đạn" />
@@ -368,7 +349,6 @@ const DUNGEON_CONFIGS = {
                         </div>
                     </div>
 
-                    <!-- 🎮 CỤM GÓC PHẢI DƯỚI -->
                     <div class="bottom-right-controls">
                         <button id="active-pow-btn" class="gunny-pow-slot-btn" title="Kích hoạt POW (100%)">
                             <img src="https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/dame-btnpow.webp" alt="POW" />
@@ -392,6 +372,7 @@ const DUNGEON_CONFIGS = {
             </div>
         </div>`;
     }
+
     function drawGunnyBurst(ctx, cx, cy, spikes, outerRadius, innerRadius) {
         let rot = (Math.PI / 2) * 3;
         let x = cx;
@@ -431,6 +412,7 @@ const DUNGEON_CONFIGS = {
             turnCountdownInterval = null;
         }
         if (socket) {
+            socket.removeAllListeners();
             socket.disconnect();
             socket = null;
         }
@@ -451,7 +433,6 @@ const DUNGEON_CONFIGS = {
             const isDungeonMode = Boolean(matchData && matchData.mode === "phoban");
             const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
 
-            // Xác định mapId: nếu đi Phó bản lấy map của Ải, nếu PvP lấy theo matchData.mapId được chọn ở sảnh (mặc định 'co_mo')
             let selectedMapKey = "co_mo";
             if (isDungeonMode && currentDungeon && currentDungeon.mapId) {
                 selectedMapKey = currentDungeon.mapId;
@@ -462,7 +443,6 @@ const DUNGEON_CONFIGS = {
 
             const GRAVITY = 0.25;
             const WORLD_WIDTH = (selectedMapKey === "co_mo" || isDungeonMode) ? 1800 : 900;
-            const GROUND_Y = 350;
             const BARREL_LEN = 35;
             const MOVE_SPEED = 3.0;
             const BASE_DAMAGE = 10;
@@ -474,7 +454,6 @@ const DUNGEON_CONFIGS = {
                 dame10: 10
             };
 
-            // Ảnh icon hiển thị trên đầu nhân vật
             const BUFF_ICONS = {
                 add1: new Image(),
                 dame50: new Image(),
@@ -494,57 +473,80 @@ const DUNGEON_CONFIGS = {
             const terrainCanvas = document.createElement('canvas');
             terrainCanvas.width = WORLD_WIDTH;
             terrainCanvas.height = canvas.height;
-            const terrainCtx = terrainCanvas.getContext('2d', { willReadFrequently: true });
+            const terrainCtx = terrainCanvas.getContext('2d');
 
-            // Mặt sàn vật lý của gạch đá nằm ở mốc Y = 350
             const SOLID_GROUND_Y = 350;
 
-            function fillSolidGround() {
-                // Tô một lớp đất đặc từ Y = 350 xuống hết đáy canvas để đạn và nhân vật luôn chạm đất
-                terrainCtx.fillStyle = 'rgba(92, 58, 33, 1)';
-                terrainCtx.fillRect(0, SOLID_GROUND_Y, WORLD_WIDTH, canvas.height - SOLID_GROUND_Y);
-            }
-            fillSolidGround();
+            // =========================================================================
+            // 🚀 BỘ ĐỆM ĐỘ CAO (HEIGHTMAP) - GIẢI PHÁP TRIỆT TIÊU LAG 100%
+            // =========================================================================
+            const heightMap = new Int16Array(WORLD_WIDTH);
+            heightMap.fill(SOLID_GROUND_Y);
 
-            // Nạp trực tiếp ảnh đất vào terrainCanvas để đọc chính xác từng pixel gồ ghề của mặt đá
+            function rebuildHeightMapFromImage() {
+                try {
+                    const imgData = terrainCtx.getImageData(0, 280, WORLD_WIDTH, canvas.height - 280).data;
+                    const h = canvas.height - 280;
+                    for (let x = 0; x < WORLD_WIDTH; x++) {
+                        let foundY = SOLID_GROUND_Y;
+                        for (let y = 0; y < h; y++) {
+                            const alphaIndex = (y * WORLD_WIDTH + x) * 4 + 3;
+                            if (imgData[alphaIndex] > 80) {
+                                foundY = 280 + y;
+                                break;
+                            }
+                        }
+                        heightMap[x] = foundY;
+                    }
+                } catch (e) {
+                    heightMap.fill(395);
+                }
+            }
+
+            terrainCtx.fillStyle = 'rgba(92, 58, 33, 1)';
+            terrainCtx.fillRect(0, SOLID_GROUND_Y, WORLD_WIDTH, canvas.height - SOLID_GROUND_Y);
+
             const groundImg = new Image();
             groundImg.crossOrigin = "anonymous";
-            groundImg.onload = function() {
+            groundImg.onload = function () {
                 terrainCtx.clearRect(0, 0, WORLD_WIDTH, canvas.height);
                 terrainCtx.drawImage(groundImg, 0, 0, WORLD_WIDTH, canvas.height);
+                rebuildHeightMapFromImage();
             };
             groundImg.src = activeMapData.ground;
 
             const bgImg = new Image();
             bgImg.src = activeMapData.bg;
 
-            function getGroundYAt(x, startY) {
+            // Đọc trực tiếp từ mảng RAM với tốc độ O(1) - Không gọi getImageData
+            function getGroundYAt(x) {
                 const checkX = Math.floor(Math.max(0, Math.min(x, WORLD_WIDTH - 1)));
-                // Quét từ trên xuống bắt đầu từ Y = 280 để đón chính xác từng gờ đá lồi lõm
-                const start = 280;
-                try {
-                    const imgData = terrainCtx.getImageData(checkX, start, 1, canvas.height - start).data;
-                    for (let y = 0; y < canvas.height - start; y++) {
-                        // Pixel có độ đậm Alpha > 80 được tính là mặt đá gồ ghề
-                        if (imgData[y * 4 + 3] > 80) {
-                            return start + y;
-                        }
-                    }
-                } catch (e) {
-                    return 395; // Cao độ mặt đá fallback an toàn
-                }
-                return 395;
+                return heightMap[checkX] || SOLID_GROUND_Y;
             }
 
-            function digHole(x, y, radius) {
+            function digHole(cx, cy, radius) {
                 if (isDungeonMode) return;
 
                 terrainCtx.save();
                 terrainCtx.globalCompositeOperation = 'destination-out';
                 terrainCtx.beginPath();
-                terrainCtx.arc(x, y, radius, 0, Math.PI * 2);
+                terrainCtx.arc(cx, cy, radius, 0, Math.PI * 2);
                 terrainCtx.fill();
                 terrainCtx.restore();
+
+                // Cập nhật lại mảng heightMap tại khu vực bị khoét đất (siêu nhanh)
+                const startX = Math.max(0, Math.floor(cx - radius));
+                const endX = Math.min(WORLD_WIDTH - 1, Math.ceil(cx + radius));
+                for (let x = startX; x <= endX; x++) {
+                    const dx = x - cx;
+                    if (Math.abs(dx) <= radius) {
+                        const chord = Math.sqrt(radius * radius - dx * dx);
+                        const holeBottom = cy + chord;
+                        if (heightMap[x] < holeBottom) {
+                            heightMap[x] = Math.min(canvas.height, Math.round(holeBottom));
+                        }
+                    }
+                }
             }
 
             const SLOT_SPAWN_X = { 1: 100, 2: 230, 3: 670, 4: 800 };
@@ -557,7 +559,6 @@ const DUNGEON_CONFIGS = {
                 let monsterMinions = [];
                 let monsterBosses = [];
 
-                // 1. Nạp Người chơi (Team 1)
                 matchData.players.forEach((p, idx) => {
                     let pImg = new Image();
                     let genderKey = (p.gender === "female") ? "female" : "male";
@@ -599,13 +600,10 @@ const DUNGEON_CONFIGS = {
                     });
                 });
 
-                // 2. Nạp Quái vật (Team 2) với tọa độ hiển thị mở rộng trên map 1800px
                 if (isDungeonMode && currentDungeon && currentDungeon.monsters) {
                     currentDungeon.monsters.forEach((m, mIdx) => {
                         let mImg = new Image();
-                        mImg.src = m.isBoss 
-                            ? CHIBI_AVATARS.male 
-                            : CHIBI_AVATARS.female;
+                        mImg.src = m.isBoss ? CHIBI_AVATARS.male : CHIBI_AVATARS.female;
                         playerImages[m.name] = mImg;
 
                         let mWp = new Image();
@@ -643,15 +641,11 @@ const DUNGEON_CONFIGS = {
                             color: m.isBoss ? '#ff0055' : '#ff7675'
                         };
 
-                        if (m.isBoss) {
-                            monsterBosses.push(monsterObj);
-                        } else {
-                            monsterMinions.push(monsterObj);
-                        }
+                        if (m.isBoss) monsterBosses.push(monsterObj);
+                        else monsterMinions.push(monsterObj);
                     });
                 }
 
-                // 3. Sắp xếp thứ tự lượt: Quái nhỏ -> Boss -> Người chơi (Level thấp đi trước)
                 if (isDungeonMode) {
                     humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
                     gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
@@ -680,7 +674,6 @@ const DUNGEON_CONFIGS = {
             let chargeSpeed = 0.25;
             let chargeDir = 1;
             let turnTimeLeft = 15;
-            let lastShotPower = null;
             let lastMoveEmitTime = 0;
 
             let bullets = [];
@@ -702,9 +695,6 @@ const DUNGEON_CONFIGS = {
                 return { dx: Math.cos(rad) * player.facing, dy: -Math.sin(rad) };
             }
 
-            // ==========================================
-            // 🐺 BỘ XỬ LÝ HÀNH VI TỰ ĐỘNG CỦA QUÁI VẬT & BOSS
-            // ==========================================
             function executeMonsterTurn(monster) {
                 if (isGameOver || monster.hp <= 0) return;
 
@@ -714,14 +704,12 @@ const DUNGEON_CONFIGS = {
 
                 if (!isCurrentHost) return;
 
-                // 1. Tìm mục tiêu người chơi (Team 1) còn sống
                 const livingHumans = gamePlayers.filter(p => !p.isMonster && p.hp > 0);
                 if (livingHumans.length === 0) {
                     checkGameOver();
                     return;
                 }
 
-                // Tìm người chơi gần quái nhất
                 let target = livingHumans[0];
                 let minDist = Math.abs(target.x - monster.x);
                 for (let i = 1; i < livingHumans.length; i++) {
@@ -734,16 +722,12 @@ const DUNGEON_CONFIGS = {
 
                 monster.facing = (target.x > monster.x) ? 1 : -1;
 
-                // -------------------------------------------------------------
-                // DẠNG 1: QUÁI PHỤ (CẬN CHIẾN - MELEE)
-                // -------------------------------------------------------------
                 if (monster.monsterType === "melee") {
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
 
                         const distanceToTarget = Math.abs(monster.x - target.x);
 
-                        // A. Chưa đến cự ly đánh: Bò lại gần theo tốc độ di chuyển
                         if (distanceToTarget > monster.attackRange) {
                             const moveDist = Math.min(monster.moveSpeed, distanceToTarget - monster.attackRange);
                             const step = monster.facing * 2.5;
@@ -753,7 +737,6 @@ const DUNGEON_CONFIGS = {
                                 if (Math.abs(moved) >= moveDist || Math.abs(monster.x - target.x) <= monster.attackRange || isGameOver) {
                                     clearInterval(walkInterval);
 
-                                    // Đồng bộ vị trí của quái sang máy người chơi khác
                                     if (socket && socket.connected) {
                                         socket.emit('player_move', {
                                             name: monster.name,
@@ -766,7 +749,6 @@ const DUNGEON_CONFIGS = {
                                         });
                                     }
 
-                                    // Nếu đã bò vào sát tầm đánh thì cào/cắn luôn, chưa thì qua lượt
                                     if (Math.abs(monster.x - target.x) <= monster.attackRange + 5) {
                                         setTimeout(() => executeMeleeAttack(monster, target), 300);
                                     } else {
@@ -777,23 +759,16 @@ const DUNGEON_CONFIGS = {
 
                                 monster.x += step;
                                 moved += Math.abs(step);
-
-                                // Chân quái bám sát theo độ mấp mô của mặt đất
-                                const groundY = getGroundYAt(monster.x, monster.y);
-                                monster.y = groundY - monster.radius;
+                                monster.y = getGroundYAt(monster.x) - monster.radius;
                             }, 20);
 
                         } else {
-                            // B. Đã ở tầm cận chiến: Tấn công trực tiếp
                             executeMeleeAttack(monster, target);
                         }
                     }, 600);
                     return;
                 }
 
-                // -------------------------------------------------------------
-                // DẠNG 2: BOSS KỸ NĂNG DIỆN RỘNG (AOE TOÀN ĐỘI)
-                // -------------------------------------------------------------
                 if (monster.monsterType === "aoe_all") {
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
@@ -845,9 +820,6 @@ const DUNGEON_CONFIGS = {
                     return;
                 }
 
-                // -------------------------------------------------------------
-                // DẠNG 3: BOSS CĂN GÓC BẮN ĐẠN THÔNG MINH TRÊN MAP RỘNG 1800PX
-                // -------------------------------------------------------------
                 if (monster.monsterType === "ranged_weapon") {
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
@@ -855,15 +827,9 @@ const DUNGEON_CONFIGS = {
                         const dx = Math.abs(target.x - monster.x);
                         const dy = target.y - monster.y;
 
-                        // Ngưỡng góc bắn tương thích theo khoảng cách trên map 1800px
                         let chosenAngle = 45;
-                        if (dx < 400) {
-                            chosenAngle = 60;
-                        } else if (dx > 1000) {
-                            chosenAngle = 35; // Tầm siêu xa hạ góc 35° để đạn bay căng hết map
-                        } else {
-                            chosenAngle = 45;
-                        }
+                        if (dx < 400) chosenAngle = 60;
+                        else if (dx > 1000) chosenAngle = 35;
 
                         if (dy < -40) chosenAngle += 8;
 
@@ -929,7 +895,6 @@ const DUNGEON_CONFIGS = {
                 }
             }
 
-            // Hàm tung đòn cận chiến của quái nhỏ
             function executeMeleeAttack(monster, target) {
                 if (isGameOver || monster.hp <= 0) return;
 
@@ -1003,13 +968,8 @@ const DUNGEON_CONFIGS = {
                 const timerEl = document.getElementById("top-turn-timer");
                 const btnPass = document.getElementById("btn-top-pass-turn");
 
-                if (timerEl) {
-                    timerEl.innerText = turnTimeLeft;
-                }
-
-                if (btnPass) {
-                    btnPass.disabled = !isMyTurn() || isFiring || isGameOver;
-                }
+                if (timerEl) timerEl.innerText = turnTimeLeft;
+                if (btnPass) btnPass.disabled = !isMyTurn() || isFiring || isGameOver;
             }
 
             function passTurnAction() {
@@ -1037,7 +997,6 @@ const DUNGEON_CONFIGS = {
                     playerData: { host: isHost }
                 });
 
-                // 1. Nhận tọa độ di chuyển từ đối thủ
                 socket.on('opponent_moved', (data) => {
                     const targetPlayer = gamePlayers.find(p => p.name === data.name);
                     if (targetPlayer && targetPlayer.name !== (window.currentUser || "")) {
@@ -1050,24 +1009,22 @@ const DUNGEON_CONFIGS = {
                     }
                 });
 
-                // 2. Nhận lệnh bắn
                 socket.on('bullet_fired', (act) => {
-                   if (act.shooterName !== (window.currentUser || "")) {
-                       const shooter = gamePlayers.find(p => p.name === act.shooterName);
-                       if (shooter) {
-                           shooter.x = act.x;
-                           shooter.y = act.y;
-                           shooter.angle = act.angle;
-                           shooter.facing = act.facing;
-                           wind = act.wind;
-                           shooter.isPowActive = act.isPow;
-                           shooter.extraBulletsCount = act.extraBullets || 0;
-                           executeVisualShot(shooter, act.angle, act.power, act.isPow, shooter.extraBulletsCount);
-                       }
-                   }
-               });
+                    if (act.shooterName !== (window.currentUser || "")) {
+                        const shooter = gamePlayers.find(p => p.name === act.shooterName);
+                        if (shooter) {
+                            shooter.x = act.x;
+                            shooter.y = act.y;
+                            shooter.angle = act.angle;
+                            shooter.facing = act.facing;
+                            wind = act.wind;
+                            shooter.isPowActive = act.isPow;
+                            shooter.extraBulletsCount = act.extraBullets || 0;
+                            executeVisualShot(shooter, act.angle, act.power, act.isPow, shooter.extraBulletsCount);
+                        }
+                    }
+                });
 
-                // 3. Nhận kết quả nổ đạn và trừ máu
                 socket.on('explosion_sync', (act) => {
                     if (act.shooterName !== (window.currentUser || "")) {
                         explosions.push({
@@ -1108,24 +1065,18 @@ const DUNGEON_CONFIGS = {
                     }
                 });
 
-                // 4. Nhận sự kiện chuyển lượt từ Server
                 socket.on('turn_changed', (data) => {
                     currentPlayerIndex = data.nextIndex;
                     wind = data.wind;
                     resetTurnState();
                 });
 
-                // 5. Đối thủ rút lui / Đầu hàng: Dừng trận NGAY LẬP TỨC
                 socket.on('player_left', (data) => {
                     const overlay = document.getElementById("endgame-cards-overlay");
-                    if (overlay && overlay.style.display === "flex") {
-                        return;
-                    }
+                    if (overlay && overlay.style.display === "flex") return;
 
                     const leaver = gamePlayers.find(p => p.name === data.leaverName);
-                    if (leaver) {
-                        leaver.hp = 0;
-                    }
+                    if (leaver) leaver.hp = 0;
                     
                     bullets = [];
                     explosions = [];
@@ -1136,12 +1087,10 @@ const DUNGEON_CONFIGS = {
                     checkGameOver(true, data.leaverName);
                 });
 
-                // 6. Nhận dữ liệu tạo 9 thẻ bài từ server
                 socket.on('cards_board_ready', ({ cards }) => {
                     renderCardsBoardUI(cards);
                 });
 
-                // 7. Nhận đồng bộ khi có người lật thẻ
                 socket.on('card_opened', ({ cardIndex, playerName, reward }) => {
                     revealSingleCardUI(cardIndex, playerName, reward);
                 });
@@ -1185,7 +1134,6 @@ const DUNGEON_CONFIGS = {
             function startShooting(lockedPower) {
                 if (isGameOver || isFiring || !isMyTurn()) return;
                 const shooter = getActivePlayer();
-                lastShotPower = lockedPower;
                 const marker = document.getElementById("last-power-marker");
                 if (marker) {
                     let markerLeft = Math.max(0, Math.min(95, lockedPower - 2.5));
@@ -1213,54 +1161,55 @@ const DUNGEON_CONFIGS = {
                 executeVisualShot(shooter, fixedAngle, lockedPower, isPow, extraCount);
             }
 
-          function triggerNextTurnServer() {
-            // 1. Kiểm tra điều kiện sống còn
-            let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
-            let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
+            function triggerNextTurnServer() {
+                let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
+                let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
 
-            if (!team1Alive || !team2Alive) {
-                checkGameOver();
-                return;
-            }
+                if (!team1Alive || !team2Alive) {
+                    checkGameOver();
+                    return;
+                }
 
-            // 2. Tìm lượt kế tiếp còn sống theo vòng xoay
-            let nextIdx = -1;
-            for (let i = 1; i <= gamePlayers.length; i++) {
-                let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
-                if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
-                    nextIdx = candidateIdx;
-                    break;
+                let nextIdx = -1;
+                for (let i = 1; i <= gamePlayers.length; i++) {
+                    let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
+                    if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
+                        nextIdx = candidateIdx;
+                        break;
+                    }
+                }
+
+                if (nextIdx === -1) {
+                    checkGameOver();
+                    return;
+                }
+
+                let newWind = (Math.random() * 0.06 - 0.03);
+
+                if (socket && socket.connected) {
+                    socket.emit('request_next_turn', {
+                        nextIndex: nextIdx,
+                        nextWind: newWind
+                    });
+                } else {
+                    currentPlayerIndex = nextIdx;
+                    wind = newWind;
+                    resetTurnState();
                 }
             }
 
-            if (nextIdx === -1) {
-                checkGameOver();
-                return;
-            }
-
-            let newWind = (Math.random() * 0.06 - 0.03);
-
-            if (socket && socket.connected) {
-                socket.emit('request_next_turn', {
-                    nextIndex: nextIdx,
-                    nextWind: newWind
-                });
-            } else {
-                currentPlayerIndex = nextIdx;
-                wind = newWind;
-                resetTurnState();
-            }
-        }
             function resetTurnState() {
                 isFiring = false;
                 isCharging = false;
                 chargePower = 0;
                 chargeDir = 1;
                 const activeP = getActivePlayer();
-                activeP.stamina = activeP.maxStamina;
-                activeP.extraBulletsCount = 0;
-                activeP.damageBonusPercent = 0;
-                activeP.activeBuffs = [];
+                if (activeP) {
+                    activeP.stamina = activeP.maxStamina;
+                    activeP.extraBulletsCount = 0;
+                    activeP.damageBonusPercent = 0;
+                    activeP.activeBuffs = [];
+                }
                 updateUI();
                 startTurnTimer();
 
@@ -1579,7 +1528,7 @@ const DUNGEON_CONFIGS = {
             function update() {
                 const p = getActivePlayer();
 
-                if (isMyTurn() && !isFiring && !isCharging && !isGameOver && p.hp > 0) {
+                if (isMyTurn() && !isFiring && !isCharging && !isGameOver && p && p.hp > 0) {
                     let hasMoved = false;
                     if ((keys['ArrowUp'] || keys['KeyW']) && p.angle < 89) { p.angle += 1; hasMoved = true; }
                     if ((keys['ArrowDown'] || keys['KeyS']) && p.angle > 1) { p.angle -= 1; hasMoved = true; }
@@ -1618,11 +1567,11 @@ const DUNGEON_CONFIGS = {
                     }
                 }
 
-                // Trọng lực rơi
+                // Trọng lực rơi - Dùng HeightMap O(1), không đọc pixel
                 gamePlayers.forEach(player => {
                     if (player.hp <= 0) return;
                     
-                    const groundUnder = getGroundYAt(player.x, player.y);
+                    const groundUnder = getGroundYAt(player.x);
                     const targetY = groundUnder - player.radius;
 
                     if (Math.abs(player.y - targetY) > 1) {
@@ -1638,16 +1587,13 @@ const DUNGEON_CONFIGS = {
                         checkGameOver();
                     }
                 });
-
                 
-                // Camera tự động lia mượt mà trên map rộng 1800px
+                // Camera tự động theo đạn / lượt
                 if (bullets.length > 0) {
-                    // Ưu tiên 1: Camera bám theo đạn bay
                     const b = bullets[0];
                     const targetCamX = Math.max(0, Math.min(b.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
                     cameraX += (targetCamX - cameraX) * 0.12;
                 } else if (!isFiring) {
-                    // Ưu tiên 2: Camera chuyển tiêu điểm sang nhân vật đang có lượt (dù là người hay quái)
                     const curP = getActivePlayer();
                     if (curP && curP.hp > 0) {
                         const targetCamX = Math.max(0, Math.min(curP.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
@@ -1655,14 +1601,13 @@ const DUNGEON_CONFIGS = {
                     }
                 }
 
-                // Tích lực
                 if (isCharging) {
                     chargePower += chargeSpeed * chargeDir * 2;
                     if (chargePower >= 100) { chargePower = 100; chargeDir = -1; }
                     else if (chargePower <= 0) { chargePower = 0; chargeDir = 1; }
                 }
 
-                // Vật lý đạn bay & va chạm
+                // Vật lý đạn bay & va chạm theo heightMap O(1)
                 const EXPLOSION_RADIUS = 50;
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     const b = bullets[i];
@@ -1672,16 +1617,10 @@ const DUNGEON_CONFIGS = {
                     b.y += b.vy;
                     b.rotation += (b.vx >= 0 ? 0.08 : -0.08);
 
-
                     let hitTerrain = false;
-                    if (b.x >= 0 && b.x < WORLD_WIDTH && b.y >= 0 && b.y < canvas.height) {
-                        try {
-                            const pixel = terrainCtx.getImageData(Math.floor(b.x), Math.floor(b.y), 1, 1).data;
-                            if (pixel[3] > 80) hitTerrain = true;
-                        } catch (e) {
-                            // Fallback nếu lỗi CORS: chạm mặt đá ở Y >= 395 là nổ
-                            if (b.y >= 395) hitTerrain = true;
-                        }
+                    if (b.x >= 0 && b.x < WORLD_WIDTH) {
+                        const groundY = getGroundYAt(b.x);
+                        if (b.y >= groundY) hitTerrain = true;
                     }
 
                     if (hitTerrain || b.y >= canvas.height || b.x < 0 || b.x > WORLD_WIDTH) {
@@ -1690,7 +1629,6 @@ const DUNGEON_CONFIGS = {
                         const curExpRadius = b.isPow ? 75 : EXPLOSION_RADIUS;
                         const holeRadius = b.isPow ? 60 : 40;
 
-                        // Đạn người chơi do chính họ kích nổ, đạn quái/boss do Host kích nổ
                         const isBulletOwner = !socket || (b.ownerName === (window.currentUser || "")) || (isHost && b.ownerTeam === 2);
 
                         if (isBulletOwner) {
@@ -1762,21 +1700,21 @@ const DUNGEON_CONFIGS = {
                     if (dt.life <= 0) damageTexts.splice(i, 1);
                 }
 
-               if (isFiring && bullets.length === 0 && explosions.length === 0) {
-                   isFiring = false;
-                   isCharging = false;
-                   chargePower = 0;
-                   chargeDir = 1;
-               
-                   const curActiveP = getActivePlayer();
-                   const canTriggerNext = isMyTurn() || (isHost && curActiveP && curActiveP.isMonster);
+                if (isFiring && bullets.length === 0 && explosions.length === 0) {
+                    isFiring = false;
+                    isCharging = false;
+                    chargePower = 0;
+                    chargeDir = 1;
+                
+                    const curActiveP = getActivePlayer();
+                    const canTriggerNext = isMyTurn() || (isHost && curActiveP && curActiveP.isMonster);
 
-                   if (canTriggerNext) {
-                       setTimeout(() => {
-                           triggerNextTurnServer();
-                       }, 400);
-                   }
-               }
+                    if (canTriggerNext) {
+                        setTimeout(() => {
+                            triggerNextTurnServer();
+                        }, 400);
+                    }
+                }
 
                 updateUIStats();
             }
@@ -1811,7 +1749,6 @@ const DUNGEON_CONFIGS = {
                 ctx.save();
                 ctx.translate(-cameraX, 0);
 
-                // 1. Vẽ ảnh nền trời / lâu đài
                 if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
                     ctx.drawImage(bgImg, 0, 0, WORLD_WIDTH, canvas.height);
                 } else {
@@ -1819,7 +1756,6 @@ const DUNGEON_CONFIGS = {
                     ctx.fillRect(0, 0, WORLD_WIDTH, canvas.height);
                 }
 
-                // 2. Vẽ nền đất (nếu ảnh đất tải xong sẽ tự đè lên nền tạm)
                 ctx.drawImage(terrainCanvas, 0, 0);
 
                 gamePlayers.forEach((pl, idx) => {
@@ -1832,7 +1768,7 @@ const DUNGEON_CONFIGS = {
 
                     ctx.font = 'bold 9.5px sans-serif';
                     const tuviStr = pl.tuviText || "Phàm Nhân";
-                    const tuviWidth = ctx.measureText(tuviStr).width + 8;
+                    const tuviWidth = 90;
                     const tuviTagX = pl.x - tuviWidth / 2;
                     const tuviTagY = pl.y - pl.radius - 36;
 
@@ -1849,12 +1785,9 @@ const DUNGEON_CONFIGS = {
 
                     ctx.font = 'bold 12px sans-serif';
                     ctx.fillStyle = pl.color;
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 4;
                     ctx.fillText(pl.name, pl.x, pl.y - pl.radius - 40);
                     ctx.restore();
 
-                    // 1. Vẽ các Icon buff trên đầu
                     if (pl.activeBuffs && pl.activeBuffs.length > 0) {
                         const iconSize = 24;
                         const gap = 4;
@@ -1866,16 +1799,11 @@ const DUNGEON_CONFIGS = {
                             const iconImg = BUFF_ICONS[buffKey];
                             if (iconImg && iconImg.complete && iconImg.naturalWidth !== 0) {
                                 const curX = startIconX + bIdx * (iconSize + gap);
-                                ctx.save();
-                                ctx.shadowColor = '#000';
-                                ctx.shadowBlur = 6;
                                 ctx.drawImage(iconImg, curX, startIconY, iconSize, iconSize);
-                                ctx.restore();
                             }
                         });
                     }
 
-                    // 2. Vẽ đường ngắm và góc độ
                     if (isTurn && !isFiring) {
                         ctx.save();
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
@@ -1900,11 +1828,8 @@ const DUNGEON_CONFIGS = {
                             ctx.strokeText(`${pl.angle}°`, angleTextX, angleTextY);
 
                             ctx.fillStyle = '#ffd369';
-                            ctx.shadowColor = '#000';
-                            ctx.shadowBlur = 3;
                             ctx.fillText(`${pl.angle}°`, angleTextX, angleTextY);
                         }
-
                         ctx.restore();
                     }
 
@@ -1983,8 +1908,6 @@ const DUNGEON_CONFIGS = {
                     const wImg = weaponImages[b.ownerName];
 
                     if (b.isPow) {
-                        ctx.shadowColor = '#ffdd00';
-                        ctx.shadowBlur = 30;
                         ctx.beginPath();
                         ctx.arc(0, 0, 42, 0, Math.PI * 2);
                         ctx.fillStyle = 'rgba(255, 60, 0, 0.45)';
