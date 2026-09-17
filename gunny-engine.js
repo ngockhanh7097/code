@@ -424,7 +424,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE XOAY NGANG MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE</span>
+                    📱 <span id="fs-text">PHONE1</span>
                 </button>
 
                 <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
@@ -1524,7 +1524,7 @@ const DUNGEON_CONFIGS = {
                 if (isNativeFullscreen() || isPhoneLandscapeActive) {
                     fsText.innerText = 'THOÁT';
                 } else {
-                    fsText.innerText = 'PHONE1';
+                    fsText.innerText = 'PHONE';
                 }
             }
 
