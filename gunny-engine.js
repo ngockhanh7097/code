@@ -190,9 +190,9 @@ const DUNGEON_CONFIGS = {
                     object-fit: contain;
                 }
 
-                /* 📱 ÉP FULL TOÀN MÀN HÌNH + CHỐNG PHÓNG TO KHI NHẤP NHANH */
+                /* 📱 CHỐNG ZOOM & KHÓA CUỘN GIAO DIỆN */
 #gunny-game-wrapper {
-    touch-action: manipulation !important; /* Chặn hoàn toàn double-tap zoom trên iOS */
+    touch-action: manipulation !important;
     -webkit-user-select: none !important;
     user-select: none !important;
 }
@@ -204,6 +204,7 @@ const DUNGEON_CONFIGS = {
     -webkit-tap-highlight-color: transparent !important;
 }
 
+/* LỚP NỀN FULL MÀN HÌNH */
 #gunny-game-wrapper.phone-landscape-mode {
     position: fixed !important;
     top: 0 !important;
@@ -216,23 +217,45 @@ const DUNGEON_CONFIGS = {
     overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
-    touch-action: none !important; /* Khóa cuộn trang khi đang xoay */
+    touch-action: none !important;
 }
 
-#gunny-game-wrapper.phone-landscape-mode #game-container {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: 100dvh !important;
-    height: 100vw !important;
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-    transform: translate(-50%, -50%) rotate(90deg) !important;
-    transform-origin: center center !important;
-    background: #000 !important;
+/* 🔄 KHI ĐIỆN THOẠI ĐANG CẦM ĐỨNG (DỌC): ÉP XOAY 90 ĐỘ */
+@media screen and (orientation: portrait) {
+    #gunny-game-wrapper.phone-landscape-mode #game-container {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        width: 100dvh !important;
+        height: 100vw !important;
+        max-width: none !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        transform: translate(-50%, -50%) rotate(90deg) !important;
+        transform-origin: center center !important;
+        background: #000 !important;
+    }
+}
+
+/* 🔄 KHI BẠN LẬT NGANG ĐIỆN THOẠI THẬT: KHÔNG XOAY CSS NỮA, BUNG NẰM NGANG TỰ NHIÊN */
+@media screen and (orientation: landscape) {
+    #gunny-game-wrapper.phone-landscape-mode #game-container {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-width: none !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        transform: none !important;
+        background: #000 !important;
+    }
 }
 
 #gunny-game-wrapper.phone-landscape-mode canvas {
@@ -424,7 +447,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE XOAY NGANG MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE1</span>
+                    📱 <span id="fs-text">PHONE2</span>
                 </button>
 
                 <!-- 🃏 9 THẺ BÀI LẬT THƯỞNG CUỐI TRẬN (ĐÃ TÍCH HỢP CSS ĐẦY ĐỦ) -->
@@ -1508,74 +1531,74 @@ const DUNGEON_CONFIGS = {
             bindDpadButton('dpad-btn-right', 'KeyD');
 
             // =========================================================================
-            // 📱 XỬ LÝ CHẾ ĐỘ PHONE: HỖ TRỢ FULLSCREEN + ÉP XOAY NGANG MỌI THIẾT BỊ
-            // =========================================================================
-            const btnFullscreen = document.getElementById('btn-fullscreen-toggle');
-            const fsText = document.getElementById('fs-text');
-            const gameWrapper = document.getElementById('gunny-game-wrapper');
-            let isPhoneLandscapeActive = false;
+// 📱 XỬ LÝ CHẾ ĐỘ PHONE: TỰ ĐỘNG CHUYỂN ĐỔI KHI CẦM DỌC / LẬT NGANG
+// =========================================================================
+const btnFullscreen = document.getElementById('btn-fullscreen-toggle');
+const fsText = document.getElementById('fs-text');
+const gameWrapper = document.getElementById('gunny-game-wrapper');
+let isPhoneLandscapeActive = false;
 
-            function isNativeFullscreen() {
-                return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-            }
+function isNativeFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
 
-            function updatePhoneBtnUI() {
-                if (!fsText) return;
-                if (isNativeFullscreen() || isPhoneLandscapeActive) {
-                    fsText.innerText = 'THOÁT';
-                } else {
-                    fsText.innerText = 'PHONE';
-                }
-            }
+function updatePhoneBtnUI() {
+    if (!fsText) return;
+    if (isNativeFullscreen() || isPhoneLandscapeActive) {
+        fsText.innerText = 'THOÁT';
+    } else {
+        fsText.innerText = 'PHONE';
+    }
+}
 
-            if (btnFullscreen) {
+function applyParentModalBreaker(breakActive) {
+    const parentModalBox = document.querySelector('#gunny-game-modal-layer .modal-box');
+    if (!parentModalBox) return;
+    if (breakActive) {
+        parentModalBox.style.setProperty('max-width', '100vw', 'important');
+        parentModalBox.style.setProperty('width', '100vw', 'important');
+        parentModalBox.style.setProperty('height', '100vh', 'important');
+        parentModalBox.style.setProperty('padding', '0', 'important');
+        parentModalBox.style.setProperty('border', 'none', 'important');
+        parentModalBox.style.setProperty('background', '#000', 'important');
+    } else {
+        parentModalBox.style.removeProperty('max-width');
+        parentModalBox.style.removeProperty('width');
+        parentModalBox.style.removeProperty('height');
+        parentModalBox.style.removeProperty('padding');
+        parentModalBox.style.removeProperty('border');
+        parentModalBox.style.removeProperty('background');
+    }
+}
+
+if (btnFullscreen) {
     btnFullscreen.onclick = async function (e) {
         if (e) e.preventDefault();
-        const gameWrapper = document.getElementById('gunny-game-wrapper');
         const targetElem = document.getElementById('game-container') || document.documentElement;
 
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
         if (!isPhoneLandscapeActive) {
-            // 1. Phá vỡ khung modal bao bọc
-            const parentModalBox = document.querySelector('#gunny-game-modal-layer .modal-box');
-            if (parentModalBox) {
-                parentModalBox.style.setProperty('max-width', '100vw', 'important');
-                parentModalBox.style.setProperty('width', '100vw', 'important');
-                parentModalBox.style.setProperty('padding', '0', 'important');
-                parentModalBox.style.setProperty('border', 'none', 'important');
-            }
+            applyParentModalBreaker(true);
 
-            // 2. Kích hoạt toàn màn hình (Android)
-            let nativeFsSuccess = false;
+            if (gameWrapper) {
+                gameWrapper.classList.add('phone-landscape-mode');
+            }
+            isPhoneLandscapeActive = true;
+
+            // Thử Fullscreen chuẩn nếu thiết bị hỗ trợ
             try {
                 if (targetElem.requestFullscreen) {
                     await targetElem.requestFullscreen();
-                    nativeFsSuccess = true;
                 } else if (targetElem.webkitRequestFullscreen) {
                     await targetElem.webkitRequestFullscreen();
-                    nativeFsSuccess = true;
                 }
                 if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    await screen.orientation.lock('landscape');
+                    screen.orientation.lock('landscape').catch(() => {});
                 }
-            } catch (err) {
-                nativeFsSuccess = false;
-            }
+            } catch (err) {}
 
-            // 3. Xoay bằng CSS cho iOS
-            if (isIOS || (!nativeFsSuccess && window.innerHeight > window.innerWidth)) {
-                if (gameWrapper) {
-                    gameWrapper.classList.add('phone-landscape-mode');
-                }
-                
-                // Mẹo ép Safari iOS giấu thanh địa chỉ URL
-                setTimeout(() => {
-                    window.scrollTo(0, 1);
-                }, 300);
-            }
-
-            isPhoneLandscapeActive = true;
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 300);
 
         } else {
             // Thoát chế độ Phone
@@ -1583,14 +1606,7 @@ const DUNGEON_CONFIGS = {
                 gameWrapper.classList.remove('phone-landscape-mode');
             }
             isPhoneLandscapeActive = false;
-
-            const parentModalBox = document.querySelector('#gunny-game-modal-layer .modal-box');
-            if (parentModalBox) {
-                parentModalBox.style.removeProperty('max-width');
-                parentModalBox.style.removeProperty('width');
-                parentModalBox.style.removeProperty('padding');
-                parentModalBox.style.removeProperty('border');
-            }
+            applyParentModalBreaker(false);
 
             if (screen.orientation && typeof screen.orientation.unlock === 'function') {
                 screen.orientation.unlock();
@@ -1603,7 +1619,7 @@ const DUNGEON_CONFIGS = {
                     await document.webkitExitFullscreen();
                 }
             } catch (err) {}
-            
+
             setTimeout(() => {
                 window.scrollTo(0, 0);
             }, 100);
@@ -1613,7 +1629,22 @@ const DUNGEON_CONFIGS = {
     };
 }
 
-// Chặn triệt để cử chỉ double-tap phóng to trên iOS Safari
+// Bắt sự kiện người dùng xoay điện thoại thực tế giữa Dọc <-> Ngang
+function handleDeviceOrientationChange() {
+    if (!isPhoneLandscapeActive) return;
+
+    // Cuộn nhẹ 1px để Safari tự thu gọn thanh URL khi chuyển góc
+    setTimeout(() => {
+        window.scrollTo(0, 1);
+    }, 200);
+}
+
+window.addEventListener('resize', handleDeviceOrientationChange);
+window.addEventListener('orientationchange', handleDeviceOrientationChange);
+document.addEventListener('fullscreenchange', updatePhoneBtnUI);
+document.addEventListener('webkitfullscreenchange', updatePhoneBtnUI);
+
+// Chống double-tap zoom
 let lastTouchEnd = 0;
 document.addEventListener('touchend', function (event) {
     const now = Date.now();
@@ -1622,17 +1653,6 @@ document.addEventListener('touchend', function (event) {
     }
     lastTouchEnd = now;
 }, { passive: false });
-
-            document.addEventListener('fullscreenchange', updatePhoneBtnUI);
-            document.addEventListener('webkitfullscreenchange', updatePhoneBtnUI);
-            window.addEventListener('resize', () => {
-                // Tự động bỏ xoay ép buộc nếu người dùng tự xoay ngang điện thoại thật
-                if (window.innerWidth > window.innerHeight && isPhoneLandscapeActive) {
-                    if (gameWrapper) gameWrapper.classList.remove('phone-landscape-mode');
-                    isPhoneLandscapeActive = false;
-                    updatePhoneBtnUI();
-                }
-            });
 
             function cleanupGameListeners() {
                 window.onkeydown = null;
