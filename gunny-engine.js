@@ -215,6 +215,7 @@ const DUNGEON_CONFIGS = {
                 }
 
                 /* LỚP FULL MÀN HÌNH */
+                /* 📱 TOÀN MÀN HÌNH KHẮC PHỤC LỖI KẸT THANH LINK */
                 #gunny-game-wrapper.phone-landscape-mode {
                     position: fixed !important;
                     top: 0 !important;
@@ -222,7 +223,8 @@ const DUNGEON_CONFIGS = {
                     right: 0 !important;
                     bottom: 0 !important;
                     width: 100vw !important;
-                    height: 100vh !important;
+                    height: 100% !important;
+                    height: 100svh !important; /* Ưu tiên chiều cao thực tế khi còn thanh link */
                     height: 100dvh !important;
                     z-index: 9999999 !important;
                     background: #000 !important;
@@ -251,36 +253,30 @@ const DUNGEON_CONFIGS = {
                 }
 
                 /* 🔄 KHI XOAY NGANG MÁY THẬT: BUNG CĂNG 100% KHÔNG ĐỂ VIỀN ĐEN 2 BÊN */
-                @media screen and (orientation: landscape) {
-                    #gunny-game-wrapper.phone-landscape-mode {
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        height: 100dvh !important;
-                    }
+               @media screen and (orientation: landscape) {
                     #gunny-game-wrapper.phone-landscape-mode #game-container {
-                        position: fixed !important;
+                        position: absolute !important;
                         top: 0 !important;
                         left: 0 !important;
                         right: 0 !important;
                         bottom: 0 !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        height: 100dvh !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        height: 100svh !important;
                         max-width: 100vw !important;
-                        max-height: 100vh !important;
+                        max-height: 100svh !important;
                         margin: 0 !important;
                         padding: 0 !important;
                         border-radius: 0 !important;
                         transform: none !important;
                         background: #000 !important;
                     }
-                    #gunny-game-wrapper.phone-landscape-mode canvas {
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        height: 100dvh !important;
-                        object-fit: fill !important;
-                        border-radius: 0 !important;
+                    #gunny-game-wrapper.phone-landscape-mode canvas#gameCanvas {
+                        width: 100% !important;
+                        height: 100% !important;
+                        object-fit: contain !important; /* Co vừa khít khung nhìn, không bao giờ bị cắt viền */
                     }
+                }
                     /* Ép 2 nút bám sát mép viền ngoài cùng màn hình */
                     #gunny-game-wrapper.phone-landscape-mode .btn-fullscreen-toggle {
                         top: 10px !important;
@@ -660,7 +656,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE1</span>
+                    📱 <span id="fs-text">PHONE2</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -1889,14 +1885,13 @@ const DUNGEON_CONFIGS = {
                 window.scrollTo({ top: 120, behavior: 'smooth' });
             }
 
-            // 2. Bước hoàn tất: Kích hoạt Fullscreen (chạy SAU KHI đã cuộn và chờ 1s)
             async function executeExpandPhoneScreen() {
                 setParentModalOverride(true);
                 if (gameWrapper) {
                     gameWrapper.classList.add('phone-landscape-mode');
                 }
                 isPhoneLandscapeActive = true;
-                document.body.style.minHeight = ''; // Trả lại chiều cao gốc
+                document.body.style.minHeight = '';
 
                 const targetElem = document.getElementById('game-container') || document.documentElement;
                 try {
@@ -1912,12 +1907,14 @@ const DUNGEON_CONFIGS = {
 
                 updatePhoneBtnUI();
 
-                // 📱 KẾT THÚC: Chờ đúng 1 giây sau khi đã vào full, tự động cuộn lên trên cùng
+                // 📱 Dùng scrollIntoView ép trình duyệt dồn viewport lên trên cùng
                 setTimeout(() => {
-                    window.scrollTo(0, 0);
-                    document.body.scrollTop = 0;
-                    document.documentElement.scrollTop = 0;
-                }, 1000);
+                    if (gameWrapper) {
+                        gameWrapper.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
+                    window.scrollTo(0, 1);
+                    setTimeout(() => window.scrollTo(0, 0), 50);
+                }, 300);
             }
 
             // 3. Thoát chế độ Phone
