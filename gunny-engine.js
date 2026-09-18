@@ -169,71 +169,78 @@ const DUNGEON_CONFIGS = {
                     transform: scale(1.05);
                 }
 
-                /* 🏳️ NÚT RÚT LUI GÓC PHẢI TRÊN */
+                /* 🔴 1. NÚT SHUT DOWN TRÒN ĐỎ NEO SÁT GÓC PHẢI */
                 #gunny-game-wrapper .btn-ingame-surrender {
-                    position: absolute;
-                    top: 8px;
-                    right: 12px;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    background: linear-gradient(180deg, #ff4d4d 0%, #b30000 100%);
-                    border: 2px solid #ffffff;
-                    color: #fff;
-                    font-size: 15px;
-                    font-weight: 900;
-                    cursor: pointer;
-                    z-index: 50;
+                    position: absolute !important;
+                    top: 6px !important;
+                    right: 6px !important;
+                    width: 32px !important;
+                    height: 32px !important;
+                    border-radius: 50% !important;
+                    background: linear-gradient(180deg, #ff4d4d 0%, #b30000 100%) !important;
+                    border: 2px solid #ffffff !important;
+                    color: #fff !important;
+                    font-size: 15px !important;
+                    font-weight: 900 !important;
+                    cursor: pointer !important;
+                    z-index: 50 !important;
                     display: flex !important;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255,255,255,0.4);
-                    transition: transform 0.15s;
-                    pointer-events: auto;
-                    line-height: 1;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8) !important;
+                    transition: transform 0.15s !important;
+                    pointer-events: auto !important;
+                    line-height: 1 !important;
                 }
-                #gunny-game-wrapper .btn-ingame-surrender:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 0 10px #ff3333;
-                }
-                #gunny-game-wrapper .btn-ingame-surrender:active {
-                    transform: scale(0.95);
-                }
-                /* 🗺️ KHUNG MINIMAP GÓC PHẢI TRÊN CÙNG */
+                #gunny-game-wrapper .btn-ingame-surrender:hover { transform: scale(1.1) !important; }
+                #gunny-game-wrapper .btn-ingame-surrender:active { transform: scale(0.95) !important; }
+
+                /* 🗺️ 2. MINIMAP THU GỌN - ĐẶT NGAY BÊN TRÁI NÚT SHUT DOWN */
                 #gunny-game-wrapper #gunny-minimap-container {
-                    position: absolute;
-                    top: 8px;
-                    right: 50px;
-                    width: 140px;
-                    height: 48px;
-                    background: rgba(10, 15, 25, 0.85);
-                    border: 1.5px solid #ffd369;
-                    border-radius: 6px;
-                    overflow: hidden;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.8);
-                    z-index: 45;
-                    cursor: pointer;
-                    pointer-events: auto;
+                    position: absolute !important;
+                    top: 6px !important;
+                    right: 44px !important;
+                    width: 120px !important;
+                    height: 42px !important;
+                    background: rgba(10, 15, 25, 0.9) !important;
+                    border: 1.5px solid #ffd369 !important;
+                    border-radius: 6px !important;
+                    overflow: hidden !important;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.9) !important;
+                    z-index: 45 !important;
+                    cursor: pointer !important;
+                    pointer-events: auto !important;
                 }
                 #gunny-game-wrapper #minimapCanvas {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                }
-                /* 📱 CHỈ KHI BẬT PHONE / TOÀN MÀN HÌNH MỚI HIỆN NÚT RÚT LUI NÀY */
-                #gunny-game-wrapper.phone-landscape-mode .btn-ingame-surrender {
-                    display: flex !important;
-                    align-items: center;
-                    gap: 4px;
+                    display: block !important;
+                    width: 100% !important;
+                    height: 100% !important;
                 }
 
-                /* 📱 CHỐNG ZOOM KHI NHẤP NHANH */
+                /* 💨 3. Ô GIÓ TURN TRƯỚC - NEO BÊN TRÁI MINIMAP, KHÔNG VA VÀO NHAU NỮA */
+                #gunny-game-wrapper #prev-wind-box {
+                    position: absolute !important;
+                    top: 10px !important;
+                    right: 170px !important;
+                    left: auto !important;
+                    background: rgba(15, 23, 42, 0.85) !important;
+                    border: 1.5px dashed rgba(255, 211, 105, 0.7) !important;
+                    color: #ffd369 !important;
+                    font-size: 10.5px !important;
+                    font-weight: bold !important;
+                    padding: 3px 6px !important;
+                    border-radius: 5px !important;
+                    z-index: 30 !important;
+                    white-space: nowrap !important;
+                    pointer-events: none !important;
+                }
+
+                /* 📱 4. CHỐNG ZOOM KHI NHẤP NHANH */
                 #gunny-game-wrapper {
                     touch-action: manipulation !important;
                     -webkit-user-select: none !important;
                     user-select: none !important;
                 }
-
                 #gunny-game-wrapper button, 
                 #gunny-game-wrapper .gunny-skill-icon-btn,
                 #gunny-game-wrapper .btn-dpad-fire {
@@ -241,169 +248,114 @@ const DUNGEON_CONFIGS = {
                     -webkit-tap-highlight-color: transparent !important;
                 }
 
-                /* LỚP FULL MÀN HÌNH */
+                /* 🔄 5. LỚP FULL MÀN HÌNH - KHÔNG BỊ TRÀN VIỀN / MẤT NÚT */
                 #gunny-game-wrapper.phone-landscape-mode {
                     position: fixed !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    bottom: 0 !important;
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    height: 100dvh !important;
-                    z-index: 9999999 !important;
-                    background: #000 !important;
-                    overflow: hidden !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
+                    top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+                    width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+                    z-index: 9999999 !important; background: #000 !important;
+                    overflow: hidden !important; margin: 0 !important; padding: 0 !important;
                     touch-action: none !important;
                 }
 
                 @media screen and (orientation: portrait) {
                     #gunny-game-wrapper.phone-landscape-mode #game-container {
                         position: absolute !important;
-                        top: 50% !important;
-                        left: 50% !important;
-                        width: 100dvh !important;
-                        height: 100vw !important;
-                        max-width: none !important;
-                        max-height: none !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        border-radius: 0 !important;
+                        top: 50% !important; left: 50% !important;
+                        width: 100dvh !important; height: 100vw !important;
+                        max-width: none !important; max-height: none !important;
+                        margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
                         transform: translate(-50%, -50%) rotate(90deg) !important;
                         transform-origin: center center !important;
                         background: #000 !important;
                     }
+                    #gunny-game-wrapper.phone-landscape-mode canvas#gameCanvas {
+                        width: 100dvh !important; height: 100vw !important;
+                        object-fit: fill !important;
+                    }
                 }
 
-                /* 🔄 KHI XOAY NGANG MÁY THẬT: BUNG CĂNG 100% KHÔNG ĐỂ VIỀN ĐEN 2 BÊN */
                 @media screen and (orientation: landscape) {
-                    #gunny-game-wrapper.phone-landscape-mode {
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        height: 100dvh !important;
-                    }
                     #gunny-game-wrapper.phone-landscape-mode #game-container {
                         position: fixed !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        right: 0 !important;
-                        bottom: 0 !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        height: 100dvh !important;
-                        max-width: 100vw !important;
-                        max-height: 100vh !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        border-radius: 0 !important;
-                        transform: none !important;
-                        background: #000 !important;
+                        top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+                        width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+                        max-width: 100vw !important; max-height: 100vh !important;
+                        margin: 0 !important; padding: 0 !important; border-radius: 0 !important;
+                        transform: none !important; background: #000 !important;
                     }
-                    #gunny-game-wrapper.phone-landscape-mode canvas {
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        height: 100dvh !important;
-                        object-fit: fill !important;
-                        border-radius: 0 !important;
-                    }
-                    /* Ép 2 nút bám sát mép viền ngoài cùng màn hình */
-                    #gunny-game-wrapper.phone-landscape-mode .btn-fullscreen-toggle {
-                        top: 10px !important;
-                        left: 12px !important;
-                    }
-                    #gunny-game-wrapper.phone-landscape-mode .btn-ingame-surrender {
-                        top: 10px !important;
-                        right: 12px !important;
+                    #gunny-game-wrapper.phone-landscape-mode canvas#gameCanvas {
+                        width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+                        object-fit: fill !important; border-radius: 0 !important;
                     }
                 }
 
-                /* 🕒 CỤM ĐẾM LÙI & BỎ LƯỢT: HẠ XUỐNG DƯỚI Ô GIÓ (KHÔNG BỊ CHÈN NỮA) */
+                /* 🕒 6. CỤM ĐẾM LÙI & BỎ LƯỢT: TÁCH RIÊNG KHỎI Ô GIÓ (KHÔNG BỊ ĐÈ LÊN GIÓ NỮA) */
                 #gunny-game-wrapper .top-turn-group {
-                    position: absolute;
-                    top: 54px; /* Hạ thấp để nằm ngay bên dưới ô Gió */
-                    left: 50%;
-                    transform: translateX(-50%);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 4px;
-                    z-index: 30;
-                    pointer-events: none;
-                }
-                #gunny-game-wrapper #top-turn-timer {
-                    font-family: 'Arial Black', Impact, sans-serif;
-                    font-size: 24px;
-                    font-weight: 900;
-                    letter-spacing: 1px;
-                    line-height: 1;
-                    background: linear-gradient(180deg, #ffffff 0%, #ffe600 30%, #ff8c00 70%, #ff3700 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    filter: drop-shadow(0 0 6px rgba(0,0,0,0.9)) drop-shadow(0 2px 4px #000);
-                }
-                #gunny-game-wrapper .btn-pass-turn {
-                    background: rgba(233, 69, 96, 0.85);
-                    border: 1.5px solid #ff5470;
-                    color: #fff;
-                    padding: 3px 12px;
-                    font-size: 11px;
-                    font-weight: bold;
-                    border-radius: 12px;
-                    cursor: pointer;
-                    backdrop-filter: blur(4px);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-                    transition: 0.2s;
-                    pointer-events: auto;
-                }
-                #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470; transform: scale(1.05); }
-                #gunny-game-wrapper .btn-pass-turn:disabled { background: #444; border-color: #666; cursor: not-allowed; opacity: 0.4; }
-
-                /* 💨 Ô GIÓ TURN TRƯỚC (NẰM BÊN PHẢI Ô GIÓ CHÍNH) */
-                #gunny-game-wrapper #prev-wind-box {
-                    position: absolute;
-                    top: 18px;
-                    left: calc(50% + 105px);
-                    background: rgba(15, 23, 42, 0.85);
-                    border: 1.5px dashed rgba(255, 211, 105, 0.7);
-                    color: #ffd369;
-                    font-size: 11px;
-                    font-weight: bold;
-                    padding: 3px 8px;
-                    border-radius: 6px;
-                    z-index: 25;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.8);
-                    white-space: nowrap;
-                    display: none;
-                    pointer-events: none;
-                }
-
-                /* 🎯 CỘT 4 NÚT SKILL DỜI XUỐNG DƯỚI MINIMAP */
-                #gunny-game-wrapper .right-skill-column {
                     position: absolute !important;
-                    top: 64px !important; /* Dời thấp xuống để không che Minimap */
-                    right: 12px !important;
+                    top: 52px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    gap: 6px !important;
+                    align-items: center !important;
+                    gap: 3px !important;
+                    z-index: 30 !important;
+                    pointer-events: none !important;
+                }
+                #gunny-game-wrapper #top-turn-timer {
+                    font-family: 'Arial Black', Impact, sans-serif !important;
+                    font-size: 20px !important;
+                    font-weight: 900 !important;
+                    letter-spacing: 1px !important;
+                    line-height: 1 !important;
+                    background: linear-gradient(180deg, #ffffff 0%, #ffe600 30%, #ff8c00 70%, #ff3700 100%) !important;
+                    -webkit-background-clip: text !important;
+                    -webkit-text-fill-color: transparent !important;
+                    filter: drop-shadow(0 0 5px rgba(0,0,0,0.9)) !important;
+                }
+                #gunny-game-wrapper .btn-pass-turn {
+                    background: rgba(233, 69, 96, 0.85) !important;
+                    border: 1.5px solid #ff5470 !important;
+                    color: #fff !important;
+                    padding: 2px 10px !important;
+                    font-size: 10px !important;
+                    font-weight: bold !important;
+                    border-radius: 12px !important;
+                    cursor: pointer !important;
+                    backdrop-filter: blur(4px) !important;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.6) !important;
+                    transition: 0.2s !important;
+                    pointer-events: auto !important;
+                }
+                #gunny-game-wrapper .btn-pass-turn:hover:not(:disabled) { background: #ff5470 !important; transform: scale(1.05) !important; }
+                #gunny-game-wrapper .btn-pass-turn:disabled { background: #444 !important; border-color: #666 !important; cursor: not-allowed !important; opacity: 0.4 !important; }
+
+                /* 🎯 7. CỘT 4 NÚT SKILL DỜI THẤP XUỐNG DƯỚI MINIMAP - KHÔNG BỊ ĂN VIỀN */
+                #gunny-game-wrapper .right-skill-column {
+                    position: absolute !important;
+                    top: 54px !important;
+                    right: 6px !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 5px !important;
                     z-index: 25 !important;
                     pointer-events: auto !important;
                 }
                 #gunny-game-wrapper .gunny-skill-icon-btn {
                     position: relative !important;
-                    width: 40px !important;
-                    height: 40px !important;
-                    background: rgba(0, 0, 0, 0.6) !important;
+                    width: 36px !important;
+                    height: 36px !important;
+                    background: rgba(0, 0, 0, 0.65) !important;
                     border: 1.5px solid rgba(255, 211, 105, 0.6) !important;
-                    border-radius: 8px !important;
+                    border-radius: 6px !important;
                     cursor: pointer !important;
                     padding: 2px !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
                     backdrop-filter: blur(4px) !important;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+                    box-shadow: 0 3px 8px rgba(0,0,0,0.5) !important;
                     transition: transform 0.15s, border-color 0.2s !important;
                 }
                 #gunny-game-wrapper .gunny-skill-icon-btn img {
@@ -416,7 +368,7 @@ const DUNGEON_CONFIGS = {
                 #gunny-game-wrapper .gunny-skill-icon-btn:disabled { opacity: 0.35 !important; cursor: not-allowed !important; filter: grayscale(100%) !important; }
                 #gunny-game-wrapper .gunny-skill-icon-btn.active {
                     border-color: #00ffcc !important;
-                    box-shadow: 0 0 12px #00ffcc !important;
+                    box-shadow: 0 0 10px #00ffcc !important;
                     background: rgba(0, 255, 204, 0.25) !important;
                 }
                 #gunny-game-wrapper .skill-badge-count {
@@ -425,32 +377,32 @@ const DUNGEON_CONFIGS = {
                     right: -2px !important;
                     background: #ff0055 !important;
                     color: #fff !important;
-                    font-size: 9px !important;
+                    font-size: 8px !important;
                     font-weight: 900 !important;
                     border-radius: 10px !important;
-                    padding: 0 4px !important;
+                    padding: 0 3px !important;
                     border: 1px solid #fff !important;
                     display: none;
                 }
 
-                /* 🕹️ CỤM ĐIỀU KHIỂN DƯỚI ĐÁY */
+                /* 🕹️ 8. CỤM ĐIỀU KHIỂN DƯỚI ĐÁY - THỤT VÀO VỪA VẶN CHỐNG CHÈN MÉP */
                 #gunny-game-wrapper .ui-panel {
-                    position: absolute;
-                    bottom: 8px;
-                    left: 10px;
-                    right: 10px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-end;
+                    position: absolute !important;
+                    bottom: 4px !important;
+                    left: 6px !important;
+                    right: 6px !important;
+                    display: flex !important;
+                    justify-content: space-between !important;
+                    align-items: flex-end !important;
                     background: transparent !important;
                     border: none !important;
                     box-shadow: none !important;
-                    padding: 0;
-                    gap: 8px;
-                    z-index: 10;
-                    pointer-events: none;
+                    padding: 0 !important;
+                    gap: 6px !important;
+                    z-index: 15 !important;
+                    pointer-events: none !important;
                 }
-                #gunny-game-wrapper .ui-panel * { pointer-events: auto; }
+                #gunny-game-wrapper .ui-panel * { pointer-events: auto !important; }
                 #gunny-game-wrapper #turn-indicator {
                     text-shadow: 0 2px 4px rgba(0,0,0,0.95), 0 -1px 3px rgba(0,0,0,0.9);
                 }
@@ -687,7 +639,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE2</span>
+                    📱 <span id="fs-text">PHONE3</span>
                 </button>
 
                 <!-- 🔴 NÚT SHUT DOWN RÚT LUI -->
@@ -2093,8 +2045,8 @@ const DUNGEON_CONFIGS = {
                 myHasPickedCard = false;
                 cardTimeRemaining = 10;
 
-                const cardW = isDungeon ? "82px" : "86px";
-                const cardH = isDungeon ? "110px" : "114px";
+                const cardW = isDungeon ? "80px" : "86px";
+                const cardH = isDungeon ? "100px" : "112px";
 
                 for (let i = 0; i < currentCardsList.length; i++) {
                     const cardData = currentCardsList[i];
@@ -2555,41 +2507,51 @@ const DUNGEON_CONFIGS = {
 
                 minimapCtx.clearRect(0, 0, mW, mH);
 
-                // 1. Vẽ nền đất thu nhỏ
-                minimapCtx.drawImage(terrainCanvas, 0, 0, mW, mH);
+                // 1. Vẽ nền trời thu nhỏ
+                if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+                    minimapCtx.drawImage(bgImg, 0, 0, mW, mH);
+                } else {
+                    minimapCtx.fillStyle = '#0a0e17';
+                    minimapCtx.fillRect(0, 0, mW, mH);
+                }
 
-                // 2. Vẽ các chấm người chơi & quái vật
+                // 2. Vẽ nền đất thu nhỏ (nếu terrain rỗng thì vẽ đường chân trời giả định)
+                if (groundImg && groundImg.complete && groundImg.naturalWidth > 0) {
+                    minimapCtx.drawImage(groundImg, 0, 0, mW, mH);
+                } else {
+                    minimapCtx.drawImage(terrainCanvas, 0, 0, mW, mH);
+                }
+
+                // 3. Vẽ vị trí người chơi & quái vật
                 gamePlayers.forEach(pl => {
                     if (pl.hp <= 0) return;
                     const dotX = pl.x * scaleX;
                     const dotY = pl.y * scaleY;
 
                     minimapCtx.beginPath();
-                    // Bản thân và đồng minh: Chấm Xanh lá/lam | Kẻ địch và Quái/Boss: Chấm Đỏ[cite: 6]
                     if (pl.team === 1) {
                         minimapCtx.fillStyle = '#00e676';
-                        minimapCtx.arc(dotX, dotY, 3, 0, Math.PI * 2);
+                        minimapCtx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
                     } else {
                         minimapCtx.fillStyle = pl.isBoss ? '#ff0055' : '#ff3333';
-                        minimapCtx.arc(dotX, dotY, pl.isBoss ? 4.5 : 3, 0, Math.PI * 2);
+                        minimapCtx.arc(dotX, dotY, pl.isBoss ? 4 : 2.5, 0, Math.PI * 2);
                     }
                     minimapCtx.fill();
-                    minimapCtx.strokeStyle = '#fff';
+                    minimapCtx.strokeStyle = '#ffffff';
                     minimapCtx.lineWidth = 0.8;
                     minimapCtx.stroke();
                 });
 
-                // 3. Khung chữ nhật màu trắng thể hiện tầm nhìn Camera hiện tại[cite: 6]
+                // 4. Khung chữ nhật màu trắng thể hiện tầm nhìn Camera hiện tại
                 const viewX = cameraX * scaleX;
-                const viewW = canvas.width * scaleX;
+                const viewW = Math.min(canvas.width * scaleX, mW);
 
                 minimapCtx.strokeStyle = '#ffffff';
-                minimapCtx.lineWidth = 1.5;
+                minimapCtx.lineWidth = 1.2;
                 minimapCtx.strokeRect(viewX, 1, viewW, mH - 2);
-                minimapCtx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+                minimapCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
                 minimapCtx.fillRect(viewX, 1, viewW, mH - 2);
             }
-
             function render() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.save();
