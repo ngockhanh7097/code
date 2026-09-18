@@ -660,13 +660,18 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE1</span>
+                    📱 <span id="fs-text">PHONE2</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
                 <button id="btn-ingame-surrender" class="btn-ingame-surrender" type="button" onclick="if(confirm('Đạo hữu có chắc chắn muốn bỏ cuộc và rút lui?')) { if(typeof closeGunnyGameModal === 'function') closeGunnyGameModal(); }" title="Đầu hàng rút lui">
                     ✕ Rút lui
                 </button>
+
+                <!-- 🗺️ MINIMAP (Ô BẢN ĐỒ THU NHỎ GÓC PHẢI TRÊN) -->
+                <div id="gunny-minimap-box" style="position: absolute; top: 10px; right: 115px; width: 110px; height: 38px; background: rgba(10, 15, 25, 0.85); border: 1.5px solid #ffd369; border-radius: 5px; overflow: hidden; z-index: 25; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.8);">
+                    <canvas id="minimapCanvas" width="110" height="38" style="display: block; width: 100%; height: 100%;"></canvas>
+                </div>
 
                 <!-- 💨 Ô HIỂN THỊ GIÓ TURN TRƯỚC -->
                 <div id="prev-wind-box">Turn trước: --</div>
@@ -1048,6 +1053,19 @@ const DUNGEON_CONFIGS = {
             let cameraX = 0;
             let wind = 0;
             let prevWind = null; // 💨 Lưu gió turn trước
+            // 🗺️ BIẾN MINIMAP & LƯỚT MÀN HÌNH
+            const miniCanvas = document.getElementById('minimapCanvas');
+            const miniCtx = miniCanvas ? miniCanvas.getContext('2d') : null;
+            let isDragScreen = false;
+            let dragStartX = 0;
+            let dragCamStartX = 0;
+            let freeCamTimer = null;
+            let isFreeCam = false;
+
+            function triggerFreeCamTimer() {
+                if (freeCamTimer) clearTimeout(freeCamTimer);
+                freeCamTimer = setTimeout(() => { isFreeCam = false; }, 2500);
+            }
             let isFiring = false;
             let isGameOver = false;
             let isCharging = false;
@@ -2340,18 +2358,17 @@ const DUNGEON_CONFIGS = {
                 });
 
                 
-                // Camera tự động lia mượt mà trên map rộng 1800px
+                // Camera bám theo đạn hoặc nhân vật (nếu không lướt tự do)
                 if (bullets.length > 0) {
-                    // Ưu tiên 1: Camera bám theo đạn bay
+                    isFreeCam = false;
                     const b = bullets[0];
                     const targetCamX = Math.max(0, Math.min(b.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
-                    cameraX += (targetCamX - cameraX) * 0.12;
-                } else if (!isFiring) {
-                    // Ưu tiên 2: Camera chuyển tiêu điểm sang nhân vật đang có lượt (dù là người hay quái)
+                    cameraX += (targetCamX - cameraX) * 0.15;
+                } else if (!isFiring && !isFreeCam) {
                     const curP = getActivePlayer();
                     if (curP && curP.hp > 0) {
                         const targetCamX = Math.max(0, Math.min(curP.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
-                        cameraX += (targetCamX - cameraX) * 0.06;
+                        cameraX += (targetCamX - cameraX) * 0.08;
                     }
                 }
 
@@ -2753,6 +2770,50 @@ const DUNGEON_CONFIGS = {
 
                 ctx.restore();
                 drawWindCompass();
+
+                // 🗺️ VẼ MINIMAP CHUẨN GUNNY (Chấm Xanh: Bạn/Đồng minh | Chấm Đỏ: Kẻ địch/Boss | Khung trắng: Tầm nhìn)
+                if (miniCtx && miniCanvas) {
+                    const mW = miniCanvas.width;
+                    const mH = miniCanvas.height;
+                    const sX = mW / WORLD_WIDTH;
+                    const sY = mH / canvas.height;
+
+                    miniCtx.clearRect(0, 0, mW, mH);
+
+                    // 1. Nền Minimap
+                    if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+                        miniCtx.drawImage(bgImg, 0, 0, mW, mH);
+                    } else {
+                        miniCtx.fillStyle = '#0f172a';
+                        miniCtx.fillRect(0, 0, mW, mH);
+                    }
+                    if (groundImg && groundImg.complete && groundImg.naturalWidth > 0) {
+                        miniCtx.drawImage(groundImg, 0, 0, mW, mH);
+                    }
+
+                    // 2. Chấm thực thể
+                    gamePlayers.forEach(pl => {
+                        if (pl.hp <= 0) return;
+                        miniCtx.beginPath();
+                        if (pl.team === 1) {
+                            miniCtx.fillStyle = '#00ff66';
+                            miniCtx.arc(pl.x * sX, pl.y * sY, 2.5, 0, Math.PI * 2);
+                        } else {
+                            miniCtx.fillStyle = pl.isBoss ? '#ff0055' : '#ff3333';
+                            miniCtx.arc(pl.x * sX, pl.y * sY, pl.isBoss ? 4 : 2.5, 0, Math.PI * 2);
+                        }
+                        miniCtx.fill();
+                    });
+
+                    // 3. Khung chữ nhật trắng báo tầm nhìn hiện tại
+                    const curViewX = cameraX * sX;
+                    const curViewW = Math.min(canvas.width * sX, mW);
+                    miniCtx.strokeStyle = '#ffffff';
+                    miniCtx.lineWidth = 1.2;
+                    miniCtx.strokeRect(curViewX, 1, curViewW, mH - 2);
+                    miniCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                    miniCtx.fillRect(curViewX, 1, curViewW, mH - 2);
+                }
             }
 
             function initRuler() {
@@ -2841,6 +2902,48 @@ const DUNGEON_CONFIGS = {
                 if (btnDame20) btnDame20.disabled = (p.stamina < BUFF_COSTS.dame20) || !canUseSkillRealtime;
                 if (btnDame10) btnDame10.disabled = (p.stamina < BUFF_COSTS.dame10) || !canUseSkillRealtime;
             
+            }
+            // Sự kiện lướt màn hình bằng cảm ứng / chuột
+            canvas.addEventListener('mousedown', (e) => {
+                if (isCharging || isFiring || isGameOver) return;
+                isDragScreen = true; isFreeCam = true;
+                dragStartX = e.clientX; dragCamStartX = cameraX;
+                if (freeCamTimer) clearTimeout(freeCamTimer);
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragScreen) return;
+                const dist = (e.clientX - dragStartX) * (WORLD_WIDTH / canvas.clientWidth);
+                cameraX = Math.max(0, Math.min(dragCamStartX - dist, WORLD_WIDTH - canvas.width));
+            });
+            window.addEventListener('mouseup', () => {
+                if (isDragScreen) { isDragScreen = false; triggerFreeCamTimer(); }
+            });
+
+            canvas.addEventListener('touchstart', (e) => {
+                if (isCharging || isFiring || isGameOver) return;
+                if (e.touches.length === 1) {
+                    isDragScreen = true; isFreeCam = true;
+                    dragStartX = e.touches[0].clientX; dragCamStartX = cameraX;
+                    if (freeCamTimer) clearTimeout(freeCamTimer);
+                }
+            }, { passive: false });
+            window.addEventListener('touchmove', (e) => {
+                if (!isDragScreen || e.touches.length !== 1) return;
+                const dist = (e.touches[0].clientX - dragStartX) * (WORLD_WIDTH / canvas.clientWidth);
+                cameraX = Math.max(0, Math.min(dragCamStartX - dist, WORLD_WIDTH - canvas.width));
+            }, { passive: false });
+            window.addEventListener('touchend', () => {
+                if (isDragScreen) { isDragScreen = false; triggerFreeCamTimer(); }
+            });
+
+            const miniBox = document.getElementById('gunny-minimap-box');
+            if (miniBox) {
+                miniBox.onclick = (e) => {
+                    const rect = miniBox.getBoundingClientRect();
+                    const ratio = (e.clientX - rect.left) / rect.width;
+                    cameraX = Math.max(0, Math.min(ratio * WORLD_WIDTH - canvas.width / 2, WORLD_WIDTH - canvas.width));
+                    isFreeCam = true; triggerFreeCamTimer();
+                };
             }
 
             initRuler();
