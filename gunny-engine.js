@@ -660,7 +660,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE1</span>
+                    📱 <span id="fs-text">PHONE5</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -1959,7 +1959,7 @@ const DUNGEON_CONFIGS = {
                 };
             }
 
-            // 🔄 TỰ ĐỘNG PHÁT HIỆN XOAY NGANG (TỰ ĐỘNG CUỘN ĐẨY THANH LINK KHI CẦM MÁY NGANG)
+            // 🔄 TỰ ĐỘNG PHÁT HIỆN XOAY NGANG: CUỘN TRƯỚC -> ĐỢI 1S -> TỰ BẬT PHONE
             function handleDeviceOrientationCheck() {
                 const gameModal = document.getElementById('gunny-game-modal-layer');
                 const isGameOpen = gameModal && gameModal.classList.contains('popup-active');
@@ -1968,37 +1968,24 @@ const DUNGEON_CONFIGS = {
                 const isLandscapeNow = window.innerWidth > window.innerHeight;
 
                 if (isLandscapeNow) {
-                    if (pendingOrientationTimeout) clearTimeout(pendingOrientationTimeout);
-
-                    // Trường hợp 1: Nếu chưa kích hoạt chế độ phone -> Kích hoạt ngay
+                    // Nếu xoay ngang máy thật và chưa full
                     if (!isPhoneLandscapeActive) {
+                        if (pendingOrientationTimeout) clearTimeout(pendingOrientationTimeout);
+
+                        // B1: Cuộn trang xuống trước để ẩn thanh URL
+                        performPreScroll();
                         if (fsText) fsText.innerText = 'ĐANG FULL...';
 
-                        // Bước 1: Cuộn nhẹ xuống để kích hoạt ẩn thanh URL Safari/Chrome
-                        performPreScroll();
-
-                        pendingOrientationTimeout = setTimeout(async () => {
-                            if (window.innerWidth > window.innerHeight) {
-                                await executeExpandPhoneScreen();
-
-                                // Bước 2: Tự động cuộn ngược lên đỉnh (top: 0) để màn hình dãn căng đét 100% viewport
-                                setTimeout(() => {
-                                    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                                    document.body.scrollTop = 0;
-                                    document.documentElement.scrollTop = 0;
-                                }, 200);
+                        // B2: Đợi đúng 1 giây để Safari thu gọn thanh link xong xuôi
+                        pendingOrientationTimeout = setTimeout(() => {
+                            // Kiểm tra lại nếu máy vẫn đang nằm ngang thì mới kích hoạt
+                            if (window.innerWidth > window.innerHeight && !isPhoneLandscapeActive) {
+                                executeExpandPhoneScreen();
                             }
-                        }, 600); // Rút ngắn xuống 600ms cho mượt mà, không phải chờ lâu
-                    } else {
-                        // Trường hợp 2: Đã ở chế độ phone nhưng trình duyệt vẫn bị kẹt thanh URL -> Tự động cuộn kéo căng
-                        setTimeout(() => {
-                            window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                            document.body.scrollTop = 0;
-                            document.documentElement.scrollTop = 0;
-                        }, 150);
+                        }, 1000);
                     }
                 } else {
-                    // Xoay dọc máy trở lại -> Thoát chế độ ngang
+                    // Nếu xoay máy đứng lại -> Tắt chế độ phone
                     if (isPhoneLandscapeActive) {
                         deactivatePhoneMode();
                     }
@@ -2981,7 +2968,7 @@ const DUNGEON_CONFIGS = {
             window.addEventListener('touchend', () => {
                 if (isDragScreen) { isDragScreen = false; triggerFreeCamTimer(); }
             });
-
+ohone
             const miniBox = document.getElementById('gunny-minimap-box');
             if (miniBox) {
                 miniBox.onclick = (e) => {
@@ -2994,10 +2981,6 @@ const DUNGEON_CONFIGS = {
 
             initRuler();
             resetTurnState();
-           // 📱 Tự động kiểm tra và bung full màn hình nếu người dùng đã cầm ngang máy từ sảnh vào
-            setTimeout(() => {
-                handleDeviceOrientationCheck();
-            }, 300);
 
             function gameLoop() {
                 update();
