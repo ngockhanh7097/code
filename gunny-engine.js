@@ -660,7 +660,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE2</span>
+                    📱 <span id="fs-text">PHONE3</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -668,10 +668,10 @@ const DUNGEON_CONFIGS = {
                     ✕ Rút lui
                 </button>
 
-                <!-- 🗺️ MINIMAP (Ô BẢN ĐỒ THU NHỎ GÓC PHẢI TRÊN) -->
-                <div id="gunny-minimap-box" style="position: absolute; top: 10px; right: 115px; width: 110px; height: 38px; background: rgba(10, 15, 25, 0.85); border: 1.5px solid #ffd369; border-radius: 5px; overflow: hidden; z-index: 25; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.8);">
-                    <canvas id="minimapCanvas" width="110" height="38" style="display: block; width: 100%; height: 100%;"></canvas>
-                </div>
+                <!-- 🗺️ MINIMAP KHÓA CỨNG KÍCH THƯỚC ĐỆM -->
+               <div id="gunny-minimap-box" style="position: absolute; top: 10px; right: 115px; width: 120px; height: 42px; background: #0b0f19; border: 1.5px solid #ffd369; border-radius: 6px; overflow: hidden; z-index: 35; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.9);">
+                   <canvas id="minimapCanvas" width="120" height="42" style="display: block; width: 120px !important; height: 42px !important; pointer-events: none;"></canvas>
+               </div>
 
                 <!-- 💨 Ô HIỂN THỊ GIÓ TURN TRƯỚC -->
                 <div id="prev-wind-box">Turn trước: --</div>
@@ -2771,48 +2771,70 @@ const DUNGEON_CONFIGS = {
                 ctx.restore();
                 drawWindCompass();
 
-                // 🗺️ VẼ MINIMAP CHUẨN GUNNY (Chấm Xanh: Bạn/Đồng minh | Chấm Đỏ: Kẻ địch/Boss | Khung trắng: Tầm nhìn)
+                // 🗺️ VẼ MINIMAP CHUẨN GUNNY (CHỐNG MẤT HÌNH KHI FULLSCREEN PHONE)
                 if (miniCtx && miniCanvas) {
-                    const mW = miniCanvas.width;
-                    const mH = miniCanvas.height;
+                    const mW = 120;
+                    const mH = 42;
+
+                    // Đảm bảo buffer luôn giữ đúng tỷ lệ
+                    if (miniCanvas.width !== mW || miniCanvas.height !== mH) {
+                        miniCanvas.width = mW;
+                        miniCanvas.height = mH;
+                    }
+
                     const sX = mW / WORLD_WIDTH;
                     const sY = mH / canvas.height;
 
+                    miniCtx.save();
                     miniCtx.clearRect(0, 0, mW, mH);
 
-                    // 1. Nền Minimap
+                    // 1. Vẽ nền bầu trời
                     if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
                         miniCtx.drawImage(bgImg, 0, 0, mW, mH);
                     } else {
                         miniCtx.fillStyle = '#0f172a';
                         miniCtx.fillRect(0, 0, mW, mH);
                     }
+
+                    // 2. Vẽ mặt đất thu nhỏ
                     if (groundImg && groundImg.complete && groundImg.naturalWidth > 0) {
                         miniCtx.drawImage(groundImg, 0, 0, mW, mH);
+                    } else {
+                        miniCtx.drawImage(terrainCanvas, 0, 0, mW, mH);
                     }
 
-                    // 2. Chấm thực thể
+                    // 3. Chấm vị trí thực thể (Chấm Xanh: Bản thân/Đồng minh | Chấm Đỏ: Kẻ địch/Boss)
                     gamePlayers.forEach(pl => {
                         if (pl.hp <= 0) return;
+                        const dotX = Math.round(pl.x * sX);
+                        const dotY = Math.round(pl.y * sY);
+
                         miniCtx.beginPath();
                         if (pl.team === 1) {
                             miniCtx.fillStyle = '#00ff66';
-                            miniCtx.arc(pl.x * sX, pl.y * sY, 2.5, 0, Math.PI * 2);
+                            miniCtx.arc(dotX, dotY, 2.8, 0, Math.PI * 2);
                         } else {
                             miniCtx.fillStyle = pl.isBoss ? '#ff0055' : '#ff3333';
-                            miniCtx.arc(pl.x * sX, pl.y * sY, pl.isBoss ? 4 : 2.5, 0, Math.PI * 2);
+                            miniCtx.arc(dotX, dotY, pl.isBoss ? 4.2 : 2.8, 0, Math.PI * 2);
                         }
                         miniCtx.fill();
+                        miniCtx.strokeStyle = '#ffffff';
+                        miniCtx.lineWidth = 0.8;
+                        miniCtx.stroke();
                     });
 
-                    // 3. Khung chữ nhật trắng báo tầm nhìn hiện tại
-                    const curViewX = cameraX * sX;
+                    // 4. Khung chữ nhật trắng thể hiện tầm nhìn Camera hiện tại
+                    const curViewX = Math.max(0, Math.min(cameraX * sX, mW - 10));
                     const curViewW = Math.min(canvas.width * sX, mW);
+
                     miniCtx.strokeStyle = '#ffffff';
-                    miniCtx.lineWidth = 1.2;
+                    miniCtx.lineWidth = 1.5;
                     miniCtx.strokeRect(curViewX, 1, curViewW, mH - 2);
-                    miniCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+
+                    miniCtx.fillStyle = 'rgba(255, 255, 255, 0.18)';
                     miniCtx.fillRect(curViewX, 1, curViewW, mH - 2);
+
+                    miniCtx.restore();
                 }
             }
 
