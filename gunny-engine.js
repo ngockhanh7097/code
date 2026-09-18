@@ -660,11 +660,11 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE1</span>
+                    📱 <span id="fs-text">PHONE6</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
-                <button id="btn-ingame-surrender" class="btn-ingame-surrender" type="button" onclick="if(confirm('Đạo hữu có chắc chắn muốn bỏ cuộc và rút lui?')) { if(typeof closeGunnyGameModal === 'function') closeGunnyGameModal(); }" title="Đầu hàng rút lui">
+                <button id="btn-ingame-surrender" class="btn-ingame-surrender" type="button" onclick="confirmExitGunnyGame()" title="Đầu hàng rút lui">
                     ✕ Rút lui
                 </button>
 
@@ -2028,6 +2028,40 @@ const DUNGEON_CONFIGS = {
                 window.onkeydown = null;
                 window.onkeyup = null;
             }
+            window.handleExitMatchToLobby = function () {
+                if (!confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN RÚT LUI?\nBản thể sẽ bị xử thua và quay về phòng chờ!")) {
+                    return;
+                }
+
+                // 1. Gửi tín hiệu báo đối phương qua socket
+                if (socket && socket.connected) {
+                    socket.emit('player_surrender');
+                }
+
+                // 2. Thoát chế độ toàn màn hình phone nếu đang bật
+                if (isPhoneLandscapeActive && typeof deactivatePhoneMode === "function") {
+                    deactivatePhoneMode();
+                }
+
+                // 3. Đóng màn hình game Canvas
+                if (typeof closeGunnyGameModal === "function") {
+                    closeGunnyGameModal();
+                }
+
+                // 4. Đưa phòng Firebase về trạng thái WAITING để không kẹt vào lại trận
+                if (window.database && roomId) {
+                    window.database.ref('pvp_rooms/' + roomId).update({
+                        status: "WAITING",
+                        matchData: null
+                    });
+                }
+
+                // 5. Tự động bung lại Sảnh Chờ Bí Cảnh
+                const lobbyModal = document.getElementById("bicanh-lobby-modal-layer");
+                if (lobbyModal) {
+                    lobbyModal.classList.add("popup-active");
+                }
+            };
 
             let cardFlipTimer = null;
             let cardTimeRemaining = 10;
