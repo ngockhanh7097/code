@@ -660,7 +660,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE4</span>
+                    📱 <span id="fs-text">PHONE1</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -1911,6 +1911,13 @@ const DUNGEON_CONFIGS = {
                 } catch (err) {}
 
                 updatePhoneBtnUI();
+
+                // 📱 KẾT THÚC: Chờ đúng 1 giây sau khi đã vào full, tự động cuộn lên trên cùng
+                setTimeout(() => {
+                    window.scrollTo(0, 0);
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
+                }, 1000);
             }
 
             // 3. Thoát chế độ Phone
