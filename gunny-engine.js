@@ -1053,7 +1053,7 @@ const DUNGEON_CONFIGS = {
             let cameraX = 0;
             let wind = 0;
             let prevWind = null; // 💨 Lưu gió turn trước
-            // 🗺️ BIẾN MINIMAP & LƯỚT MÀN HÌNH
+            // 🗺️ BIẾN MINIMAP & LƯỚT MÀN HÌNH (ĐÃ NÂNG CẤP CHỐNG TUA CAMERA)
             const miniCanvas = document.getElementById('minimapCanvas');
             const miniCtx = miniCanvas ? miniCanvas.getContext('2d') : null;
             let isDragScreen = false;
@@ -1064,7 +1064,14 @@ const DUNGEON_CONFIGS = {
 
             function triggerFreeCamTimer() {
                 if (freeCamTimer) clearTimeout(freeCamTimer);
-                freeCamTimer = setTimeout(() => { isFreeCam = false; }, 2500);
+                // Nếu đang tích lực hoặc đang giữ phím thì không kích hoạt đếm ngược trả camera
+                if (isCharging) return;
+                freeCamTimer = setTimeout(() => { 
+                    // Chỉ trả camera khi không tích lực và không đang bắn
+                    if (!isCharging && !isFiring) {
+                        isFreeCam = false; 
+                    }
+                }, 4500); // Nới rộng thời gian ngắm thoải mái lên 4.5s
             }
             let isFiring = false;
             let isGameOver = false;
@@ -1610,8 +1617,10 @@ const DUNGEON_CONFIGS = {
 
             // Hàm chuyển lượt Server
             function triggerNextTurnServer() {
-                // Dừng ngay mọi chuyển động để tránh kẹt phím sang turn kế tiếp
                 clearAllInputKeys();
+                
+                // Khóa camera không cho giật ngược về Boss trước khi nhận turn mới
+                isFreeCam = true;
 
                 let team1Alive = gamePlayers.some(p => p.team === 1 && p.hp > 0);
                 let team2Alive = gamePlayers.some(p => p.team === 2 && p.hp > 0);
@@ -1663,6 +1672,8 @@ const DUNGEON_CONFIGS = {
                 chargeDir = 1;
 
                 const activeP = getActivePlayer();
+                // Tự động mở khóa và hướng camera ngay về phía người chơi nhận lượt mới
+                isFreeCam = false;
                 if (activeP) {
                     activeP.stamina = activeP.maxStamina;
                     activeP.extraBulletsCount = 0;
@@ -2358,14 +2369,14 @@ const DUNGEON_CONFIGS = {
                 });
 
                 
-                // Camera bám theo đạn hoặc nhân vật (nếu không lướt tự do)
+                // Camera: Ưu tiên bám đạn bay -> Khi đang tích lực/ngắm hoặc lướt tự do thì GIỮ NGUYÊN VỊ TRÍ
                 if (bullets.length > 0) {
-                    isFreeCam = false;
                     const b = bullets[0];
                     const targetCamX = Math.max(0, Math.min(b.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
                     cameraX += (targetCamX - cameraX) * 0.15;
-                } else if (!isFiring && !isFreeCam) {
+                } else if (!isFiring && !isFreeCam && !isCharging) {
                     const curP = getActivePlayer();
+                    // Chỉ tự lia về nhân vật khi người chơi KHÔNG đang thao tác tích lực
                     if (curP && curP.hp > 0) {
                         const targetCamX = Math.max(0, Math.min(curP.x - canvas.width / 2, WORLD_WIDTH - canvas.width));
                         cameraX += (targetCamX - cameraX) * 0.08;
