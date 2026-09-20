@@ -1961,6 +1961,11 @@ const DUNGEON_CONFIGS = {
 
             // 🔄 TỰ ĐỘNG PHÁT HIỆN XOAY NGANG (TỰ ĐỘNG CUỘN ĐẨY THANH LINK KHI CẦM MÁY NGANG)
             function handleDeviceOrientationCheck() {
+                // Nếu là máy tính (không có cảm ứng chạm), không bao giờ tự động can thiệp
+                const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                if (!isTouchDevice) return;
+
+               
                 const gameModal = document.getElementById('gunny-game-modal-layer');
                 const isGameOpen = gameModal && gameModal.classList.contains('popup-active');
                 if (!isGameOpen) return;
@@ -2005,9 +2010,7 @@ const DUNGEON_CONFIGS = {
                 }
             }
 
-            window.addEventListener('resize', () => {
-                setTimeout(handleDeviceOrientationCheck, 150);
-            });
+            
             window.addEventListener('orientationchange', () => {
                 setTimeout(handleDeviceOrientationCheck, 150);
             });
@@ -3028,10 +3031,10 @@ const DUNGEON_CONFIGS = {
 
             initRuler();
             resetTurnState();
-           // 📱 Tự động kiểm tra và bung full màn hình nếu người dùng đã cầm ngang máy từ sảnh vào
-            setTimeout(() => {
-                handleDeviceOrientationCheck();
-            }, 300);
+           // Đã tắt tự động bung màn hình khi vào trận
+           // setTimeout(() => {
+            //    handleDeviceOrientationCheck();
+           // }, 300);
 
             function gameLoop() {
                 update();
