@@ -36,34 +36,68 @@ const DUNGEON_CONFIGS = {
             monsters: [
                 {
                     id: "minion_1",
-                    name: "Tà Giáo Đồ",
+                    name: "Tà Giáo Đồ 1",
                     level: 3,
                     type: "melee",
-                    hp: 30,           // Máu quái phụ: 30
+                    hp: 30,
                     maxHp: 30,
-                    damage: 5,         // Sát thương vụt: 5
+                    damage: 5,
                     attackRange: 60,
-                    moveSpeed: 160,    // Quãng đường di chuyển gấp đôi (từ 80 lên 160)
-                    x: 1300, y: 350,
+                    moveSpeed: 160,
+                    x: 1050, y: 350,
                     isMonster: true,
                     isBoss: false,
-                    gender: "male"
+                    gender: "male",
+                    weaponImg: ""
+                },
+                {
+                    id: "minion_2",
+                    name: "Tà Giáo Đồ 2",
+                    level: 3,
+                    type: "melee",
+                    hp: 30,
+                    maxHp: 30,
+                    damage: 5,
+                    attackRange: 60,
+                    moveSpeed: 160,
+                    x: 1250, y: 350,
+                    isMonster: true,
+                    isBoss: false,
+                    gender: "male",
+                    weaponImg: ""
+                },
+                {
+                    id: "minion_3",
+                    name: "Tà Giáo Đồ 3",
+                    level: 3,
+                    type: "melee",
+                    hp: 30,
+                    maxHp: 30,
+                    damage: 5,
+                    attackRange: 60,
+                    moveSpeed: 160,
+                    x: 1450, y: 350,
+                    isMonster: true,
+                    isBoss: false,
+                    gender: "male",
+                    weaponImg: ""
                 },
                 {
                     id: "boss_1",
                     name: "Xiềng Xích Ma Tướng",
                     level: 10,
-                    type: "boss_slam",  // Cơ chế đập đất toàn map
+                    type: "boss_slam",
                     bossSkillType: "aoe",
-                    hp: 100,          // Máu boss: 100
+                    hp: 100,
                     maxHp: 100,
-                    damage: 20,        // Sát thương cơ bản 20
+                    damage: 20,
                     attackRange: 80,
-                    moveSpeed: 300,    // Tốc độ lướt khi nộ
-                    x: 1650, y: 350,
+                    moveSpeed: 300,
+                    x: 1680, y: 350,
                     isMonster: true,
                     isBoss: true,
-                    gender: "male"
+                    gender: "male",
+                    weaponImg: "" // Không đeo vũ khí
                 }
             ]
         },
@@ -658,7 +692,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE1</span>
+                    📱 <span id="fs-text">PHONE2</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -1030,16 +1064,15 @@ const DUNGEON_CONFIGS = {
                             isMonster: true,
                             isBoss: m.isBoss,
                             monsterType: m.type, 
-                            attackRange: m.attackRange || 50,
-                            moveSpeed: m.moveSpeed || 80,
-                            x: m.x || defaultMonsterX,
+                            attackRange: m.attackRange || 60,
+                            moveSpeed: m.moveSpeed || 160,
+                            x: m.x,
                             y: 280,
-                            radius: m.isBoss ? 66 : 22,
-                            animFrame: 0,
-                            isAttacking: false,
+                            radius: m.isBoss ? 132 : 44, // 🔥 Quái phụ 44 (gấp 2), Boss 132 (gấp 2)
                             angle: 45,
-                            facing: -1,
-                            color: m.isBoss ? '#ff0055' : '#ff7675'
+                            facing: -1, // Hướng về phía người chơi
+                            color: m.isBoss ? '#ff0055' : '#ff7675',
+                            animFrame: 0
                         };
 
                         if (m.isBoss) {
@@ -2668,7 +2701,7 @@ const DUNGEON_CONFIGS = {
                     }
 
                     const wImg = weaponImages[pl.name];
-                    if (wImg && wImg.complete && wImg.naturalWidth !== 0) {
+                    if (!pl.isMonster && wImg && wImg.complete && wImg.naturalWidth !== 0) {
                         const wSize = 63;
                         const aspect = wImg.naturalWidth / wImg.naturalHeight;
                         ctx.save();
@@ -2682,9 +2715,16 @@ const DUNGEON_CONFIGS = {
 
                     const pImg = playerImages[pl.name];
                     // --- VẼ BODY VÀ HOẠT ẢNH NHÂN VẬT / QUÁI VẬT ---
-                    ctx.save();
-                    ctx.translate(pl.x, pl.y);
-                    ctx.scale(pl.facing, 1);
+                     ctx.save();
+                     ctx.translate(pl.x, pl.y);
+                     // 🔥 SỬA HƯỚNG QUAY: 
+                     // Người chơi ảnh gốc nhìn sang Phải -> scale(pl.facing, 1)
+                     // Quái vật ảnh gốc nhìn sang Trái -> scale(-pl.facing, 1) để khi facing = -1 (nhìn về phía người bên trái), ảnh không bị lật ngược
+                     if (pl.isMonster) {
+                         ctx.scale(-pl.facing, 1);
+                     } else {
+                         ctx.scale(pl.facing, 1);
+                     }
 
                     let currentDrawImg = null;
 
@@ -2732,7 +2772,7 @@ const DUNGEON_CONFIGS = {
                         ctx.fill();
                     }
 
-                    const barW = 46;
+                    const barW = pl.isBoss ? 120 : (pl.isMonster ? 60 : 46); // Thanh máu co giãn theo kích thước quái
                     const barH = 6;
                     const barX = pl.x - barW / 2;
                     const barY = pl.y + pl.radius + 6;
