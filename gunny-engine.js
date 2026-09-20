@@ -31,41 +31,39 @@
     // --- CẤU HÌNH DỮ LIỆU PHÓ BẢN (DUNGEONS CONFIG) ---
 const DUNGEON_CONFIGS = {
         "linh_son_1": {
-            name: "Ải 1: Yêu Lang Cổ Mộ",
-            mapId: "co_mo", // Dùng map Cổ Mộ mới
+            name: "Ải 1: Cổ Mộ U Hồn",
+            mapId: "co_mo",
             monsters: [
                 {
-                    id: "wolf_minion_1",
-                    name: "Huyết Lang (Nhỏ)",
+                    id: "minion_1",
+                    name: "Tà Giáo Đồ",
                     level: 3,
                     type: "melee",
-                    hp: 120,
-                    maxHp: 120,
-                    damage: 8,
-                    attackRange: 50,
-                    moveSpeed: 80,
+                    hp: 30,           // Máu quái phụ: 30
+                    maxHp: 30,
+                    damage: 5,         // Sát thương vụt: 5
+                    attackRange: 60,
+                    moveSpeed: 160,    // Quãng đường di chuyển gấp đôi (từ 80 lên 160)
                     x: 1300, y: 350,
                     isMonster: true,
                     isBoss: false,
-                    gender: "male",
-                    skin: "monster_wolf_1",
-                    weaponImg: ""
+                    gender: "male"
                 },
                 {
-                    id: "wolf_boss",
-                    name: "Huyết Lang Vương (Boss)",
+                    id: "boss_1",
+                    name: "Xiềng Xích Ma Tướng",
                     level: 10,
-                    type: "ranged_weapon",
-                    bossSkillType: "ranged",
-                    hp: 450,
-                    maxHp: 450,
-                    damage: 25,
+                    type: "boss_slam",  // Cơ chế đập đất toàn map
+                    bossSkillType: "aoe",
+                    hp: 100,          // Máu boss: 100
+                    maxHp: 100,
+                    damage: 20,        // Sát thương cơ bản 20
+                    attackRange: 80,
+                    moveSpeed: 300,    // Tốc độ lướt khi nộ
                     x: 1650, y: 350,
                     isMonster: true,
                     isBoss: true,
-                    gender: "male",
-                    skin: "monster_boss_wolf",
-                    weaponImg: "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/vk-dinhvang.webp"
+                    gender: "male"
                 }
             ]
         },
@@ -660,7 +658,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE6</span>
+                    📱 <span id="fs-text">PHONE1</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -930,6 +928,26 @@ const DUNGEON_CONFIGS = {
             let gamePlayers = [];
             let playerImages = {};
             let weaponImages = {};
+           // Nạp trước 4 Frame hoạt ảnh cho Quái Phụ
+            const MINION_FRAMES = [
+                new Image(), new Image(), new Image(), new Image()
+            ];
+            MINION_FRAMES[0].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-phu1.webp";
+            MINION_FRAMES[1].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-phu2.webp";
+            MINION_FRAMES[2].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-phu3.webp";
+            MINION_FRAMES[3].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-phu4.webp";
+
+            // Nạp trước 4 Frame hoạt ảnh cho Boss
+            const BOSS_FRAMES = [
+                new Image(), new Image(), new Image(), new Image()
+            ];
+            BOSS_FRAMES[0].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-chinh1.webp";
+            BOSS_FRAMES[1].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-chinh2.webp";
+            BOSS_FRAMES[2].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-chinh3.webp";
+            BOSS_FRAMES[3].src = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/quai-map1-chinh4.webp";
+
+            // Biến đếm frame idle nhấp nhô của Boss
+            let bossIdleTimer = 0;
 
             if (matchData && matchData.players && matchData.players.length > 0) {
                 let humanPlayers = [];
@@ -1016,7 +1034,9 @@ const DUNGEON_CONFIGS = {
                             moveSpeed: m.moveSpeed || 80,
                             x: m.x || defaultMonsterX,
                             y: 280,
-                            radius: m.isBoss ? 38 : 26,
+                            radius: m.isBoss ? 66 : 22,
+                            animFrame: 0,
+                            isAttacking: false,
                             angle: 45,
                             facing: -1,
                             color: m.isBoss ? '#ff0055' : '#ff7675'
@@ -1147,47 +1167,45 @@ const DUNGEON_CONFIGS = {
                     return;
                 }
 
-                let target = livingHumans[0];
-                let minDist = Math.abs(target.x - monster.x);
-                for (let i = 1; i < livingHumans.length; i++) {
-                    let d = Math.abs(livingHumans[i].x - monster.x);
-                    if (d < minDist) {
-                        minDist = d;
-                        target = livingHumans[i];
+                // ==========================================
+                // 1. QUÁI PHỤ (DI CHUYỂN BẰNG ẢNH 1-2, ĐẾN NƠI VỤT ẢNH 3-4)
+                // ==========================================
+                if (!monster.isBoss) {
+                    // Chọn người chơi gần nhất
+                    let target = livingHumans[0];
+                    let minDist = Math.abs(target.x - monster.x);
+                    for (let i = 1; i < livingHumans.length; i++) {
+                        let d = Math.abs(livingHumans[i].x - monster.x);
+                        if (d < minDist) { minDist = d; target = livingHumans[i]; }
                     }
-                }
 
-                monster.facing = (target.x > monster.x) ? 1 : -1;
+                    monster.facing = (target.x > monster.x) ? 1 : -1;
 
-                if (monster.monsterType === "melee") {
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
-
                         const distanceToTarget = Math.abs(monster.x - target.x);
 
                         if (distanceToTarget > monster.attackRange) {
                             const moveDist = Math.min(monster.moveSpeed, distanceToTarget - monster.attackRange);
-                            const step = monster.facing * 2.5;
+                            const step = monster.facing * 3.5;
                             let moved = 0;
+                            let toggleWalk = 0;
 
                             const walkInterval = setInterval(() => {
                                 if (Math.abs(moved) >= moveDist || Math.abs(monster.x - target.x) <= monster.attackRange || isGameOver) {
                                     clearInterval(walkInterval);
+                                    monster.animFrame = 0; // Trả về ảnh 1
 
                                     if (socket && socket.connected) {
                                         socket.emit('player_move', {
-                                            name: monster.name,
-                                            x: monster.x,
-                                            y: monster.y,
-                                            angle: monster.angle,
-                                            facing: monster.facing,
-                                            stamina: monster.stamina,
-                                            activeBuffs: []
+                                            name: monster.name, x: monster.x, y: monster.y,
+                                            angle: monster.angle, facing: monster.facing,
+                                            stamina: monster.stamina, activeBuffs: []
                                         });
                                     }
 
-                                    if (Math.abs(monster.x - target.x) <= monster.attackRange + 5) {
-                                        setTimeout(() => executeMeleeAttack(monster, target), 300);
+                                    if (Math.abs(monster.x - target.x) <= monster.attackRange + 10) {
+                                        executeMinionAttack(monster, target);
                                     } else {
                                         setTimeout(() => triggerNextTurnServer(), 500);
                                     }
@@ -1196,195 +1214,158 @@ const DUNGEON_CONFIGS = {
 
                                 monster.x += step;
                                 moved += Math.abs(step);
+                                
+                                // Đảo qua lại giữa ảnh 1 (frame 0) và ảnh 2 (frame 1)
+                                toggleWalk++;
+                                if (toggleWalk % 6 === 0) {
+                                    monster.animFrame = (monster.animFrame === 0) ? 1 : 0;
+                                }
+
                                 const groundY = getGroundYAt(monster.x, monster.y);
                                 monster.y = groundY - monster.radius;
                             }, 20);
-
                         } else {
-                            executeMeleeAttack(monster, target);
+                            executeMinionAttack(monster, target);
+                        }
+                    }, 500);
+                    return;
+                }
+
+                // ==========================================
+                // 2. BOSS (DƯỚI 50% MÁU THÌ NỘ LƯỚT ĐẾN 1 NGƯỜI X3 DAME, BÌNH THƯỜNG ĐẬP ĐẤT TOÀN MAP)
+                // ==========================================
+                if (monster.isBoss) {
+                    const isEnraged = (monster.hp <= (monster.maxHp * 0.5)); // Dưới 50% máu kích hoạt Nộ
+
+                    setTimeout(() => {
+                        if (isGameOver || monster.hp <= 0) return;
+
+                        if (isEnraged) {
+                            // Chọn NGẪU NHIÊN 1 người chơi
+                            const chosenTarget = livingHumans[Math.floor(Math.random() * livingHumans.length)];
+                            monster.facing = (chosenTarget.x > monster.x) ? 1 : -1;
+
+                            // Lướt tốc độ cao đến vị trí người chơi
+                            const targetPosX = chosenTarget.x - (monster.facing * 70);
+                            const dashStep = (targetPosX - monster.x) / 15;
+                            let dashCount = 0;
+
+                            const dashInterval = setInterval(() => {
+                                monster.x += dashStep;
+                                dashCount++;
+                                monster.animFrame = (dashCount % 4 < 2) ? 0 : 1;
+                                monster.y = getGroundYAt(monster.x, monster.y) - monster.radius;
+
+                                if (dashCount >= 15) {
+                                    clearInterval(dashInterval);
+                                    monster.x = targetPosX;
+                                    monster.y = getGroundYAt(monster.x, monster.y) - monster.radius;
+                                    executeBossSlamAttack(monster, chosenTarget, true);
+                                }
+                            }, 20);
+                        } else {
+                            // Đứng tại chỗ vung xích đập đất
+                            let target = livingHumans[0];
+                            monster.facing = (target.x > monster.x) ? 1 : -1;
+                            executeBossSlamAttack(monster, null, false);
                         }
                     }, 600);
-                    return;
-                }
-
-                if (monster.monsterType === "aoe_all") {
-                    setTimeout(() => {
-                        if (isGameOver || monster.hp <= 0) return;
-
-                        let damageSyncList = [];
-
-                        livingHumans.forEach(h => {
-                            h.hp = Math.max(0, h.hp - monster.damageStat);
-                            h.pow = Math.min(100, h.pow + monster.damageStat * 1.2);
-
-                            const dtObj = {
-                                x: h.x,
-                                y: h.y - h.radius - 20,
-                                text: monster.damageStat.toString(),
-                                isCrit: true,
-                                scale: 0.2,
-                                targetScale: 1.2,
-                                alpha: 1.0,
-                                life: 60
-                            };
-                            damageTexts.push(dtObj);
-                            damageSyncList.push(dtObj);
-
-                            explosions.push({
-                                x: h.x,
-                                y: h.y,
-                                radius: 6,
-                                maxRadius: 38,
-                                alpha: 1,
-                                color: '#a020f0'
-                            });
-                        });
-
-                        if (socket && socket.connected) {
-                            socket.emit('bullet_exploded', {
-                                shooterName: monster.name,
-                                expX: monster.x,
-                                expY: monster.y,
-                                holeRadius: 0,
-                                isPow: true,
-                                updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
-                                damageList: damageSyncList
-                            });
-                        }
-
-                        checkGameOver();
-                        setTimeout(() => triggerNextTurnServer(), 1000);
-                    }, 1000);
-                    return;
-                }
-
-                if (monster.monsterType === "ranged_weapon") {
-                    setTimeout(() => {
-                        if (isGameOver || monster.hp <= 0) return;
-
-                        const dx = Math.abs(target.x - monster.x);
-                        const dy = target.y - monster.y;
-
-                        let chosenAngle = 45;
-                        if (dx < 400) {
-                            chosenAngle = 60;
-                        } else if (dx > 1000) {
-                            chosenAngle = 35;
-                        } else {
-                            chosenAngle = 45;
-                        }
-
-                        if (dy < -40) chosenAngle += 8;
-
-                        const rad = (chosenAngle * Math.PI) / 180;
-                        const cos = Math.cos(rad);
-
-                        let term = dx * Math.tan(rad) - dy;
-                        let baseSpeed = 15;
-
-                        if (term > 0 && cos > 0) {
-                            baseSpeed = Math.sqrt((GRAVITY * dx * dx) / (2 * cos * cos * term));
-                        }
-
-                        let estFlightTime = dx / (baseSpeed * cos || 1);
-                        let windEffect = 0.5 * wind * estFlightTime * estFlightTime * 20;
-
-                        let adjustedDx = dx - (monster.facing * windEffect);
-                        let adjustedTerm = adjustedDx * Math.tan(rad) - dy;
-
-                        if (adjustedTerm > 0) {
-                            baseSpeed = Math.sqrt((GRAVITY * adjustedDx * adjustedDx) / (2 * cos * cos * adjustedTerm));
-                        }
-
-                        let calculatedPower = Math.round((baseSpeed / 25) * 100);
-                        let randomError = (Math.random() * 3 - 1.5);
-                        let finalPower = Math.max(12, Math.min(100, Math.round(calculatedPower + randomError)));
-
-                        monster.angle = chosenAngle;
-                        const isPow = (monster.pow >= 100) || (Math.random() < 0.3);
-
-                        if (socket && socket.connected) {
-                            socket.emit('player_move', {
-                                name: monster.name,
-                                x: monster.x,
-                                y: monster.y,
-                                angle: monster.angle,
-                                facing: monster.facing,
-                                stamina: monster.stamina,
-                                activeBuffs: []
-                            });
-                        }
-
-                        setTimeout(() => {
-                            if (isGameOver || monster.hp <= 0) return;
-
-                            if (socket && socket.connected) {
-                                socket.emit('player_fire', {
-                                    shooterName: monster.name,
-                                    x: monster.x,
-                                    y: monster.y,
-                                    angle: monster.angle,
-                                    facing: monster.facing,
-                                    power: finalPower,
-                                    wind: wind,
-                                    isPow: isPow,
-                                    extraBullets: isPow ? 1 : 0
-                                });
-                            }
-                            executeVisualShot(monster, monster.angle, finalPower, isPow, isPow ? 1 : 0);
-                        }, 500);
-
-                    }, 800);
                 }
             }
+             // Quái phụ vụt (Dùng Frame 3 và 4)
+            function executeMinionAttack(minion, target) {
+                minion.animFrame = 2; // Frame 3: Dơ thánh giá lên
+                setTimeout(() => {
+                    minion.animFrame = 3; // Frame 4: Vụt xuống
+                    
+                    target.hp = Math.max(0, target.hp - minion.damageStat);
+                    target.pow = Math.min(100, target.pow + minion.damageStat * 1.5);
 
-            function executeMeleeAttack(monster, target) {
-                if (isGameOver || monster.hp <= 0) return;
-
-                target.hp = Math.max(0, target.hp - monster.damageStat);
-                target.pow = Math.min(100, target.pow + monster.damageStat * 1.5);
-
-                damageTexts.push({
-                    x: target.x,
-                    y: target.y - target.radius - 20,
-                    text: monster.damageStat.toString(),
-                    isCrit: false,
-                    scale: 0.2,
-                    targetScale: 1.0,
-                    alpha: 1.0,
-                    life: 60
-                });
-
-                explosions.push({
-                    x: target.x,
-                    y: target.y,
-                    radius: 4,
-                    maxRadius: 25,
-                    alpha: 1,
-                    color: '#ff4b2b'
-                });
-
-                if (socket && socket.connected) {
-                    socket.emit('bullet_exploded', {
-                        shooterName: monster.name,
-                        expX: target.x,
-                        expY: target.y,
-                        holeRadius: 0,
-                        isPow: false,
-                        updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
-                        damageList: [{
-                            x: target.x,
-                            y: target.y - target.radius - 20,
-                            text: monster.damageStat.toString(),
-                            isCrit: false
-                        }]
+                    damageTexts.push({
+                        x: target.x, y: target.y - target.radius - 20,
+                        text: minion.damageStat.toString(), isCrit: false,
+                        scale: 0.2, targetScale: 1.0, alpha: 1.0, life: 60
                     });
-                }
 
-                checkGameOver();
-                setTimeout(() => triggerNextTurnServer(), 600);
+                    explosions.push({
+                        x: target.x, y: target.y, radius: 4, maxRadius: 22,
+                        alpha: 1, color: '#ff4b2b'
+                    });
+
+                    if (socket && socket.connected) {
+                        socket.emit('bullet_exploded', {
+                            shooterName: minion.name, expX: target.x, expY: target.y,
+                            holeRadius: 0, isPow: false,
+                            updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
+                            damageList: [{ x: target.x, y: target.y - target.radius - 20, text: minion.damageStat.toString(), isCrit: false }]
+                        });
+                    }
+
+                    checkGameOver();
+                    setTimeout(() => {
+                        minion.animFrame = 0; // Trả về ảnh 1
+                        triggerNextTurnServer();
+                    }, 600);
+                }, 400);
             }
 
+            // Boss vung xích đập đất (Dùng Frame 3 và 4)
+            function executeBossSlamAttack(boss, directTarget, isEnragedMode) {
+                boss.animFrame = 2; // Frame 3: Vung xích lên
+                setTimeout(() => {
+                    boss.animFrame = 3; // Frame 4: Đập xích xuống đất
+
+                    // Hiệu ứng nổ chấn động tại điểm đập
+                    explosions.push({
+                        x: boss.x + (boss.facing * 50), y: boss.y + boss.radius - 10,
+                        radius: 10, maxRadius: 75, alpha: 1, color: isEnragedMode ? '#ff0033' : '#a020f0'
+                    });
+
+                    let damageSyncList = [];
+                    const livingHumans = gamePlayers.filter(p => !p.isMonster && p.hp > 0);
+
+                    livingHumans.forEach(h => {
+                        // Nếu Nộ: Người bị đập trực tiếp chịu x3 dame (20 * 3 = 60), những người khác chịu dame gốc 20
+                        let isDirect = (isEnragedMode && directTarget && h.name === directTarget.name);
+                        let finalDmg = isDirect ? (boss.damageStat * 3) : boss.damageStat;
+
+                        h.hp = Math.max(0, h.hp - finalDmg);
+                        h.pow = Math.min(100, h.pow + finalDmg);
+
+                        const dtObj = {
+                            x: h.x, y: h.y - h.radius - 20,
+                            text: finalDmg.toString(),
+                            isCrit: isDirect,
+                            scale: 0.2, targetScale: isDirect ? 1.5 : 1.1,
+                            alpha: 1.0, life: 60
+                        };
+                        damageTexts.push(dtObj);
+                        damageSyncList.push(dtObj);
+
+                        explosions.push({
+                            x: h.x, y: h.y, radius: 6, maxRadius: isDirect ? 50 : 30,
+                            alpha: 1, color: isDirect ? '#ff0000' : '#ffd369'
+                        });
+                    });
+
+                    if (socket && socket.connected) {
+                        socket.emit('bullet_exploded', {
+                            shooterName: boss.name, expX: boss.x, expY: boss.y,
+                            holeRadius: 0, isPow: isEnragedMode,
+                            updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
+                            damageList: damageSyncList
+                        });
+                    }
+
+                    checkGameOver();
+                    setTimeout(() => {
+                        boss.animFrame = 0;
+                        triggerNextTurnServer();
+                    }, 800);
+                }, 450);
+            }
+
+            
             function startTurnTimer() {
                 if (turnCountdownInterval) clearInterval(turnCountdownInterval);
                 turnTimeLeft = 15;
@@ -2700,16 +2681,42 @@ const DUNGEON_CONFIGS = {
                     }
 
                     const pImg = playerImages[pl.name];
+                    // --- VẼ BODY VÀ HOẠT ẢNH NHÂN VẬT / QUÁI VẬT ---
                     ctx.save();
-                    if (pImg && pImg.complete && pImg.naturalWidth !== 0) {
+                    ctx.translate(pl.x, pl.y);
+                    ctx.scale(pl.facing, 1);
+
+                    let currentDrawImg = null;
+
+                    if (pl.isMonster) {
+                        if (pl.isBoss) {
+                            // Boss dùng Frame 2/3 khi đánh, dùng Frame 0/1 luân phiên khi đứng yên/di chuyển
+                            if (pl.animFrame >= 2) {
+                                currentDrawImg = BOSS_FRAMES[pl.animFrame];
+                            } else {
+                                bossIdleTimer++;
+                                let idleFrame = (Math.floor(bossIdleTimer / 25) % 2 === 0) ? 0 : 1;
+                                currentDrawImg = BOSS_FRAMES[idleFrame];
+                            }
+                        } else {
+                            // Quái phụ lấy theo animFrame (0, 1 di chuyển; 2, 3 vụt)
+                            let frameIdx = pl.animFrame || 0;
+                            currentDrawImg = MINION_FRAMES[frameIdx];
+                        }
+                    } else {
+                        // Người chơi giữ ảnh Chibi gốc
+                        currentDrawImg = playerImages[pl.name];
+                    }
+
+                    if (currentDrawImg && currentDrawImg.complete && currentDrawImg.naturalWidth !== 0) {
                         const drawH = pl.radius * 2.2;
-                        const aspect = pImg.naturalWidth / pImg.naturalHeight;
-                        ctx.translate(pl.x, pl.y);
-                        ctx.scale(pl.facing, 1);
-                        ctx.drawImage(pImg, -drawH * aspect / 2, -drawH / 2, drawH * aspect, drawH);
+                        const aspect = currentDrawImg.naturalWidth / currentDrawImg.naturalHeight;
+                        const drawW = drawH * aspect;
+
+                        ctx.drawImage(currentDrawImg, -drawW / 2, -drawH / 2, drawW, drawH);
                     } else {
                         ctx.beginPath();
-                        ctx.arc(pl.x, pl.y, pl.radius, 0, Math.PI * 2);
+                        ctx.arc(0, 0, pl.radius, 0, Math.PI * 2);
                         ctx.fillStyle = pl.color;
                         ctx.fill();
                     }
