@@ -171,7 +171,7 @@ const DUNGEON_CONFIGS = {
                     background: #182238; padding: 0; border-radius: 12px; box-shadow: 0 12px 35px rgba(0,0,0,0.6);
                     width: 900px; max-width: 100%; overflow: hidden;
                 }
-                #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+                #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; image-rendering: auto; }
                /* 📱 NÚT PHONE GÓC TRÁI TRÊN CÙNG DÀNH RIÊNG CHO ĐIỆN THOẠI */
                /* 📱 NÚT PHONE GÓC TRÁI TRÊN CÙNG */
                 #gunny-game-wrapper .btn-fullscreen-toggle {
@@ -859,10 +859,9 @@ const DUNGEON_CONFIGS = {
              if (!canvas) return;
              const ctx = canvas.getContext('2d');
          
-             // 👉 THÊM 3 DÒNG TẮT LÀM MỜ Ở ĐÂY:
-             ctx.imageSmoothingEnabled = false;
-             ctx.webkitImageSmoothingEnabled = false;
-             ctx.mozImageSmoothingEnabled = false;
+             // Bật lại làm mượt và đặt chất lượng tối đa
+             ctx.imageSmoothingEnabled = true;
+             ctx.imageSmoothingQuality = 'high';
          
              const isDungeonMode = Boolean(matchData && matchData.mode === "phoban");
              const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
@@ -2657,7 +2656,7 @@ const DUNGEON_CONFIGS = {
 
             function render() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.imageSmoothingEnabled = false; // 👉 Đảm bảo mỗi frame render đều không bị làm mờ nhòe viền
+               
                 ctx.save();
                 ctx.translate(-cameraX, 0);
 
