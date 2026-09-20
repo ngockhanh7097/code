@@ -171,7 +171,7 @@ const DUNGEON_CONFIGS = {
                     background: #182238; padding: 0; border-radius: 12px; box-shadow: 0 12px 35px rgba(0,0,0,0.6);
                     width: 900px; max-width: 100%; overflow: hidden;
                 }
-                #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; }
+                #gunny-game-wrapper canvas { background-color: #0f172a; border: none; border-radius: 12px; display: block; width: 100%; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
                /* 📱 NÚT PHONE GÓC TRÁI TRÊN CÙNG DÀNH RIÊNG CHO ĐIỆN THOẠI */
                /* 📱 NÚT PHONE GÓC TRÁI TRÊN CÙNG */
                 #gunny-game-wrapper .btn-fullscreen-toggle {
@@ -855,12 +855,17 @@ const DUNGEON_CONFIGS = {
         injectGunnyUI();
 
         setTimeout(() => {
-            const canvas = document.getElementById('gameCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-
-            const isDungeonMode = Boolean(matchData && matchData.mode === "phoban");
-            const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
+          const canvas = document.getElementById('gameCanvas');
+             if (!canvas) return;
+             const ctx = canvas.getContext('2d');
+         
+             // 👉 THÊM 3 DÒNG TẮT LÀM MỜ Ở ĐÂY:
+             ctx.imageSmoothingEnabled = false;
+             ctx.webkitImageSmoothingEnabled = false;
+             ctx.mozImageSmoothingEnabled = false;
+         
+             const isDungeonMode = Boolean(matchData && matchData.mode === "phoban");
+             const currentDungeon = isDungeonMode ? DUNGEON_CONFIGS[matchData.dungeonId || "linh_son_1"] : null;
 
             // Xác định mapId: nếu đi Phó bản lấy map của Ải, nếu PvP lấy theo matchData.mapId được chọn ở sảnh (mặc định 'co_mo')
             let selectedMapKey = "co_mo";
@@ -2652,6 +2657,7 @@ const DUNGEON_CONFIGS = {
 
             function render() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.imageSmoothingEnabled = false; // 👉 Đảm bảo mỗi frame render đều không bị làm mờ nhòe viền
                 ctx.save();
                 ctx.translate(-cameraX, 0);
 
