@@ -1083,17 +1083,13 @@ const DUNGEON_CONFIGS = {
                     });
                 }
 
-                // 3. Sắp xếp thứ tự lượt: Quái nhỏ -> Boss -> Người chơi (Level thấp đi trước)
+                // 3. Sắp xếp thứ tự lượt: Nạp ĐẦY ĐỦ cả 3 quái phụ để vẽ ra màn hình
                 if (isDungeonMode) {
-                humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
-                // Đưa 1 đại diện quái phụ (con đầu tiên) đứng vào hàng đợi lượt, sau đó đến Boss, rồi tới Người chơi
-                // Cả 3 quái phụ sẽ hành động cùng lúc trong turn của minion
-                let firstMinion = monsterMinions.length > 0 ? [monsterMinions[0]] : [];
-                gamePlayers = [...firstMinion, ...monsterBosses, ...humanPlayers];
-                
-                // Lưu riêng danh sách toàn bộ quái phụ để điều khiển đồng loạt
-                window.allMinionsList = monsterMinions;
-            } else {
+                    humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
+                    // Đưa toàn bộ quái phụ vào gamePlayers để vẽ đủ 3 con
+                    gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
+                    window.allMinionsList = monsterMinions;
+                } else {
                     gamePlayers = [...humanPlayers].sort((a, b) => (a.level || 1) - (b.level || 1));
                 }
             } else {
@@ -1684,11 +1680,28 @@ const DUNGEON_CONFIGS = {
                 }
 
                 let nextIdx = -1;
-                for (let i = 1; i <= gamePlayers.length; i++) {
-                    let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
-                    if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
-                        nextIdx = candidateIdx;
-                        break;
+                const curP = getActivePlayer();
+
+                // Nếu lượt vừa rồi là của nhóm quái phụ, nhảy cóc qua tất cả quái phụ còn lại để tới Boss/Người chơi
+                if (isDungeonMode && curP && curP.isMonster && !curP.isBoss) {
+                    for (let i = 0; i < gamePlayers.length; i++) {
+                        let p = gamePlayers[i];
+                        // Tìm thực thể còn sống tiếp theo không phải là quái phụ (tức là Boss hoặc Người chơi)
+                        if (p && p.hp > 0 && (p.isBoss || !p.isMonster)) {
+                            nextIdx = i;
+                            break;
+                        }
+                    }
+                }
+
+                // Nếu không phải lượt quái phụ hoặc không tìm thấy, tính tuần tự như cũ
+                if (nextIdx === -1) {
+                    for (let i = 1; i <= gamePlayers.length; i++) {
+                        let candidateIdx = (currentPlayerIndex + i) % gamePlayers.length;
+                        if (gamePlayers[candidateIdx] && gamePlayers[candidateIdx].hp > 0) {
+                            nextIdx = candidateIdx;
+                            break;
+                        }
                     }
                 }
 
