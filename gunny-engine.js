@@ -692,7 +692,7 @@ const DUNGEON_CONFIGS = {
             <div id="game-container">
                 <!-- 📱 NÚT PHONE TOÀN MÀN HÌNH -->
                 <button id="btn-fullscreen-toggle" class="btn-fullscreen-toggle" type="button" title="Chế độ điện thoại xoay ngang">
-                    📱 <span id="fs-text">PHONE2</span>
+                    📱 <span id="fs-text">PHONE3</span>
                 </button>
 
                 <!-- 🏳️ NÚT RÚT LUI TRONG GAME KHI FULLSCREEN -->
@@ -1068,7 +1068,7 @@ const DUNGEON_CONFIGS = {
                             moveSpeed: m.moveSpeed || 160,
                             x: m.x,
                             y: 280,
-                            radius: m.isBoss ? 132 : 44, // 🔥 Quái phụ 44 (gấp 2), Boss 132 (gấp 2)
+                            radius: m.isBoss ? 100 : 44, // 🔥 Quái phụ 44 (gấp 2), Boss 132 (gấp 2)
                             angle: 45,
                             facing: -1, // Hướng về phía người chơi
                             color: m.isBoss ? '#ff0055' : '#ff7675',
@@ -1085,9 +1085,15 @@ const DUNGEON_CONFIGS = {
 
                 // 3. Sắp xếp thứ tự lượt: Quái nhỏ -> Boss -> Người chơi (Level thấp đi trước)
                 if (isDungeonMode) {
-                    humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
-                    gamePlayers = [...monsterMinions, ...monsterBosses, ...humanPlayers];
-                } else {
+                humanPlayers.sort((a, b) => (a.level || 1) - (b.level || 1));
+                // Đưa 1 đại diện quái phụ (con đầu tiên) đứng vào hàng đợi lượt, sau đó đến Boss, rồi tới Người chơi
+                // Cả 3 quái phụ sẽ hành động cùng lúc trong turn của minion
+                let firstMinion = monsterMinions.length > 0 ? [monsterMinions[0]] : [];
+                gamePlayers = [...firstMinion, ...monsterBosses, ...humanPlayers];
+                
+                // Lưu riêng danh sách toàn bộ quái phụ để điều khiển đồng loạt
+                window.allMinionsList = monsterMinions;
+            } else {
                     gamePlayers = [...humanPlayers].sort((a, b) => (a.level || 1) - (b.level || 1));
                 }
             } else {
@@ -1201,84 +1207,92 @@ const DUNGEON_CONFIGS = {
                 }
 
                 // ==========================================
-                // 1. QUÁI PHỤ (DI CHUYỂN BẰNG ẢNH 1-2, ĐẾN NƠI VỤT ẢNH 3-4)
+                // 1. CẢ 3 QUÁI PHỤ CÙNG DI CHUYỂN & ĐÁNH TRONG 1 TURN
                 // ==========================================
                 if (!monster.isBoss) {
-                    // Chọn người chơi gần nhất
-                    let target = livingHumans[0];
-                    let minDist = Math.abs(target.x - monster.x);
-                    for (let i = 1; i < livingHumans.length; i++) {
-                        let d = Math.abs(livingHumans[i].x - monster.x);
-                        if (d < minDist) { minDist = d; target = livingHumans[i]; }
+                    // Lấy tất cả quái phụ còn sống
+                    const activeMinions = (window.allMinionsList || [monster]).filter(m => m.hp > 0);
+                    if (activeMinions.length === 0) {
+                        triggerNextTurnServer();
+                        return;
                     }
 
-                    monster.facing = (target.x > monster.x) ? 1 : -1;
-
                     setTimeout(() => {
-                        if (isGameOver || monster.hp <= 0) return;
-                        const distanceToTarget = Math.abs(monster.x - target.x);
+                        if (isGameOver) return;
 
-                        if (distanceToTarget > monster.attackRange) {
-                            const moveDist = Math.min(monster.moveSpeed, distanceToTarget - monster.attackRange);
-                            const step = monster.facing * 3.5;
-                            let moved = 0;
-                            let toggleWalk = 0;
+                        // Tìm mục tiêu riêng cho từng con quái phụ
+                        activeMinions.forEach(minion => {
+                            let target = livingHumans[0];
+                            let minDist = Math.abs(target.x - minion.x);
+                            for (let i = 1; i < livingHumans.length; i++) {
+                                let d = Math.abs(livingHumans[i].x - minion.x);
+                                if (d < minDist) { minDist = d; target = livingHumans[i]; }
+                            }
+                            minion.targetPlayer = target;
+                            minion.facing = (target.x > minion.x) ? 1 : -1;
+                            minion.hasHit = false; // Reset cờ đánh để không bị nhảy nhiều số 5
+                        });
 
-                            const walkInterval = setInterval(() => {
-                                if (Math.abs(moved) >= moveDist || Math.abs(monster.x - target.x) <= monster.attackRange || isGameOver) {
-                                    clearInterval(walkInterval);
-                                    monster.animFrame = 0; // Trả về ảnh 1
+                        // Cả 3 con cùng bước đi đồng thời
+                        let stepCount = 0;
+                        const maxSteps = 45; // Số bước di chuyển tối đa tương đương 160px
+                        let toggleWalk = 0;
 
+                        const groupWalkInterval = setInterval(() => {
+                            stepCount++;
+                            toggleWalk++;
+                            let allDone = true;
+
+                            activeMinions.forEach(minion => {
+                                const dist = Math.abs(minion.x - minion.targetPlayer.x);
+                                // Nếu chưa đến tầm đánh và chưa hết bước thì đi tiếp
+                                if (dist > minion.attackRange && stepCount <= maxSteps && !isGameOver) {
+                                    minion.x += minion.facing * 3.5;
+                                    const groundY = getGroundYAt(minion.x, minion.y);
+                                    minion.y = groundY - minion.radius;
+                                    allDone = false;
+
+                                    if (toggleWalk % 6 === 0) {
+                                        minion.animFrame = (minion.animFrame === 0) ? 1 : 0;
+                                    }
+                                }
+                            });
+
+                            if (allDone || stepCount >= maxSteps || isGameOver) {
+                                clearInterval(groupWalkInterval);
+
+                                activeMinions.forEach(minion => {
+                                    minion.animFrame = 0;
                                     if (socket && socket.connected) {
                                         socket.emit('player_move', {
-                                            name: monster.name, x: monster.x, y: monster.y,
-                                            angle: monster.angle, facing: monster.facing,
-                                            stamina: monster.stamina, activeBuffs: []
+                                            name: minion.name, x: minion.x, y: minion.y,
+                                            angle: minion.angle, facing: minion.facing,
+                                            stamina: minion.stamina, activeBuffs: []
                                         });
                                     }
+                                });
 
-                                    if (Math.abs(monster.x - target.x) <= monster.attackRange + 10) {
-                                        executeMinionAttack(monster, target);
-                                    } else {
-                                        setTimeout(() => triggerNextTurnServer(), 500);
-                                    }
-                                    return;
-                                }
-
-                                monster.x += step;
-                                moved += Math.abs(step);
-                                
-                                // Đảo qua lại giữa ảnh 1 (frame 0) và ảnh 2 (frame 1)
-                                toggleWalk++;
-                                if (toggleWalk % 6 === 0) {
-                                    monster.animFrame = (monster.animFrame === 0) ? 1 : 0;
-                                }
-
-                                const groundY = getGroundYAt(monster.x, monster.y);
-                                monster.y = groundY - monster.radius;
-                            }, 20);
-                        } else {
-                            executeMinionAttack(monster, target);
-                        }
+                                // Con nào đủ tầm thì vung đòn đánh, con nào chưa tới thì dừng lại
+                                executeGroupMinionAttack(activeMinions);
+                            }
+                        }, 20);
                     }, 500);
                     return;
                 }
 
                 // ==========================================
-                // 2. BOSS (DƯỚI 50% MÁU THÌ NỘ LƯỚT ĐẾN 1 NGƯỜI X3 DAME, BÌNH THƯỜNG ĐẬP ĐẤT TOÀN MAP)
+                // 2. BOSS (AOE / NỘ X3 SÁT THƯƠNG)
                 // ==========================================
                 if (monster.isBoss) {
-                    const isEnraged = (monster.hp <= (monster.maxHp * 0.5)); // Dưới 50% máu kích hoạt Nộ
+                    const isEnraged = (monster.hp <= (monster.maxHp * 0.5));
 
                     setTimeout(() => {
                         if (isGameOver || monster.hp <= 0) return;
 
                         if (isEnraged) {
-                            // Chọn NGẪU NHIÊN 1 người chơi
                             const chosenTarget = livingHumans[Math.floor(Math.random() * livingHumans.length)];
                             monster.facing = (chosenTarget.x > monster.x) ? 1 : -1;
 
-                            // Lướt tốc độ cao đến vị trí người chơi
                             const targetPosX = chosenTarget.x - (monster.facing * 70);
                             const dashStep = (targetPosX - monster.x) / 15;
                             let dashCount = 0;
@@ -1297,7 +1311,6 @@ const DUNGEON_CONFIGS = {
                                 }
                             }, 20);
                         } else {
-                            // Đứng tại chỗ vung xích đập đất
                             let target = livingHumans[0];
                             monster.facing = (target.x > monster.x) ? 1 : -1;
                             executeBossSlamAttack(monster, null, false);
@@ -1305,50 +1318,73 @@ const DUNGEON_CONFIGS = {
                     }, 600);
                 }
             }
-             // Quái phụ vụt (Dùng Frame 3 và 4)
-            function executeMinionAttack(minion, target) {
-                minion.animFrame = 2; // Frame 3: Dơ thánh giá lên
+
+            // Quái phụ tấn công đồng loạt (Chỉ hiện đúng 1 số sát thương mỗi con)
+            function executeGroupMinionAttack(minions) {
+                let attackers = minions.filter(m => Math.abs(m.x - m.targetPlayer.x) <= m.attackRange + 15);
+
+                if (attackers.length === 0) {
+                    setTimeout(() => triggerNextTurnServer(), 600);
+                    return;
+                }
+
+                // Chuyển sang Frame 2: Giơ thánh giá lên
+                attackers.forEach(m => m.animFrame = 2);
+
                 setTimeout(() => {
-                    minion.animFrame = 3; // Frame 4: Vụt xuống
-                    
-                    target.hp = Math.max(0, target.hp - minion.damageStat);
-                    target.pow = Math.min(100, target.pow + minion.damageStat * 1.5);
+                    // Chuyển sang Frame 3: Vụt xuống
+                    attackers.forEach(m => {
+                        m.animFrame = 3;
+                        const target = m.targetPlayer;
 
-                    damageTexts.push({
-                        x: target.x, y: target.y - target.radius - 20,
-                        text: minion.damageStat.toString(), isCrit: false,
-                        scale: 0.2, targetScale: 1.0, alpha: 1.0, life: 60
+                        if (!m.hasHit && target && target.hp > 0) {
+                            m.hasHit = true; // Khóa lại, đảm bảo 1 quái chỉ trừ máu và hiện số 1 lần
+
+                            target.hp = Math.max(0, target.hp - m.damageStat);
+                            target.pow = Math.min(100, target.pow + m.damageStat * 1.5);
+
+                            // Đẩy duy nhất 1 text sát thương 5
+                            damageTexts.push({
+                                x: target.x,
+                                y: target.y - target.radius - 20,
+                                text: m.damageStat.toString(),
+                                isCrit: false,
+                                scale: 0.2, targetScale: 1.0, alpha: 1.0, life: 60
+                            });
+
+                            explosions.push({
+                                x: target.x, y: target.y, radius: 4, maxRadius: 22,
+                                alpha: 1, color: '#ff4b2b'
+                            });
+                        }
                     });
 
-                    explosions.push({
-                        x: target.x, y: target.y, radius: 4, maxRadius: 22,
-                        alpha: 1, color: '#ff4b2b'
-                    });
-
+                    // Đồng bộ qua socket 1 lần duy nhất cho toàn bộ nhóm đòn đánh
                     if (socket && socket.connected) {
                         socket.emit('bullet_exploded', {
-                            shooterName: minion.name, expX: target.x, expY: target.y,
+                            shooterName: attackers[0].name,
+                            expX: attackers[0].x, expY: attackers[0].y,
                             holeRadius: 0, isPow: false,
                             updatedPlayers: gamePlayers.map(pl => ({ name: pl.name, hp: pl.hp, pow: pl.pow })),
-                            damageList: [{ x: target.x, y: target.y - target.radius - 20, text: minion.damageStat.toString(), isCrit: false }]
+                            damageList: [] // Để mảng rỗng để máy đối thủ không vẽ đè thêm số lần 2
                         });
                     }
 
                     checkGameOver();
+
                     setTimeout(() => {
-                        minion.animFrame = 0; // Trả về ảnh 1
+                        attackers.forEach(m => m.animFrame = 0);
                         triggerNextTurnServer();
                     }, 600);
                 }, 400);
             }
 
-            // Boss vung xích đập đất (Dùng Frame 3 và 4)
+            // Boss đập đất (Sửa để không bị nhân đôi số nhảy dame)
             function executeBossSlamAttack(boss, directTarget, isEnragedMode) {
-                boss.animFrame = 2; // Frame 3: Vung xích lên
+                boss.animFrame = 2;
                 setTimeout(() => {
-                    boss.animFrame = 3; // Frame 4: Đập xích xuống đất
+                    boss.animFrame = 3;
 
-                    // Hiệu ứng nổ chấn động tại điểm đập
                     explosions.push({
                         x: boss.x + (boss.facing * 50), y: boss.y + boss.radius - 10,
                         radius: 10, maxRadius: 75, alpha: 1, color: isEnragedMode ? '#ff0033' : '#a020f0'
@@ -1358,7 +1394,6 @@ const DUNGEON_CONFIGS = {
                     const livingHumans = gamePlayers.filter(p => !p.isMonster && p.hp > 0);
 
                     livingHumans.forEach(h => {
-                        // Nếu Nộ: Người bị đập trực tiếp chịu x3 dame (20 * 3 = 60), những người khác chịu dame gốc 20
                         let isDirect = (isEnragedMode && directTarget && h.name === directTarget.name);
                         let finalDmg = isDirect ? (boss.damageStat * 3) : boss.damageStat;
 
@@ -1483,7 +1518,11 @@ const DUNGEON_CONFIGS = {
                });
 
                 socket.on('explosion_sync', (act) => {
-                    if (act.shooterName !== (window.currentUser || "")) {
+                    // Nếu là đòn đánh từ bản thân HOẶC đòn đánh quái phụ/Boss do máy Host bắn ra thì không nhận lại để tránh lặp sát thương
+                    const isMyOwnShot = (act.shooterName === (window.currentUser || ""));
+                    const isHostMonsterShot = isHost && (act.shooterName.includes("Tà Giáo Đồ") || act.shooterName.includes("Xiềng Xích"));
+
+                    if (!isMyOwnShot && !isHostMonsterShot) {
                         explosions.push({
                             x: act.expX,
                             y: act.expY,
