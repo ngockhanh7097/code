@@ -795,6 +795,10 @@ window.executePlantSeed = function(seedKey) {
         }
         window.closeFarmSeedBagModal();
         renderFarmPlotsOnly(activeUser);
+        // 🔥 Thêm dòng này để kiểm tra lại (nếu đã lấp hết đất trống thì tắt thông báo)
+        if (typeof window.checkFarmNotification === "function") {
+            window.checkFarmNotification();
+        }
     });
 };
 
@@ -887,6 +891,10 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
 
             renderFarmPlotsOnly(activeUser);
             showFarmAlert(`🎉 THU HOẠCH THÀNH CÔNG!\nCây trồng: ${cfg.name}\nNhận được: ${summary.join(', ')}`);
+            // 🔥 Thêm dòng này: sau khi thu hoạch, ô đất trở thành đất trống nên sẽ kích hoạt lại thông báo cần gieo hạt
+            if (typeof window.checkFarmNotification === "function") {
+                window.checkFarmNotification();
+            }
         });
     }).catch(err => {
         console.error("Lỗi thu hoạch:", err);
