@@ -976,7 +976,7 @@ window.checkQuestNotification = function() {
     window.updateMasterFeatureNotificationState();
 };
 // =========================================================================
-// 📈 MODULE THIÊN BẢO THƯƠNG HỘI (MÀU THEO BIẾN ĐỘNG & TỔNG LÃI LỖ)
+// 📈 MODULE THIÊN BẢO THƯƠNG HỘI (HƯỚNG DẪN + BXH LÃI LỖ TOÀN TAM GIỚI)
 // =========================================================================
 window.cachedInvestQuotes = {
     updatedTime: "Đang nạp...",
@@ -984,7 +984,6 @@ window.cachedInvestQuotes = {
     quotes: {}
 };
 
-// Từ điển tên ngắn gọn/loại hình doanh nghiệp
 const COMPANY_SHORT_NAMES = {
     "FPT": "Công nghệ FPT",
     "HPG": "Thép Hòa Phát",
@@ -1021,6 +1020,22 @@ window.closeInvestModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
+// 🌟 HÀM HIỂN THỊ HƯỚNG DẪN
+window.showInvestRulesAlert = function() {
+    let guide = `📜 BÍ KÍP ĐẦU TƯ THIÊN BẢO THƯƠNG HỘI:
+1. DANH MỤC TÀI SẢN:
+   - 7 Cổ phiếu VN (HOSE): Chốt giá lúc 15:00 hàng ngày (Nghỉ T7, CN).
+   - Vàng & Tiền số (BTC, ETH): Cập nhật giá 24/7 lúc 15:00 mỗi ngày.
+2. GIAO DỊCH & PHÍ SÀN:
+   - Phí mỗi lệnh Mua/Bán là 0.15% giá trị giao dịch.
+   - Có thể mua số lượng lẻ theo số Linh Thạch bạn muốn đầu tư.
+3. KHO DANH MỤC & THANH KHOẢN:
+   - Nhấp vào ô 'Giá trị danh mục' để xem các tài sản đang sở hữu và BÁN.
+   - Con số trong ngoặc hiển thị số Linh Thạch Lãi/Lỗ thực tế nếu bạn bán toàn bộ danh mục ngay lúc này.`;
+    alert(guide);
+};
+
+// 🌟 MỞ / ĐÓNG MODAL DANH MỤC NẮM GIỮ (CHUYÊN ĐỂ BÁN)
 window.openInvestPortfolioModal = function() {
     window.renderInvestPortfolioList();
     const modal = document.getElementById("invest-portfolio-modal-layer");
@@ -1030,6 +1045,110 @@ window.openInvestPortfolioModal = function() {
 window.closeInvestPortfolioModal = function() {
     const modal = document.getElementById("invest-portfolio-modal-layer");
     if (modal) modal.classList.remove("popup-active");
+};
+
+// 🌟 MỞ / ĐÓNG MODAL BẢNG XẾP HẠNG LÃI LỖ
+window.openInvestLeaderboardModal = function() {
+    const modal = document.getElementById("invest-leaderboard-modal-layer");
+    if (modal) modal.classList.add("popup-active");
+    window.renderInvestLeaderboardUI();
+};
+
+window.closeInvestLeaderboardModal = function() {
+    const modal = document.getElementById("invest-leaderboard-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
+};
+
+// 🌟 RENDER BẢNG PHONG THẦN THƯƠNG NHÂN (BXH LÃI/LỖ)
+window.renderInvestLeaderboardUI = function() {
+    const tbody = document.getElementById("invest-leaderboard-body");
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:15px; color:#888; font-style:italic; text-align:center;">Đang thu thập thần thức thương nhân...</td></tr>`;
+
+    const db = window.database || firebase.database();
+    const quotes = window.cachedInvestQuotes.quotes || {};
+
+    db.ref('users').once('value').then(snap => {
+        let list = [];
+        let nowTime = new Date().getTime();
+
+        snap.forEach(child => {
+            let uVal = child.val();
+            if (uVal) {
+                let name = child.key;
+                let level = uVal.level || 1;
+                let portfolio = {};
+
+                // Giải mã payload nếu có
+                if (uVal.securePayload && typeof GameCrypt !== "undefined") {
+                    let dec = GameCrypt.decrypt(uVal.securePayload);
+                    if (dec) {
+                        level = dec.level || level;
+                        portfolio = dec.portfolio || {};
+                    }
+                } else if (uVal.portfolio) {
+                    portfolio = uVal.portfolio;
+                }
+
+                // Tính tổng Lãi / Lỗ dựa trên giá thị trường hiện tại
+                let totalCurrentVal = 0;
+                let totalCost = 0;
+                let hasInvestment = false;
+
+                Object.keys(portfolio).forEach(t => {
+                    let h = portfolio[t];
+                    if (h && h.shares > 0 && quotes[t]) {
+                        hasInvestment = true;
+                        totalCurrentVal += Math.round(h.shares * quotes[t].price);
+                        totalCost += (h.totalInvested || 0);
+                    }
+                });
+
+                if (hasInvestment) {
+                    let netProfit = totalCurrentVal - totalCost;
+                    list.push({
+                        name: name,
+                        level: level,
+                        profit: netProfit,
+                        totalVal: totalCurrentVal
+                    });
+                }
+            }
+        });
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; color:#888; font-style:italic; text-align:center;">Chưa có đạo hữu nào tham gia đầu tư!</td></tr>`;
+            return;
+        }
+
+        // Sắp xếp người có số linh thạch Lời cao nhất lên Top 1
+        list.sort((a, b) => b.profit - a.profit);
+
+        let html = "";
+        let myName = (window.currentUser || "").toLowerCase();
+
+        list.forEach((u, idx) => {
+            let rank = idx + 1;
+            let isMe = u.name.toLowerCase() === myName;
+            let isProfit = u.profit >= 0;
+            let profitColor = isProfit ? "#2ecc71" : "#e74c3c";
+            let profitSign = isProfit ? "+" : "";
+            let tuviHtml = (typeof window.getTuViTitleHtml === "function") ? window.getTuViTitleHtml(u.level) : `Lv.${u.level}`;
+
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${isMe ? 'background: rgba(0, 255, 204, 0.1); font-weight:bold;' : ''}">
+                    <td style="padding: 7px 4px; text-align: center;"><b style="color:${rank <= 3 ? '#ffcc00' : '#fff'};">${rank}</b></td>
+                    <td style="padding: 7px 4px; text-align: left;"><span style="color:#ffcc00;">${u.name}</span></td>
+                    <td style="padding: 7px 4px; text-align: center;">${tuviHtml}</td>
+                    <td style="padding: 7px 6px; text-align: right; color:${profitColor}; font-weight:bold;">
+                        ${profitSign}${u.profit.toLocaleString()} Thạch
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    });
 };
 
 window.renderInvestMarketUI = function() {
@@ -1086,8 +1205,6 @@ window.renderInvestMarketUI = function() {
         const q = quotes[ticker] || { name: ticker, price: 100, change: 0 };
         const isUp = (q.change > 0);
         const isDown = (q.change < 0);
-        
-        // 🔥 Mã cổ phiếu đổi màu theo tăng/giảm (Xanh/Đỏ/Vàng)
         const tickerColor = isUp ? "#2ecc71" : (isDown ? "#e74c3c" : "#ffcc00");
         const changeColor = tickerColor;
         const changeText = (isUp ? "+" : "") + q.change + "%";
@@ -1124,8 +1241,6 @@ window.renderInvestMarketUI = function() {
         const q = quotes[ticker] || { name: ticker, price: 1000, change: 0 };
         const isUp = (q.change > 0);
         const isDown = (q.change < 0);
-        
-        // 🔥 Đổi màu chữ theo tăng/giảm
         const tickerColor = isUp ? "#2ecc71" : (isDown ? "#e74c3c" : "#ffaa00");
         const changeColor = tickerColor;
         const changeText = (isUp ? "+" : "") + q.change + "%";
@@ -1219,7 +1334,6 @@ window.renderInvestPortfolioList = function() {
         return;
     }
 
-    // 🔥 TÍNH CON SỐ TỔNG LÃI/LỖ TRÊN TOÀN BỘ DANH MỤC
     let netTotalProfit = totalVal - totalInvested;
     let netTotalPct = totalInvested > 0 ? ((netTotalProfit / totalInvested) * 100).toFixed(2) : 0;
     let isNetProfit = netTotalProfit >= 0;
