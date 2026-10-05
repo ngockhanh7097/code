@@ -976,15 +976,13 @@ window.checkQuestNotification = function() {
     window.updateMasterFeatureNotificationState();
 };
 // =========================================================================
-// 📈 MODULE THIÊN BẢO THƯƠNG HỘI (GIAO DIỆN COMPACT LIỀN KỀ)
+// 📈 MODULE THIÊN BẢO THƯƠNG HỘI (PHÂN KHU VỰC + BÁN TRONG DANH MỤC)
 // =========================================================================
 window.cachedInvestQuotes = {
-    updatedTime: "Đang tải...",
+    updatedTime: "Đang nạp...",
     feeRate: 0.0015,
     quotes: {}
 };
-
-let currentInvestTab = "market"; // 'market' hoặc 'portfolio'
 
 window.openInvestModal = function() {
     if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
@@ -1009,9 +1007,16 @@ window.closeInvestModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
-window.switchInvestTab = function(tabName) {
-    currentInvestTab = tabName;
-    window.renderInvestMarketUI();
+// 🌟 MỞ / ĐÓNG MODAL KHO DANH MỤC NẮM GIỮ (NƠI DUY NHẤT CÓ NÚT BÁN)
+window.openInvestPortfolioModal = function() {
+    window.renderInvestPortfolioList();
+    const modal = document.getElementById("invest-portfolio-modal-layer");
+    if (modal) modal.classList.add("popup-active");
+};
+
+window.closeInvestPortfolioModal = function() {
+    const modal = document.getElementById("invest-portfolio-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
 };
 
 window.renderInvestMarketUI = function() {
@@ -1024,16 +1029,16 @@ window.renderInvestMarketUI = function() {
     const quotes = window.cachedInvestQuotes.quotes || {};
     const portfolio = (window.userStats && window.userStats.portfolio) ? window.userStats.portfolio : {};
 
-    // 1. Tính tổng tài sản danh mục & Lãi/lỗ
+    // 1. Tính tổng tài sản danh mục & Lãi/Lỗ
     let totalVal = 0;
     let totalInvested = 0;
-    let ownedCount = 0;
+    let totalHoldingCount = 0;
 
     Object.keys(quotes).forEach(ticker => {
         const q = quotes[ticker];
         const holding = portfolio[ticker];
         if (holding && holding.shares > 0) {
-            ownedCount++;
+            totalHoldingCount++;
             const holdingVal = Math.round(holding.shares * q.price);
             totalVal += holdingVal;
             totalInvested += (holding.totalInvested || 0);
@@ -1052,94 +1057,144 @@ window.renderInvestMarketUI = function() {
         profitEl.innerText = `${isProfitable ? '+' : ''}${profit.toLocaleString()} (${isProfitable ? '+' : ''}${profitPct}%)`;
     }
 
-    // 2. Render Thanh chuyển đổi 2 Tab: THỊ TRƯỜNG & KHO SỞ HỮU
-    let html = `
-        <div style="display:flex; gap:6px; margin-bottom:8px;">
-            <button onclick="window.switchInvestTab('market')" style="flex:1; padding:5px; background:${currentInvestTab === 'market' ? '#008080' : 'rgba(255,255,255,0.06)'}; color:#fff; border:1px solid ${currentInvestTab === 'market' ? '#00ffcc' : '#444'}; border-radius:4px; font-size:11.5px; font-weight:bold; cursor:pointer;">
-                📊 Thị Trường (10 Mã)
-            </button>
-            <button onclick="window.switchInvestTab('portfolio')" style="flex:1; padding:5px; background:${currentInvestTab === 'portfolio' ? '#e67e22' : 'rgba(255,255,255,0.06)'}; color:#fff; border:1px solid ${currentInvestTab === 'portfolio' ? '#ffcc00' : '#444'}; border-radius:4px; font-size:11.5px; font-weight:bold; cursor:pointer;">
-                🎒 Kho Của Tôi (${ownedCount} Mã)
-            </button>
+    // 2. Phân loại 2 nhóm: Cổ phiếu VN (ở trên) và Vàng/Crypto (ở dưới)
+    const cryptoKeys = ["GOLD", "BTC", "ETH"];
+    const stockKeys = Object.keys(quotes).filter(k => !cryptoKeys.includes(k));
+
+    let html = `<div style="display:flex; flex-direction:column; gap:2px;">`;
+
+    // --- KHU VỰC 1: CỔ PHIẾU VIỆT NAM ---
+    html += `
+        <div style="font-size:11px; font-weight:bold; color:#00ffcc; padding:4px 6px; background:rgba(0,255,204,0.08); border-radius:4px; margin-bottom:2px;">
+            🏛️ CỔ PHIẾU DOANH NGHIỆP
         </div>
-        <div style="display:flex; flex-direction:column; gap:2px;">
     `;
 
-    // 3. Tab THỊ TRƯỜNG: Liền kề siêu gọn, CHỈ CÓ NÚT MUA
-    if (currentInvestTab === "market") {
-        Object.keys(quotes).forEach(ticker => {
-            const q = quotes[ticker];
-            const isPositive = (q.change >= 0);
-            const changeColor = isPositive ? "#2ecc71" : "#e74c3c";
-            const changeText = (isPositive ? "+" : "") + q.change + "%";
+    stockKeys.forEach(ticker => {
+        const q = quotes[ticker];
+        const isPositive = (q.change >= 0);
+        const changeColor = isPositive ? "#2ecc71" : "#e74c3c";
+        const changeText = (isPositive ? "+" : "") + q.change + "%";
 
-            html += `
-                <div style="background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 5px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
-                    <div style="display:flex; align-items:center; gap:8px; width:45%;">
-                        <b style="color:#ffcc00; font-size:13px; width:46px;">${ticker}</b>
-                        <span style="font-size:10.5px; color:#aaa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${q.name}</span>
-                    </div>
-                    <div style="text-align:right; width:35%; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
-                        <b style="color:#00ffcc;">${q.price.toLocaleString()}</b>
-                        <span style="color:${changeColor}; font-weight:bold; font-size:11px; min-width:52px; text-align:right;">${changeText}</span>
-                    </div>
-                    <div style="width:20%; text-align:right;">
-                        <button onclick="window.tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:3px 10px; border-radius:3px; font-weight:bold; font-size:11px; cursor:pointer;">
-                            MUA
-                        </button>
-                    </div>
+        html += `
+            <div style="background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 5px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                <div style="display:flex; align-items:center; gap:8px; width:45%;">
+                    <b style="color:#ffcc00; font-size:13px; width:46px;">${ticker}</b>
+                    <span style="font-size:10.5px; color:#aaa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${q.name}</span>
                 </div>
-            `;
-        });
-    } 
-    // 4. Tab KHO SỞ HỮU: CHỈ CÓ NÚT BÁN
-    else {
-        let hasItem = false;
-        Object.keys(quotes).forEach(ticker => {
-            const q = quotes[ticker];
-            const holding = portfolio[ticker];
+                <div style="text-align:right; width:35%; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+                    <b style="color:#00ffcc;">${q.price.toLocaleString()}</b>
+                    <span style="color:${changeColor}; font-weight:bold; font-size:11px; min-width:52px; text-align:right;">${changeText}</span>
+                </div>
+                <div style="width:20%; text-align:right;">
+                    <button onclick="window.tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:3px 12px; border-radius:3px; font-weight:bold; font-size:11px; cursor:pointer;">
+                        MUA
+                    </button>
+                </div>
+            </div>
+        `;
+    });
 
-            if (holding && holding.shares > 0) {
-                hasItem = true;
-                const holdingVal = Math.round(holding.shares * q.price);
-                const profit = holdingVal - (holding.totalInvested || 0);
-                const profitPct = holding.totalInvested > 0 ? ((profit / holding.totalInvested) * 100).toFixed(2) : 0;
-                const isProfit = profit >= 0;
+    // --- KHU VỰC 2: VÀNG & TIỀN ĐIỆN TỬ (Ở DƯỚI CÙNG) ---
+    html += `
+        <div style="font-size:11px; font-weight:bold; color:#ffaa00; padding:4px 6px; background:rgba(255,170,0,0.08); border-radius:4px; margin-top:6px; margin-bottom:2px;">
+            💎 VÀNG & TIỀN KỸ THUẬT SỐ (24/7)
+        </div>
+    `;
 
-                html += `
-                    <div style="background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
-                        <div style="width:40%;">
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <b style="color:#ffcc00; font-size:13px;">${ticker}</b>
-                                <span style="font-size:10.5px; color:#aaa;">x${holding.shares.toFixed(3)}</span>
-                            </div>
-                            <div style="font-size:11px; color:#bbb; margin-top:1px;">≈ ${holdingVal.toLocaleString()} Thạch</div>
-                        </div>
-                        <div style="text-align:right; width:40%;">
-                            <div style="font-size:11.5px; font-weight:bold; color:${isProfit ? '#2ecc71' : '#e74c3c'};">
-                                ${isProfit ? '+' : ''}${profit.toLocaleString()} (${isProfit ? '+' : ''}${profitPct}%)
-                            </div>
-                            <div style="font-size:10px; color:#888;">Vốn: ${(holding.totalInvested || 0).toLocaleString()}</div>
-                        </div>
-                        <div style="width:20%; text-align:right;">
-                            <button onclick="window.tradeInvestStock('${ticker}', 'SELL')" style="background:#e74c3c; color:#fff; border:none; padding:3px 10px; border-radius:3px; font-weight:bold; font-size:11px; cursor:pointer;">
-                                BÁN
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-        });
+    cryptoKeys.forEach(ticker => {
+        if (!quotes[ticker]) return;
+        const q = quotes[ticker];
+        const isPositive = (q.change >= 0);
+        const changeColor = isPositive ? "#2ecc71" : "#e74c3c";
+        const changeText = (isPositive ? "+" : "") + q.change + "%";
 
-        if (!hasItem) {
-            html += `<div style="text-align:center; color:#888; padding:30px; font-style:italic;">Hành trang đầu tư trống! Hãy chọn thẻ Thị Trường để mua cổ phiếu.</div>`;
-        }
-    }
+        html += `
+            <div style="background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 5px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                <div style="display:flex; align-items:center; gap:8px; width:45%;">
+                    <b style="color:#ffaa00; font-size:13px; width:46px;">${ticker}</b>
+                    <span style="font-size:10.5px; color:#aaa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${q.name}</span>
+                </div>
+                <div style="text-align:right; width:35%; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+                    <b style="color:#00ffcc;">${q.price.toLocaleString()}</b>
+                    <span style="color:${changeColor}; font-weight:bold; font-size:11px; min-width:52px; text-align:right;">${changeText}</span>
+                </div>
+                <div style="width:20%; text-align:right;">
+                    <button onclick="window.tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:3px 12px; border-radius:3px; font-weight:bold; font-size:11px; cursor:pointer;">
+                        MUA
+                    </button>
+                </div>
+            </div>
+        `;
+    });
 
     html += `</div>`;
     container.innerHTML = html;
 };
 
+// 🌟 RENDER BẢNG CHI TIẾT DANH MỤC NẮM GIỮ (CÓ LÃI/LỖ TRONG NGOẶC VÀ NÚT BÁN)
+window.renderInvestPortfolioList = function() {
+    const container = document.getElementById("portfolio-items-list");
+    if (!container) return;
+
+    const quotes = window.cachedInvestQuotes.quotes || {};
+    const portfolio = (window.userStats && window.userStats.portfolio) ? window.userStats.portfolio : {};
+
+    let html = "";
+    let hasHolding = false;
+
+    Object.keys(quotes).forEach(ticker => {
+        const q = quotes[ticker];
+        const holding = portfolio[ticker];
+
+        if (holding && holding.shares > 0) {
+            hasHolding = true;
+            const holdingVal = Math.round(holding.shares * q.price);
+            const profit = holdingVal - (holding.totalInvested || 0);
+            const profitPct = holding.totalInvested > 0 ? ((profit / holding.totalInvested) * 100).toFixed(2) : 0;
+            const isProfit = profit >= 0;
+            const profitColor = isProfit ? "#2ecc71" : "#e74c3c";
+            const profitSign = isProfit ? "+" : "";
+
+            html += `
+                <div style="background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                    <div style="width: 48%;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <b style="color:#ffcc00; font-size:13.5px;">${ticker}</b>
+                            <span style="font-size:11px; color:#aaa;">x${holding.shares.toFixed(3)}</span>
+                        </div>
+                        <div style="font-size:11.5px; color:#00ffcc; margin-top:2px;">
+                            Trị giá: <b>${holdingVal.toLocaleString()}</b> Thạch
+                        </div>
+                    </div>
+                    
+                    <div style="text-align:right; width: 34%; padding-right:8px;">
+                        <div style="font-size:11.5px; font-weight:bold; color:${profitColor};">
+                            (${profitSign}${profit.toLocaleString()} Thạch)
+                        </div>
+                        <div style="font-size:10px; color:${profitColor}; font-weight:500;">
+                            ${profitSign}${profitPct}%
+                        </div>
+                    </div>
+
+                    <div style="width: 18%; text-align:right;">
+                        <button onclick="window.tradeInvestStock('${ticker}', 'SELL')" style="background:#e74c3c; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">
+                            BÁN
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    if (!hasHolding) {
+        html = `<div style="text-align:center; color:#888; padding:35px 10px; font-style:italic;">Đạo hữu chưa nắm giữ cổ phiếu hay tài sản nào!</div>`;
+    }
+
+    container.innerHTML = html;
+};
+
+// 🌟 XỬ LÝ MUA VÀ BÁN
 window.tradeInvestStock = function(ticker, action) {
     if (!window.cachedInvestQuotes || !window.cachedInvestQuotes.quotes[ticker]) return;
     const q = window.cachedInvestQuotes.quotes[ticker];
@@ -1179,8 +1234,11 @@ window.tradeInvestStock = function(ticker, action) {
         let grossValue = Math.round(sharesToSell * q.price);
         let fee = Math.ceil(grossValue * feeRate);
         let netReceived = grossValue - fee;
+        let profit = grossValue - (holding.totalInvested || 0);
 
-        if (!confirm(`Xác nhận BÁN TOÀN BỘ [ ${sharesToSell.toFixed(3)} ${ticker} ]?\nƯớc tính thu về: ${netReceived.toLocaleString()} Linh Thạch (Đã trừ phí ${fee} Thạch).`)) {
+        let profitText = profit >= 0 ? `LÃI +${profit.toLocaleString()} Thạch` : `LỖ ${profit.toLocaleString()} Thạch`;
+
+        if (!confirm(`Xác nhận BÁN TOÀN BỘ [ ${sharesToSell.toFixed(3)} ${ticker} ]?\n- Dự kiến thu về: ${netReceived.toLocaleString()} Linh Thạch (Đã trừ phí ${fee} Thạch)\n- Kết toán: (${profitText})`)) {
             return;
         }
 
@@ -1190,7 +1248,8 @@ window.tradeInvestStock = function(ticker, action) {
         window.pushSecureUserData(window.currentUser).then(() => {
             window.refreshUIFields();
             window.renderInvestMarketUI();
-            alert(`🎉 THANH KHOẢN THÀNH CÔNG!\nĐã bán ${ticker}, thu về ${netReceived.toLocaleString()} Linh Thạch.`);
+            window.renderInvestPortfolioList();
+            alert(`🎉 THANH KHOẢN THÀNH CÔNG!\nĐã bán toàn bộ ${ticker}, nhận về ${netReceived.toLocaleString()} Linh Thạch vào túi đồ.`);
         });
     }
 };
