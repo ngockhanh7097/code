@@ -976,7 +976,7 @@ window.checkQuestNotification = function() {
     window.updateMasterFeatureNotificationState();
 };
 // =========================================================================
-// 📈 MODULE THIÊN BẢO THƯƠNG HỘI
+// 📈 KHỞI TẠO TỨC THÌ: THIÊN BẢO THƯƠNG HỘI (ĐẦU TƯ)
 // =========================================================================
 window.cachedInvestQuotes = {
     updatedTime: "Khởi tạo ban đầu",
@@ -996,26 +996,23 @@ window.cachedInvestQuotes = {
 };
 
 window.openInvestModal = function() {
-    if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
-    if (!window.userStats.portfolio) window.userStats.portfolio = {};
+    if (!currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
+    if (!userStats.portfolio) userStats.portfolio = {};
 
     const modal = document.getElementById("invest-modal-layer");
     if (modal) modal.classList.add("popup-active");
 
-    const db = window.database || firebase.database();
-    db.ref('market_quotes').on('value', snap => {
+    // Lắng nghe dữ liệu realtime từ Firebase
+    database.ref('market_quotes').on('value', snap => {
         let val = snap.val();
         if (val && val.quotes) {
             window.cachedInvestQuotes = val;
         }
         window.renderInvestMarketUI();
     });
-    window.renderInvestMarketUI();
-};
 
-window.closeInvestModal = function() {
-    const modal = document.getElementById("invest-modal-layer");
-    if (modal) modal.classList.remove("popup-active");
+    // Render ngay danh mục mẫu/cache để không bao giờ bị đơ màn hình
+    window.renderInvestMarketUI();
 };
 
 window.renderInvestMarketUI = function() {
@@ -1026,7 +1023,7 @@ window.renderInvestMarketUI = function() {
     if (timeEl) timeEl.innerText = `Cập nhật: ${window.cachedInvestQuotes.updatedTime || 'Mới nhất'}`;
 
     const quotes = window.cachedInvestQuotes.quotes;
-    const portfolio = (window.userStats && window.userStats.portfolio) ? window.userStats.portfolio : {};
+    const portfolio = userStats.portfolio || {};
 
     let totalVal = 0;
     let totalInvested = 0;
@@ -1060,10 +1057,10 @@ window.renderInvestMarketUI = function() {
                     </div>
                 </div>
                 <div style="display:flex; gap:6px;">
-                    <button onclick="window.tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">
+                    <button onclick="tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">
                         MUA
                     </button>
-                    <button onclick="window.tradeInvestStock('${ticker}', 'SELL')" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;" ${holding.shares > 0 ? '' : 'disabled style="opacity:0.4; cursor:not-allowed;"'}>
+                    <button onclick="tradeInvestStock('${ticker}', 'SELL')" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;" ${holding.shares > 0 ? '' : 'disabled style="opacity:0.4; cursor:not-allowed;"'}>
                         BÁN
                     </button>
                 </div>
@@ -1091,8 +1088,8 @@ window.tradeInvestStock = function(ticker, action) {
     const q = window.cachedInvestQuotes.quotes[ticker];
     const feeRate = window.cachedInvestQuotes.feeRate || 0.0015;
 
-    if (!window.userStats.portfolio) window.userStats.portfolio = {};
-    const holding = window.userStats.portfolio[ticker] || { shares: 0, totalInvested: 0 };
+    if (!userStats.portfolio) userStats.portfolio = {};
+    const holding = userStats.portfolio[ticker] || { shares: 0, totalInvested: 0 };
 
     if (action === "BUY") {
         let amountStr = prompt(`Nhập số LINH THẠCH muốn đầu tư vào [ ${ticker} - ${q.name} ]:\n(Giá hiện tại: ${q.price.toLocaleString()} Thạch / đơn vị | Phí sàn: 0.15%)`);
@@ -1102,18 +1099,18 @@ window.tradeInvestStock = function(ticker, action) {
         let fee = Math.ceil(investAmount * feeRate);
         let totalCost = investAmount + fee;
 
-        if ((window.userStats.coin || 0) < totalCost) {
+        if ((userStats.coin || 0) < totalCost) {
             return alert(`⚠️ Hành trang không đủ Linh Thạch! Cần ${totalCost.toLocaleString()} Thạch (gồm ${fee} Thạch phí sàn 0.15%).`);
         }
 
         let sharesBought = investAmount / q.price;
-        window.userStats.coin -= totalCost;
+        userStats.coin -= totalCost;
         holding.shares = (holding.shares || 0) + sharesBought;
         holding.totalInvested = (holding.totalInvested || 0) + investAmount;
-        window.userStats.portfolio[ticker] = holding;
+        userStats.portfolio[ticker] = holding;
 
-        window.pushSecureUserData(window.currentUser).then(() => {
-            window.refreshUIFields();
+        pushSecureUserData(currentUser).then(() => {
+            refreshUIFields();
             window.renderInvestMarketUI();
             alert(`🎉 ĐẦU TƯ THÀNH CÔNG!\nĐã mua ${sharesBought.toFixed(3)} ${ticker} với ${investAmount.toLocaleString()} Linh Thạch (Phí: ${fee} Thạch).`);
         });
@@ -1130,11 +1127,11 @@ window.tradeInvestStock = function(ticker, action) {
             return;
         }
 
-        window.userStats.coin = (window.userStats.coin || 0) + netReceived;
-        delete window.userStats.portfolio[ticker];
+        userStats.coin = (userStats.coin || 0) + netReceived;
+        delete userStats.portfolio[ticker];
 
-        window.pushSecureUserData(window.currentUser).then(() => {
-            window.refreshUIFields();
+        pushSecureUserData(currentUser).then(() => {
+            refreshUIFields();
             window.renderInvestMarketUI();
             alert(`🎉 THANH KHOẢN THÀNH CÔNG!\nĐã bán ${ticker}, thu về ${netReceived.toLocaleString()} Linh Thạch vào túi đồ.`);
         });
