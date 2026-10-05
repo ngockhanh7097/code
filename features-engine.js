@@ -976,9 +976,24 @@ window.checkQuestNotification = function() {
     window.updateMasterFeatureNotificationState();
 };
 // =========================================================================
-// 📈 5. MODULE THIÊN BẢO THƯƠNG HỘI (ĐẦU TƯ CHỨNG KHOÁN, CRYPTO & VÀNG)
+// 📈 MODULE THIÊN BẢO THƯƠNG HỘI
 // =========================================================================
-let cachedInvestQuotes = null;
+window.cachedInvestQuotes = {
+    updatedTime: "Khởi tạo ban đầu",
+    feeRate: 0.0015,
+    quotes: {
+        "FPT": { name: "FPT Telecom", price: 135, change: 1.5 },
+        "HPG": { name: "Hòa Phát Group", price: 28, change: -0.8 },
+        "VCB": { name: "Vietcombank", price: 92, change: 0.5 },
+        "VNM": { name: "Vinamilk", price: 68, change: -0.3 },
+        "SSI": { name: "Chứng Khoán SSI", price: 34, change: 2.1 },
+        "VIC": { name: "Vingroup", price: 42, change: -1.2 },
+        "DGC": { name: "Hóa Chất Đức Giang", price: 115, change: 3.4 },
+        "GOLD": { name: "Vàng Thế Giới", price: 68000, change: 0.2 },
+        "BTC": { name: "Bitcoin", price: 1650000, change: 1.8 },
+        "ETH": { name: "Ethereum", price: 85000, change: 2.4 }
+    }
+};
 
 window.openInvestModal = function() {
     if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
@@ -990,29 +1005,12 @@ window.openInvestModal = function() {
     const db = window.database || firebase.database();
     db.ref('market_quotes').on('value', snap => {
         let val = snap.val();
-        if (!val || !val.quotes) {
-            // Giá khởi tạo ban đầu nếu Firebase chưa chạy Cron Job
-            cachedInvestQuotes = {
-                updatedTime: "Khởi tạo ban đầu",
-                feeRate: 0.0015,
-                quotes: {
-                    "FPT": { name: "FPT Telecom", price: 135, change: 1.5 },
-                    "HPG": { name: "Hòa Phát Group", price: 28, change: -0.8 },
-                    "VCB": { name: "Vietcombank", price: 92, change: 0.5 },
-                    "VNM": { name: "Vinamilk", price: 68, change: -0.3 },
-                    "SSI": { name: "Chứng Khoán SSI", price: 34, change: 2.1 },
-                    "VIC": { name: "Vingroup", price: 42, change: -1.2 },
-                    "DGC": { name: "Hóa Chất Đức Giang", price: 115, change: 3.4 },
-                    "GOLD": { name: "Vàng Thế Giới", price: 68000, change: 0.2 },
-                    "BTC": { name: "Bitcoin", price: 1650000, change: 1.8 },
-                    "ETH": { name: "Ethereum", price: 85000, change: 2.4 }
-                }
-            };
-        } else {
-            cachedInvestQuotes = val;
+        if (val && val.quotes) {
+            window.cachedInvestQuotes = val;
         }
-        renderInvestMarketUI();
+        window.renderInvestMarketUI();
     });
+    window.renderInvestMarketUI();
 };
 
 window.closeInvestModal = function() {
@@ -1020,18 +1018,15 @@ window.closeInvestModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
-function renderInvestMarketUI() {
+window.renderInvestMarketUI = function() {
     const container = document.getElementById("invest-items-container");
-    if (!container || !cachedInvestQuotes || !cachedInvestQuotes.quotes) {
-        if (container) container.innerHTML = `<div style="text-align:center; padding:20px; color:#888;">Đang kết nối thần thức lấy giá thị trường...</div>`;
-        return;
-    }
+    if (!container || !window.cachedInvestQuotes || !window.cachedInvestQuotes.quotes) return;
 
     const timeEl = document.getElementById("lbl-invest-update-time");
-    if (timeEl) timeEl.innerText = `Cập nhật: ${cachedInvestQuotes.updatedTime || 'Mới nhất'}`;
+    if (timeEl) timeEl.innerText = `Cập nhật: ${window.cachedInvestQuotes.updatedTime || 'Mới nhất'}`;
 
-    const quotes = cachedInvestQuotes.quotes;
-    const portfolio = window.userStats.portfolio || {};
+    const quotes = window.cachedInvestQuotes.quotes;
+    const portfolio = (window.userStats && window.userStats.portfolio) ? window.userStats.portfolio : {};
 
     let totalVal = 0;
     let totalInvested = 0;
@@ -1065,10 +1060,10 @@ function renderInvestMarketUI() {
                     </div>
                 </div>
                 <div style="display:flex; gap:6px;">
-                    <button onclick="tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">
+                    <button onclick="window.tradeInvestStock('${ticker}', 'BUY')" style="background:#27ae60; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">
                         MUA
                     </button>
-                    <button onclick="tradeInvestStock('${ticker}', 'SELL')" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;" ${holding.shares > 0 ? '' : 'disabled style="opacity:0.4; cursor:not-allowed;"'}>
+                    <button onclick="window.tradeInvestStock('${ticker}', 'SELL')" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;" ${holding.shares > 0 ? '' : 'disabled style="opacity:0.4; cursor:not-allowed;"'}>
                         BÁN
                     </button>
                 </div>
@@ -1078,7 +1073,6 @@ function renderInvestMarketUI() {
 
     container.innerHTML = html;
 
-    // Cập nhật tổng tài sản danh mục & lời lỗ
     const totalValEl = document.getElementById("lbl-invest-total-val");
     const profitEl = document.getElementById("lbl-invest-profit");
     if (totalValEl) totalValEl.innerText = `${totalVal.toLocaleString()} Linh Thạch`;
@@ -1090,13 +1084,12 @@ function renderInvestMarketUI() {
         profitEl.style.color = isProfitable ? "#2ecc71" : "#e74c3c";
         profitEl.innerText = `${isProfitable ? '+' : ''}${profit.toLocaleString()} (${isProfitable ? '+' : ''}${profitPct}%)`;
     }
-}
+};
 
-// Xử lý Mua & Bán tài sản
 window.tradeInvestStock = function(ticker, action) {
-    if (!cachedInvestQuotes || !cachedInvestQuotes.quotes[ticker]) return;
-    const q = cachedInvestQuotes.quotes[ticker];
-    const feeRate = cachedInvestQuotes.feeRate || 0.0015; // Phí sàn 0.15%
+    if (!window.cachedInvestQuotes || !window.cachedInvestQuotes.quotes[ticker]) return;
+    const q = window.cachedInvestQuotes.quotes[ticker];
+    const feeRate = window.cachedInvestQuotes.feeRate || 0.0015;
 
     if (!window.userStats.portfolio) window.userStats.portfolio = {};
     const holding = window.userStats.portfolio[ticker] || { shares: 0, totalInvested: 0 };
@@ -1121,7 +1114,7 @@ window.tradeInvestStock = function(ticker, action) {
 
         window.pushSecureUserData(window.currentUser).then(() => {
             window.refreshUIFields();
-            renderInvestMarketUI();
+            window.renderInvestMarketUI();
             alert(`🎉 ĐẦU TƯ THÀNH CÔNG!\nĐã mua ${sharesBought.toFixed(3)} ${ticker} với ${investAmount.toLocaleString()} Linh Thạch (Phí: ${fee} Thạch).`);
         });
 
@@ -1142,7 +1135,7 @@ window.tradeInvestStock = function(ticker, action) {
 
         window.pushSecureUserData(window.currentUser).then(() => {
             window.refreshUIFields();
-            renderInvestMarketUI();
+            window.renderInvestMarketUI();
             alert(`🎉 THANH KHOẢN THÀNH CÔNG!\nĐã bán ${ticker}, thu về ${netReceived.toLocaleString()} Linh Thạch vào túi đồ.`);
         });
     }
