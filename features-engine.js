@@ -984,11 +984,33 @@ window.openInvestModal = function() {
     if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
     if (!window.userStats.portfolio) window.userStats.portfolio = {};
 
-    document.getElementById("invest-modal-layer").classList.add("popup-active");
+    const modal = document.getElementById("invest-modal-layer");
+    if (modal) modal.classList.add("popup-active");
 
     const db = window.database || firebase.database();
     db.ref('market_quotes').on('value', snap => {
-        cachedInvestQuotes = snap.val();
+        let val = snap.val();
+        if (!val || !val.quotes) {
+            // Giá khởi tạo ban đầu nếu Firebase chưa chạy Cron Job
+            cachedInvestQuotes = {
+                updatedTime: "Khởi tạo ban đầu",
+                feeRate: 0.0015,
+                quotes: {
+                    "FPT": { name: "FPT Telecom", price: 135, change: 1.5 },
+                    "HPG": { name: "Hòa Phát Group", price: 28, change: -0.8 },
+                    "VCB": { name: "Vietcombank", price: 92, change: 0.5 },
+                    "VNM": { name: "Vinamilk", price: 68, change: -0.3 },
+                    "SSI": { name: "Chứng Khoán SSI", price: 34, change: 2.1 },
+                    "VIC": { name: "Vingroup", price: 42, change: -1.2 },
+                    "DGC": { name: "Hóa Chất Đức Giang", price: 115, change: 3.4 },
+                    "GOLD": { name: "Vàng Thế Giới", price: 68000, change: 0.2 },
+                    "BTC": { name: "Bitcoin", price: 1650000, change: 1.8 },
+                    "ETH": { name: "Ethereum", price: 85000, change: 2.4 }
+                }
+            };
+        } else {
+            cachedInvestQuotes = val;
+        }
         renderInvestMarketUI();
     });
 };
