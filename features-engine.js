@@ -4,7 +4,18 @@
  * =========================================================================
  */
 
-// 1. Quản lý trạng thái thông báo tập trung
+// Helper lấy ngày an toàn
+function getSafeCurrentDate() {
+    if (typeof window.getFormattedCurrentDate === "function") {
+        return window.getFormattedCurrentDate();
+    }
+    let d = new Date();
+    let year = d.getFullYear();
+    let month = (d.getMonth() + 1).toString().padStart(2, '0');
+    let day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 window.FeatureNotifications = {
     wheel: false,
     hero: false,
@@ -17,7 +28,6 @@ const MASTER_IMG_NOTIFY = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-pic
 let masterNotifyInterval = null;
 let isMasterNotifyActive = false;
 
-// Điều khiển Modal Menu Master
 window.openFeatureMasterModal = function() {
     const modal = document.getElementById("feature-master-modal-layer");
     if (modal) modal.classList.add("popup-active");
@@ -91,11 +101,13 @@ let isSpinningWheel = false;
 let currentWheelAngle = 0;
 
 window.openLuckyWheelModal = function() {
-    if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước khi quay thưởng!");
-    if (!window.userStats.inventory) window.userStats.inventory = {};
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user) return alert("Vui lòng đăng nhập khế ước trước khi quay thưởng!");
+    if (!stats.inventory) stats.inventory = {};
 
-    let todayStr = window.getFormattedCurrentDate();
-    let currentTickets = window.userStats.inventory.wheelTicket || 0;
+    let todayStr = getSafeCurrentDate();
+    let currentTickets = stats.inventory.wheelTicket || 0;
 
     const lblTicket = document.getElementById("lbl-wheel-ticket-count");
     if (lblTicket) lblTicket.innerText = currentTickets;
@@ -103,30 +115,36 @@ window.openLuckyWheelModal = function() {
     const btnFree = document.getElementById("btn-spin-wheel-free");
     const btnTicket = document.getElementById("btn-spin-wheel-ticket");
 
-    if (window.userStats.lastWheelDate === todayStr) {
-        btnFree.disabled = true;
-        btnFree.style.opacity = "0.5";
-        btnFree.style.background = "#555";
-        btnFree.innerText = "✓ ĐÃ QUAY (HẸN MAI)";
+    if (stats.lastWheelDate === todayStr) {
+        if (btnFree) {
+            btnFree.disabled = true;
+            btnFree.style.opacity = "0.5";
+            btnFree.style.background = "#555";
+            btnFree.innerText = "✓ ĐÃ QUAY (HẸN MAI)";
+        }
     } else {
-        btnFree.disabled = false;
-        btnFree.style.opacity = "1";
-        btnFree.style.background = "linear-gradient(135deg, #a020f0 0%, #ff00ff 100%)";
-        btnFree.innerText = "🌀 QUAY MIỄN PHÍ";
+        if (btnFree) {
+            btnFree.disabled = false;
+            btnFree.style.opacity = "1";
+            btnFree.style.background = "linear-gradient(135deg, #a020f0 0%, #ff00ff 100%)";
+            btnFree.innerText = "🌀 QUAY MIỄN PHÍ";
+        }
     }
 
-    if (currentTickets <= 0) {
-        btnTicket.disabled = true;
-        btnTicket.style.opacity = "0.5";
-        btnTicket.style.background = "#555";
-        btnTicket.style.color = "#aaa";
-        btnTicket.innerText = "🎫 HẾT VÉ QUAY";
-    } else {
-        btnTicket.disabled = false;
-        btnTicket.style.opacity = "1";
-        btnTicket.style.background = "linear-gradient(135deg, #008080 0%, #00ffcc 100%)";
-        btnTicket.style.color = "#000";
-        btnTicket.innerText = `🎫 DÙNG VÉ (CÒN ${currentTickets})`;
+    if (btnTicket) {
+        if (currentTickets <= 0) {
+            btnTicket.disabled = true;
+            btnTicket.style.opacity = "0.5";
+            btnTicket.style.background = "#555";
+            btnTicket.style.color = "#aaa";
+            btnTicket.innerText = "🎫 HẾT VÉ QUAY";
+        } else {
+            btnTicket.disabled = false;
+            btnTicket.style.opacity = "1";
+            btnTicket.style.background = "linear-gradient(135deg, #008080 0%, #00ffcc 100%)";
+            btnTicket.style.color = "#000";
+            btnTicket.innerText = `🎫 DÙNG VÉ (CÒN ${currentTickets})`;
+        }
     }
 
     document.getElementById("wheel-modal-layer").classList.add("popup-active");
@@ -138,31 +156,31 @@ window.closeLuckyWheelModal = function() {
 };
 
 window.startSpinningWheel = function(spinType = 'free') {
-    if (isSpinningWheel || !window.currentUser) return;
-    if (!window.userStats.inventory) window.userStats.inventory = {};
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (isSpinningWheel || !user) return;
+    if (!stats.inventory) stats.inventory = {};
 
-    let todayStr = window.getFormattedCurrentDate();
+    let todayStr = getSafeCurrentDate();
     const btnFree = document.getElementById("btn-spin-wheel-free");
     const btnTicket = document.getElementById("btn-spin-wheel-ticket");
 
     if (spinType === 'free') {
-        if (window.userStats.lastWheelDate === todayStr) {
+        if (stats.lastWheelDate === todayStr) {
             return alert("⚠️ Hôm nay đạo hữu đã nhận cơ duyên Miễn Phí rồi! Hãy dùng Vé Quay hoặc quay lại vào ngày mai.");
         }
     } else if (spinType === 'ticket') {
-        let tickets = window.userStats.inventory.wheelTicket || 0;
+        let tickets = stats.inventory.wheelTicket || 0;
         if (tickets <= 0) {
             return alert("⚠️ Hành trang không còn [Vé Vòng Quay]! Hãy tham gia hoạt động để thu thập thêm.");
         }
-        window.userStats.inventory.wheelTicket = tickets - 1;
-        document.getElementById("lbl-wheel-ticket-count").innerText = window.userStats.inventory.wheelTicket;
+        stats.inventory.wheelTicket = tickets - 1;
+        document.getElementById("lbl-wheel-ticket-count").innerText = stats.inventory.wheelTicket;
     }
 
     isSpinningWheel = true;
-    btnFree.disabled = true;
-    btnFree.style.opacity = "0.5";
-    btnTicket.disabled = true;
-    btnTicket.style.opacity = "0.5";
+    if (btnFree) { btnFree.disabled = true; btnFree.style.opacity = "0.5"; }
+    if (btnTicket) { btnTicket.disabled = true; btnTicket.style.opacity = "0.5"; }
 
     const winningIndex = Math.floor(Math.random() * WHEEL_PRIZES.length);
     const arc = 360 / WHEEL_PRIZES.length;
@@ -180,16 +198,16 @@ window.startSpinningWheel = function(spinType = 'free') {
         const prize = WHEEL_PRIZES[winningIndex];
 
         if (prize.isInventory) {
-            window.userStats.inventory[prize.type] = (window.userStats.inventory[prize.type] || 0) + prize.amount;
+            stats.inventory[prize.type] = (stats.inventory[prize.type] || 0) + prize.amount;
         } else {
-            window.userStats[prize.type] = (window.userStats[prize.type] || 0) + prize.amount;
+            stats[prize.type] = (stats[prize.type] || 0) + prize.amount;
         }
 
         if (spinType === 'free') {
-            window.userStats.lastWheelDate = todayStr;
+            stats.lastWheelDate = todayStr;
         }
 
-        window.pushSecureUserData(window.currentUser).then(() => {
+        window.pushSecureUserData(user).then(() => {
             window.refreshUIFields();
             isSpinningWheel = false;
             window.openLuckyWheelModal();
@@ -205,9 +223,11 @@ window.startSpinningWheel = function(spinType = 'free') {
 };
 
 window.checkLuckyWheelNotification = function() {
-    if (!window.currentUser || !window.userStats) return;
-    let todayStr = window.getFormattedCurrentDate();
-    let hasFreeSpin = (window.userStats.lastWheelDate !== todayStr);
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || !stats) return;
+    let todayStr = getSafeCurrentDate();
+    let hasFreeSpin = (stats.lastWheelDate !== todayStr);
 
     window.FeatureNotifications.wheel = hasFreeSpin;
 
@@ -248,15 +268,17 @@ window.getHeroCurrentWeekKey = function() {
 };
 
 window.openHeroTournamentModal = function() {
-    if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
+    const user = window.currentUser;
+    if (!user) return alert("Vui lòng đăng nhập khế ước trước!");
     cachedHeroWeekKey = window.getHeroCurrentWeekKey();
 
     const btnAdmin = document.getElementById("btn-hero-admin-setup");
     if (btnAdmin) {
-        btnAdmin.style.display = (window.currentUser.toLowerCase() === "admin") ? "block" : "none";
+        btnAdmin.style.display = (user.toLowerCase() === "admin") ? "block" : "none";
     }
 
-    window.database.ref('hero_tournament_config/active_chapters').once('value').then(snap => {
+    const db = window.database || firebase.database();
+    db.ref('hero_tournament_config/active_chapters').once('value').then(snap => {
         if (snap.exists() && Array.isArray(snap.val())) {
             heroConfigChapters = snap.val();
         } else {
@@ -273,6 +295,7 @@ window.closeHeroTournamentModal = function() {
 };
 
 window.updateHeroTournamentUI = function() {
+    const user = window.currentUser;
     const now = new Date();
     const dayOfWeek = now.getDay();
     const hour = now.getHours();
@@ -285,15 +308,17 @@ window.updateHeroTournamentUI = function() {
     let isBefore8PM = (hour < 20);
     let isClosedForWeek = (isSunday && !isBefore8PM) || (dayOfWeek !== 0);
 
-    window.database.ref('hero_tournaments/' + cachedHeroWeekKey).on('value', snapshot => {
+    const db = window.database || firebase.database();
+    db.ref('hero_tournaments/' + cachedHeroWeekKey).on('value', snapshot => {
         let players = [];
         let myRecord = null;
+        let cNameLower = (user || "").toLowerCase();
 
         snapshot.forEach(child => {
             let val = child.val();
             if (val) {
                 players.push(val);
-                if (val.name.toLowerCase() === window.currentUser.toLowerCase()) {
+                if (val.name && val.name.toLowerCase() === cNameLower) {
                     myRecord = val;
                 }
             }
@@ -302,9 +327,11 @@ window.updateHeroTournamentUI = function() {
         players.sort((a, b) => b.score - a.score);
         window.renderHeroLeaderboardTable(players, isClosedForWeek);
 
+        if (!actionContainer || !statusTitle) return;
+
         if (isSunday && isBefore8PM) {
             statusTitle.innerHTML = `<span style="color: #27ae60;">🔥 ĐANG MỞ TRANH HÙNG (Chốt lúc 20:00)</span>`;
-            statusDesc.innerText = `Kho đề thi tuần: Chương ${heroConfigChapters.join(', ')}. Thử thách 5 phút tốc độ!`;
+            if (statusDesc) statusDesc.innerText = `Kho đề thi tuần: Chương ${heroConfigChapters.join(', ')}. Thử thách 5 phút tốc độ!`;
 
             if (myRecord) {
                 actionContainer.innerHTML = `
@@ -321,7 +348,7 @@ window.updateHeroTournamentUI = function() {
             }
         } else {
             statusTitle.innerHTML = `<span style="color: #ff4500;">🔒 ĐÃ ĐÓNG CỔNG THI ĐẤU (ĐÃ CHỐT SỔ)</span>`;
-            statusDesc.innerText = `Đại hội bế mạc lúc 20:00 Chủ Nhật. Mở lại vào Chủ Nhật tuần sau!`;
+            if (statusDesc) statusDesc.innerText = `Đại hội bế mạc lúc 20:00 Chủ Nhật. Mở lại vào Chủ Nhật tuần sau!`;
 
             if (myRecord) {
                 if (myRecord.rewardClaimed) {
@@ -356,6 +383,7 @@ window.renderHeroLeaderboardTable = function(players, isClosedForWeek) {
     }
 
     let html = "";
+    let user = window.currentUser || "";
     players.forEach((p, idx) => {
         let rank = idx + 1;
         let reward = window.getHeroRewardByRank(rank);
@@ -365,14 +393,15 @@ window.renderHeroLeaderboardTable = function(players, isClosedForWeek) {
             rewardText = `<b style="color:#ffcc00;">${reward.tickets} Vé</b> + <b style="color:#00ffcc;">${reward.coins} Thạch</b>`;
         }
 
-        let isMe = (p.name.toLowerCase() === window.currentUser.toLowerCase());
+        let isMe = (p.name && p.name.toLowerCase() === user.toLowerCase());
         let rowStyle = isMe ? "background: rgba(0, 255, 204, 0.1); font-weight: bold;" : "";
+        let tuviHtml = (typeof window.getTuViTitleHtml === "function") ? window.getTuViTitleHtml(p.level || 1) : `Lv.${p.level}`;
 
         html += `
             <tr style="${rowStyle}">
                 <td><b style="color: ${rank <= 3 ? '#ffcc00' : '#fff'};">${rank}</b></td>
                 <td style="text-align: left;"><span style="color: #ffcc00;">${p.name}</span></td>
-                <td>${window.getTuViTitleHtml(p.level || 1)}</td>
+                <td>${tuviHtml}</td>
                 <td><b style="color: #2ecc71; font-size: 14px;">${p.score}</b></td>
                 <td>${rewardText}</td>
             </tr>
@@ -390,10 +419,13 @@ window.getHeroRewardByRank = function(rank) {
 };
 
 window.executeClaimHeroReward = function() {
-    if (!window.currentUser) return alert("Vui lòng đăng nhập tài khoản trước!");
-    if (!window.userStats.inventory) window.userStats.inventory = {};
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user) return alert("Vui lòng đăng nhập tài khoản trước!");
+    if (!stats.inventory) stats.inventory = {};
 
-    const weekRef = window.database.ref(`hero_tournaments/${cachedHeroWeekKey}`);
+    const db = window.database || firebase.database();
+    const weekRef = db.ref(`hero_tournaments/${cachedHeroWeekKey}`);
 
     weekRef.once('value').then(allSnap => {
         if (!allSnap.exists()) return alert("Chưa có dữ liệu bảng thi đấu tuần này!");
@@ -401,7 +433,7 @@ window.executeClaimHeroReward = function() {
         let list = [];
         let myFoundNodeKey = null;
         let myRecord = null;
-        let cNameLower = window.currentUser.trim().toLowerCase();
+        let cNameLower = user.trim().toLowerCase();
 
         allSnap.forEach(child => {
             let val = child.val();
@@ -435,11 +467,11 @@ window.executeClaimHeroReward = function() {
 
         let reward = window.getHeroRewardByRank(myRank);
 
-        window.userStats.coin = (window.userStats.coin || 0) + reward.coins;
-        window.userStats.inventory.wheelTicket = (window.userStats.inventory.wheelTicket || 0) + reward.tickets;
+        stats.coin = (stats.coin || 0) + reward.coins;
+        stats.inventory.wheelTicket = (stats.inventory.wheelTicket || 0) + reward.tickets;
 
         weekRef.child(myFoundNodeKey).update({ rewardClaimed: true }).then(() => {
-            window.pushSecureUserData(window.currentUser).then(() => {
+            window.pushSecureUserData(user).then(() => {
                 window.refreshUIFields();
                 window.updateHeroTournamentUI();
                 window.checkHeroTournamentNotification();
@@ -450,13 +482,14 @@ window.executeClaimHeroReward = function() {
 };
 
 function preloadNextHeroWord(callbackOnLoaded) {
-    if (!window.gameActivePool || window.gameActivePool.length === 0) {
+    let pool = window.gameActivePool;
+    if (!pool || pool.length === 0) {
         nextHeroWord = null;
         if (typeof callbackOnLoaded === "function") callbackOnLoaded();
         return;
     }
 
-    let rawNext = window.gameActivePool[Math.floor(Math.random() * window.gameActivePool.length)];
+    let rawNext = pool[Math.floor(Math.random() * pool.length)];
     nextHeroWord = Object.assign({}, rawNext);
 
     if (nextHeroWord.img && nextHeroWord.img.trim() !== "") {
@@ -496,7 +529,8 @@ window.startHeroTournamentMatch = function() {
     nextHeroWord = null;
 
     preloadNextHeroWord(function() {
-        document.getElementById("hero-match-banner").style.display = "flex";
+        const banner = document.getElementById("hero-match-banner");
+        if (banner) banner.style.display = "flex";
         document.getElementById("hero-live-score").innerText = heroScore;
         document.getElementById("hero-total-timer").innerText = "05:00";
         document.getElementById("hero-freeze-alert").style.display = "none";
@@ -527,7 +561,8 @@ function startHeroTotalCountdown() {
         let minutes = Math.floor(heroTotalTimeLeft / 60);
         let seconds = heroTotalTimeLeft % 60;
         let timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        document.getElementById("hero-total-timer").innerText = timeStr;
+        const totalTimerEl = document.getElementById("hero-total-timer");
+        if (totalTimerEl) totalTimerEl.innerText = timeStr;
 
         if (heroTotalTimeLeft <= 0) {
             clearInterval(heroTotalTimerInterval);
@@ -562,7 +597,9 @@ function triggerNextHeroWordLoop() {
         window.playWordByText(window.currentGameWord.eng, 1.0);
     }
 
-    document.getElementById("timer-display").style.display = "none";
+    const timerDisplay = document.getElementById("timer-display");
+    if (timerDisplay) timerDisplay.style.display = "none";
+
     heroCurrentQuestionStartTime = Date.now();
     preloadNextHeroWord();
 }
@@ -619,15 +656,19 @@ function finishHeroTournamentMatch() {
     inputField.disabled = false;
     inputField.classList.remove("input-frozen");
 
+    const user = window.currentUser;
+    const stats = window.userStats;
+
     let record = {
-        name: window.currentUser,
-        level: window.userStats.level || 1,
+        name: user,
+        level: stats.level || 1,
         score: heroScore,
         completedTime: Date.now(),
         rewardClaimed: false
     };
 
-    window.database.ref(`hero_tournaments/${cachedHeroWeekKey}/${window.currentUser.toLowerCase()}`).set(record).then(() => {
+    const db = window.database || firebase.database();
+    db.ref(`hero_tournaments/${cachedHeroWeekKey}/${user.toLowerCase()}`).set(record).then(() => {
         alert(`⏰ HẾT GIỜ TRANH HÙNG (5 PHÚT)!\nTổng điểm Đại Hội của bạn: ${heroScore} ĐIỂM.\nĐiểm số đã được ghi danh vào Bảng Phong Thần!`);
         window.switchScreen("screen-start");
         window.checkHeroTournamentNotification();
@@ -655,7 +696,8 @@ window.executeSaveHeroChaptersConfig = function() {
 
     if (chosen.length === 0) return alert("Phải chọn ít nhất 1 chương làm đề thi!");
 
-    window.database.ref('hero_tournament_config/active_chapters').set(chosen).then(() => {
+    const db = window.database || firebase.database();
+    db.ref('hero_tournament_config/active_chapters').set(chosen).then(() => {
         heroConfigChapters = chosen;
         alert(`✨ Đã lưu cấu hình đề thi tuần thành công! Gồm các chương: ${chosen.join(', ')}.`);
         window.closeHeroAdminConfigModal();
@@ -690,7 +732,8 @@ Trả lời đúng trong vòng
 };
 
 window.checkHeroTournamentNotification = function() {
-    if (!window.currentUser) return;
+    const user = window.currentUser;
+    if (!user) return;
     const now = new Date();
     const dayOfWeek = now.getDay();
     const hour = now.getHours();
@@ -698,10 +741,11 @@ window.checkHeroTournamentNotification = function() {
     const isBefore8PM = (hour < 20);
 
     const weekKey = window.getHeroCurrentWeekKey();
+    const db = window.database || firebase.database();
 
-    window.database.ref(`hero_tournaments/${weekKey}`).once('value').then(snapshot => {
+    db.ref(`hero_tournaments/${weekKey}`).once('value').then(snapshot => {
         let myRecord = null;
-        let cNameLower = window.currentUser.trim().toLowerCase();
+        let cNameLower = user.trim().toLowerCase();
 
         snapshot.forEach(child => {
             let val = child.val();
@@ -758,17 +802,19 @@ window.switchMasterQuestTab = function(idx) {
 };
 
 window.loadMasterQuestData = function() {
-    if (!window.currentUser || !window.userStats) return;
-    let todayStr = window.getFormattedCurrentDate();
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || !stats) return;
+    let todayStr = getSafeCurrentDate();
 
-    if (window.userStats.lastMinedCoinDate !== todayStr) {
-        window.userStats.dailyMinedCoin = 0;
-        window.userStats.claimedDailyMinedQuest = false;
-        window.userStats.lastMinedCoinDate = todayStr;
+    if (stats.lastMinedCoinDate !== todayStr) {
+        stats.dailyMinedCoin = 0;
+        stats.claimedDailyMinedQuest = false;
+        stats.lastMinedCoinDate = todayStr;
     }
 
-    let mined = window.userStats.dailyMinedCoin || 0;
-    let isMinedClaimed = window.userStats.claimedDailyMinedQuest === true;
+    let mined = stats.dailyMinedCoin || 0;
+    let isMinedClaimed = stats.claimedDailyMinedQuest === true;
 
     const lblMined = document.getElementById("lbl-quest-mine-progress");
     if (lblMined) lblMined.innerText = Math.min(mined, 100);
@@ -796,13 +842,15 @@ window.loadMasterQuestData = function() {
         }
     }
 
-    let hasClan = (window.myTongPhaiName && window.myTongPhaiName.trim() !== "");
-    let isClanAchieveClaimed = window.userStats.achieveClanClaimed === true;
+    // Tra cứu tông môn trực tiếp từ App chính hoặc biến window
+    let clanName = window.myTongPhaiName || (typeof myTongPhaiName !== "undefined" ? myTongPhaiName : "");
+    let hasClan = (clanName && clanName.trim() !== "");
+    let isClanAchieveClaimed = stats.achieveClanClaimed === true;
 
     const lblClanStatus = document.getElementById("lbl-quest-clan-status");
     if (lblClanStatus) {
         if (hasClan) {
-            lblClanStatus.innerHTML = `<b style="color: #00ffcc;">Đã gia nhập: ${window.myTongPhaiName}</b>`;
+            lblClanStatus.innerHTML = `<b style="color: #00ffcc;">Đã gia nhập: ${clanName}</b>`;
         } else {
             lblClanStatus.innerHTML = `<span style="color: #e74c3c;">Chưa gia nhập</span>`;
         }
@@ -835,26 +883,28 @@ window.loadMasterQuestData = function() {
 };
 
 window.executeClaimDailyMineQuest = function() {
-    if (!window.currentUser) return;
-    let todayStr = window.getFormattedCurrentDate();
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user) return;
+    let todayStr = getSafeCurrentDate();
 
-    if (window.userStats.lastMinedCoinDate !== todayStr) {
+    if (stats.lastMinedCoinDate !== todayStr) {
         window.loadMasterQuestData();
-        return alert("⚠️️ Đã sang ngày mới, tiến độ đã làm mới!");
+        return alert("⚠️ Đã sang ngày mới, tiến độ đã làm mới!");
     }
 
-    if (window.userStats.claimedDailyMinedQuest) {
+    if (stats.claimedDailyMinedQuest) {
         return alert("⚠️ Hôm nay bạn đã nhận thưởng nhiệm vụ này rồi!");
     }
 
-    if ((window.userStats.dailyMinedCoin || 0) < 100) {
-        return alert(`⚠️ Chưa đủ điều kiện! Bạn mới đào được ${window.userStats.dailyMinedCoin || 0}/100 Linh Thạch.`);
+    if ((stats.dailyMinedCoin || 0) < 100) {
+        return alert(`⚠️ Chưa đủ điều kiện! Bạn mới đào được ${stats.dailyMinedCoin || 0}/100 Linh Thạch.`);
     }
 
-    window.userStats.claimedDailyMinedQuest = true;
-    window.userStats.coin = (window.userStats.coin || 0) + 100;
+    stats.claimedDailyMinedQuest = true;
+    stats.coin = (stats.coin || 0) + 100;
 
-    window.pushSecureUserData(window.currentUser).then(() => {
+    window.pushSecureUserData(user).then(() => {
         window.refreshUIFields();
         window.loadMasterQuestData();
         window.checkQuestNotification();
@@ -863,20 +913,23 @@ window.executeClaimDailyMineQuest = function() {
 };
 
 window.executeClaimAchieveClan = function() {
-    if (!window.currentUser) return;
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user) return;
 
-    if (window.userStats.achieveClanClaimed) {
+    if (stats.achieveClanClaimed) {
         return alert("⚠️ Bạn đã nhận phần thưởng thành tựu này rồi (Chỉ nhận 1 lần duy nhất)!");
     }
 
-    if (!window.myTongPhaiName || window.myTongPhaiName.trim() === "") {
+    let clanName = window.myTongPhaiName || (typeof myTongPhaiName !== "undefined" ? myTongPhaiName : "");
+    if (!clanName || clanName.trim() === "") {
         return alert("⚠️ Bạn chưa gia nhập hoặc khai lập Tông Môn nào!");
     }
 
-    window.userStats.achieveClanClaimed = true;
-    window.userStats.coin = (window.userStats.coin || 0) + 999;
+    stats.achieveClanClaimed = true;
+    stats.coin = (stats.coin || 0) + 999;
 
-    window.pushSecureUserData(window.currentUser).then(() => {
+    window.pushSecureUserData(user).then(() => {
         window.refreshUIFields();
         window.loadMasterQuestData();
         alert(`🎉 THÀNH TỰU KHAI TÔNG NHẬP PHÁI!\nBạn đã nhận thành công +999 Linh Thạch.`);
@@ -884,20 +937,23 @@ window.executeClaimAchieveClan = function() {
 };
 
 window.checkQuestNotification = function() {
-    if (!window.currentUser || !window.userStats) return;
-    let todayStr = window.getFormattedCurrentDate();
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || !stats) return;
+    let todayStr = getSafeCurrentDate();
 
-    if (window.userStats.lastMinedCoinDate !== todayStr) {
-        window.userStats.dailyMinedCoin = 0;
-        window.userStats.claimedDailyMinedQuest = false;
-        window.userStats.lastMinedCoinDate = todayStr;
+    if (stats.lastMinedCoinDate !== todayStr) {
+        stats.dailyMinedCoin = 0;
+        stats.claimedDailyMinedQuest = false;
+        stats.lastMinedCoinDate = todayStr;
     }
 
-    let canClaimDailyMine = (!window.userStats.claimedDailyMinedQuest) && ((window.userStats.dailyMinedCoin || 0) >= 100);
+    let canClaimDailyMine = (!stats.claimedDailyMinedQuest) && ((stats.dailyMinedCoin || 0) >= 100);
 
+    let clanName = window.myTongPhaiName || (typeof myTongPhaiName !== "undefined" ? myTongPhaiName : "");
     let canClaimClanAchieve = false;
-    if (!window.userStats.achieveClanClaimed) {
-        canClaimClanAchieve = (window.myTongPhaiName && window.myTongPhaiName.trim() !== "");
+    if (!stats.achieveClanClaimed) {
+        canClaimClanAchieve = (clanName && clanName.trim() !== "");
     }
 
     let hasQuestNoti = canClaimDailyMine || canClaimClanAchieve;
