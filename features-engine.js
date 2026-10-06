@@ -1224,7 +1224,7 @@ window.showInvestRulesAlert = function() {
    - Vàng & Tiền số (BTC, ETH): Cập nhật giá 24/7 lúc 15:00 mỗi ngày.
 2. GIAO DỊCH & PHÍ SÀN:
    - Phí mỗi lệnh Mua/Bán là 0.15% giá trị giao dịch.
-   - Cổ phiếu HOSE mua theo số lượng nguyên cổ phiếu. Vàng & Crypto cho phép mua số lẻ thập phân.
+   - Cổ phiếu HOSE mua theo số nguyên cổ phiếu (tiền thừa trả lại túi). Vàng & Crypto mua số lẻ thập phân.
 3. KHO DANH MỤC & THANH KHOẢN:
    - Nhấp vào ô 'Giá trị danh mục' để xem các tài sản đang sở hữu và BÁN.
    - Khi BÁN, số Linh Thạch Lãi/Lỗ được tích lũy vĩnh viễn vào Bảng Phong Thần Thương Nhân.`;
@@ -1276,7 +1276,6 @@ window.renderInvestLeaderboardUI = function() {
                 let portfolio = {};
                 let realizedProfit = Number(uVal.realizedProfit) || 0;
 
-                // Giải mã payload nếu có
                 if (uVal.securePayload && typeof GameCrypt !== "undefined") {
                     let dec = GameCrypt.decrypt(uVal.securePayload);
                     if (dec) {
@@ -1288,7 +1287,6 @@ window.renderInvestLeaderboardUI = function() {
                     portfolio = uVal.portfolio;
                 }
 
-                // 1. Tính lãi/lỗ tạm tính của danh mục đang nắm giữ
                 let unrealizedProfit = 0;
                 let hasActiveHolding = false;
 
@@ -1302,7 +1300,6 @@ window.renderInvestLeaderboardUI = function() {
                     }
                 });
 
-                // 2. Tổng lãi/lỗ = Lãi đã bán (realized) + Lãi đang giữ (unrealized)
                 let totalNetProfit = realizedProfit + unrealizedProfit;
 
                 if (hasActiveHolding || realizedProfit !== 0) {
@@ -1359,7 +1356,6 @@ window.renderInvestMarketUI = function() {
     const quotes = window.cachedInvestQuotes.quotes || {};
     const portfolio = (window.userStats && window.userStats.portfolio) ? window.userStats.portfolio : {};
 
-    // 1. Tính tổng tài sản danh mục & Lãi/Lỗ
     let totalVal = 0;
     let totalInvested = 0;
 
@@ -1386,7 +1382,6 @@ window.renderInvestMarketUI = function() {
         profitEl.innerText = `${isProfitable ? '+' : ''}${profit.toLocaleString()} (${isProfitable ? '+' : ''}${profitPct}%)`;
     }
 
-    // 2. Danh sách hiển thị
     const stockOrder = ["FPT", "HPG", "VCB", "VNM", "SSI", "VIC", "DGC"];
     const cryptoOrder = ["GOLD", "BTC", "ETH"];
 
@@ -1468,7 +1463,7 @@ window.renderInvestMarketUI = function() {
     container.innerHTML = html;
 };
 
-// 🌟 RENDER BẢNG KHO NẮM GIỮ
+// 🌟 RENDER BẢNG KHO NẮM GIỮ (ĐÃ FIX LỖI TÍNH LỖ DO DỮ LIỆU CŨ LẺ)
 window.renderInvestPortfolioList = function() {
     const container = document.getElementById("portfolio-items-list");
     if (!container) return;
@@ -1488,9 +1483,19 @@ window.renderInvestPortfolioList = function() {
         const holding = portfolio[ticker];
 
         if (holding && holding.shares > 0) {
-            // TỰ ĐỘNG LÀM TRÒN SỐ CỔ PHIẾU CŨ: Cổ phiếu VN làm tròn xuống số nguyên
+            // 🔥 TỰ ĐỘNG CÂN BẰNG LẠI DỮ LIỆU CŨ: Cổ phiếu VN làm tròn CP thì PHẢI chia lại giá vốn tương ứng
             if (!cryptoOrder.includes(ticker) && holding.shares % 1 !== 0) {
-                holding.shares = Math.floor(holding.shares);
+                let originalShares = holding.shares;
+                let roundedShares = Math.floor(originalShares);
+                
+                if (roundedShares > 0) {
+                    // Cân chỉnh lại vốn mua đúng với số CP được giữ
+                    holding.totalInvested = Math.round((holding.totalInvested || 0) * (roundedShares / originalShares));
+                    holding.shares = roundedShares;
+                } else {
+                    holding.shares = 0;
+                    holding.totalInvested = 0;
+                }
                 needCleanSync = true;
                 if (holding.shares <= 0) return;
             }
@@ -1573,7 +1578,7 @@ window.renderInvestPortfolioList = function() {
     container.innerHTML = headerSummaryHtml + rowsHtml;
 };
 
-// 🌟 XỬ LÝ MUA & BÁN (MUA CP NGUYÊN THEO THỊ GIÁ CHUẨN 2 SỐ LẺ + CỘNG DỒN REALIZED PROFIT)
+// 🌟 XỬ LÝ MUA & BÁN (CHÍNH XÁC: TIỀN THỪA KHÔNG BỊ TRỪ VÀ KHÔNG BỊ TÍNH VÀO VỐN)
 window.tradeInvestStock = function(ticker, action) {
     if (!window.cachedInvestQuotes || !window.cachedInvestQuotes.quotes[ticker]) return;
     const q = window.cachedInvestQuotes.quotes[ticker];
@@ -1588,7 +1593,7 @@ window.tradeInvestStock = function(ticker, action) {
 
     if (action === "BUY") {
         let formattedPrice = formatMarketPrice(ticker, priceNum);
-        let amountStr = prompt(`Nhập số LINH THẠCH muốn đầu tư vào [ ${ticker} - ${COMPANY_SHORT_NAMES[ticker] || q.name} ]:\n(Giá hiện tại: ${formattedPrice} Thạch / đơn vị | Phí sàn: 0.15%)\n${!isCryptoOrGold ? '* Cổ phiếu VN sẽ tự tính số lượng nguyên cổ phiếu có thể mua.' : '* Cho phép mua số lẻ thập phân.'}`);
+        let amountStr = prompt(`Nhập số LINH THẠCH muốn đầu tư vào [ ${ticker} - ${COMPANY_SHORT_NAMES[ticker] || q.name} ]:\n(Giá hiện tại: ${formattedPrice} Thạch / đơn vị | Phí sàn: 0.15%)\n${!isCryptoOrGold ? '* Cổ phiếu VN sẽ tự làm tròn thành số lượng nguyên CP (tiền thừa được hoàn lại).' : '* Cho phép mua số lẻ thập phân.'}`);
         let investAmount = parseInt(amountStr);
         if (isNaN(investAmount) || investAmount <= 0) return;
 
@@ -1599,11 +1604,12 @@ window.tradeInvestStock = function(ticker, action) {
             sharesBought = investAmount / priceNum;
             actualSpentAmount = investAmount;
         } else {
-            // Cổ phiếu VN: Tính số nguyên cổ phiếu mua được
+            // Mua số nguyên CP: 1000 thạch giá 132.50 -> mua 7 CP
             sharesBought = Math.floor(investAmount / priceNum);
             if (sharesBought <= 0) {
                 return alert(`⚠️ Số linh thạch không đủ mua tối thiểu 1 cổ phiếu ${ticker}! (Cần ít nhất ${formattedPrice} Linh Thạch).`);
             }
+            // Tiền gốc thực tế chỉ tính trên 7 CP, số tiền thừa còn lại người chơi vẫn giữ
             actualSpentAmount = Math.round(sharesBought * priceNum);
         }
 
@@ -1614,8 +1620,10 @@ window.tradeInvestStock = function(ticker, action) {
             return alert(`⚠️ Hành trang không đủ Linh Thạch! Cần ${totalCost.toLocaleString()} Thạch (gồm ${fee} Thạch phí sàn 0.15%).`);
         }
 
+        // Chỉ trừ đúng số tiền thực mua + phí (tiền thừa không bị trừ)
         window.userStats.coin -= totalCost;
         holding.shares = (holding.shares || 0) + sharesBought;
+        // Giá vốn chỉ lưu số tiền thực chi, không tính tiền thừa nhập vào prompt
         holding.totalInvested = (holding.totalInvested || 0) + actualSpentAmount;
         window.userStats.portfolio[ticker] = holding;
 
@@ -1623,7 +1631,7 @@ window.tradeInvestStock = function(ticker, action) {
             window.refreshUIFields();
             window.renderInvestMarketUI();
             let shareTxt = isCryptoOrGold ? sharesBought.toFixed(3) : sharesBought;
-            alert(`🎉 ĐẦU TƯ THÀNH CÔNG!\nĐã mua ${shareTxt} ${ticker} với ${actualSpentAmount.toLocaleString()} Linh Thạch (Phí: ${fee} Thạch).`);
+            alert(`🎉 ĐẦU TƯ THÀNH CÔNG!\nĐã mua ${shareTxt} ${ticker} với ${actualSpentAmount.toLocaleString()} Linh Thạch (Phí: ${fee} Thạch). Tiền thừa vẫn ở trong túi đồ!`);
         });
 
     } else if (action === "SELL") {
@@ -1642,13 +1650,9 @@ window.tradeInvestStock = function(ticker, action) {
             return;
         }
 
-        // 1. Cộng tiền vào túi
         window.userStats.coin = (window.userStats.coin || 0) + netReceived;
-
-        // 2. Cộng dồn vào realizedProfit để giữ thành tích trên BXH vĩnh viễn
         window.userStats.realizedProfit = (window.userStats.realizedProfit || 0) + profit;
 
-        // 3. Xóa khỏi danh mục nắm giữ
         delete window.userStats.portfolio[ticker];
 
         window.pushSecureUserData(window.currentUser).then(() => {
