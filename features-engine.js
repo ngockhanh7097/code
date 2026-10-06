@@ -807,12 +807,32 @@ window.switchMasterQuestTab = function(idx) {
     document.getElementById("pane-master-achieve").style.display = (idx === 1) ? "block" : "none";
 };
 
-window.loadMasterQuestData = function() {
+let currentAchieveGroup = 1;
+
+window.switchAchieveGroup = function(groupIdx) {
+    currentAchieveGroup = groupIdx;
+    for (let i = 1; i <= 3; i++) {
+        let btn = document.getElementById(`btn-achieve-group-${i}`);
+        let pane = document.getElementById(`achieve-group-pane-${i}`);
+        if (btn) {
+            btn.style.background = (i === groupIdx) ? "#a020f0" : "rgba(255,255,255,0.08)";
+            btn.style.color = (i === groupIdx) ? "#fff" : "#aaa";
+            btn.style.borderColor = (i === groupIdx) ? "#00ffcc" : "#444";
+        }
+        if (pane) pane.style.display = (i === groupIdx) ? "flex" : "none";
+    }
+};
+
+window.loadMasterQuestData = async function() {
     const user = window.currentUser;
     const stats = window.userStats;
     if (!user || !stats) return;
+    if (!stats.achievements) stats.achievements = {};
+    if (!stats.inventory) stats.inventory = {};
+
     let todayStr = getSafeCurrentDate();
 
+    // 1. Quản lý Nhiệm Vụ Ngày (Đào 100 Linh Thạch)
     if (stats.lastMinedCoinDate !== todayStr) {
         stats.dailyMinedCoin = 0;
         stats.claimedDailyMinedQuest = false;
@@ -821,7 +841,6 @@ window.loadMasterQuestData = function() {
 
     let mined = stats.dailyMinedCoin || 0;
     let isMinedClaimed = stats.claimedDailyMinedQuest === true;
-
     const lblMined = document.getElementById("lbl-quest-mine-progress");
     if (lblMined) lblMined.innerText = Math.min(mined, 100);
 
@@ -831,61 +850,193 @@ window.loadMasterQuestData = function() {
             btnClaimMine.disabled = true;
             btnClaimMine.innerText = "Đã Nhận";
             btnClaimMine.style.background = "#555";
-            btnClaimMine.style.color = "#aaa";
-            btnClaimMine.style.cursor = "not-allowed";
         } else if (mined >= 100) {
             btnClaimMine.disabled = false;
             btnClaimMine.innerText = "Nhận Thưởng";
             btnClaimMine.style.background = "#27ae60";
-            btnClaimMine.style.color = "#fff";
-            btnClaimMine.style.cursor = "pointer";
         } else {
             btnClaimMine.disabled = true;
             btnClaimMine.innerText = "Chưa Đạt";
             btnClaimMine.style.background = "#444";
-            btnClaimMine.style.color = "#aaa";
-            btnClaimMine.style.cursor = "not-allowed";
         }
     }
 
-    // Tra cứu tông môn trực tiếp từ App chính hoặc biến window
-    let clanName = window.myTongPhaiName || (typeof myTongPhaiName !== "undefined" ? myTongPhaiName : "");
-    let hasClan = (clanName && clanName.trim() !== "");
-    let isClanAchieveClaimed = stats.achieveClanClaimed === true;
+    // 2. Render Nhóm 1: Tu Vi Cảnh Giới
+    const tuviPane = document.getElementById("achieve-group-pane-1");
+    if (tuviPane) {
+        const tuviMilestones = [
+            { key: "tuvi_5", name: "Luyện Khí Tầng 5", lv: 5, rewardChest: 1 },
+            { key: "tuvi_11", name: "Luyện Khí Tầng 11", lv: 11, rewardChest: 1 },
+            { key: "tuvi_tc", name: "Trúc Cơ Kỳ", lv: 16, rewardChest: 2 },
+            { key: "tuvi_kd", name: "Kết Đan Kỳ", lv: 23, rewardChest: 3 },
+            { key: "tuvi_na", name: "Nguyên Anh Kỳ", lv: 29, rewardChest: 4 },
+            { key: "tuvi_ht", name: "Hóa Thần Kỳ", lv: 41, rewardChest: 5 },
+            { key: "tuvi_ab", name: "Anh Biến Kỳ", lv: 57, rewardChest: 10 }
+        ];
 
-    const lblClanStatus = document.getElementById("lbl-quest-clan-status");
-    if (lblClanStatus) {
-        if (hasClan) {
-            lblClanStatus.innerHTML = `<b style="color: #00ffcc;">Đã gia nhập: ${clanName}</b>`;
-        } else {
-            lblClanStatus.innerHTML = `<span style="color: #e74c3c;">Chưa gia nhập</span>`;
-        }
+        let html1 = "";
+        tuviMilestones.forEach(m => {
+            let isClaimed = stats.achievements[m.key] === true;
+            let isEligible = (stats.level || 1) >= m.lv;
+
+            html1 += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+                    <div>
+                        <b style="color:#ffcc00; font-size:12.5px;">${m.name}</b>
+                        <div style="font-size:10.5px; color:#aaa;">Yêu cầu: Đạt Cảnh giới Lv.${m.lv}</div>
+                        <div style="font-size:10.5px; color:#00ffcc;">Thưởng: 🎁 <b>+${m.rewardChest} Rương Cực Phẩm</b></div>
+                    </div>
+                    <button onclick="window.claimTuViAchieve('${m.key}', ${m.rewardChest}, ${m.lv})" style="background:${isClaimed ? '#555' : (isEligible ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
+                        ${isClaimed ? 'Đã Nhận' : (isEligible ? 'Nhận' : 'Chưa Đạt')}
+                    </button>
+                </div>
+            `;
+        });
+        tuviPane.innerHTML = html1;
     }
 
-    const btnClaimClan = document.getElementById("btn-claim-achieve-clan");
-    if (btnClaimClan) {
-        if (isClanAchieveClaimed) {
-            btnClaimClan.disabled = true;
-            btnClaimClan.innerText = "Đã Nhận";
-            btnClaimClan.style.background = "#555";
-            btnClaimClan.style.color = "#aaa";
-            btnClaimClan.style.cursor = "not-allowed";
-        } else if (hasClan) {
-            btnClaimClan.disabled = false;
-            btnClaimClan.innerText = "Nhận Thưởng";
-            btnClaimClan.style.background = "#27ae60";
-            btnClaimClan.style.color = "#fff";
-            btnClaimClan.style.cursor = "pointer";
-        } else {
-            btnClaimClan.disabled = true;
-            btnClaimClan.innerText = "Chưa Đạt";
-            btnClaimClan.style.background = "#444";
-            btnClaimClan.style.color = "#aaa";
-            btnClaimClan.style.cursor = "not-allowed";
+    // 3. Render Nhóm 2: Tông Môn Khai Sáng
+    const clanPane = document.getElementById("achieve-group-pane-2");
+    if (clanPane) {
+        let clanName = window.myTongPhaiName || "";
+        let role = window.myTongPhaiRole || "";
+        let db = window.database || firebase.database();
+        let myContrib = 0;
+
+        if (clanName) {
+            let mSnap = await db.ref(`tongphai/${clanName}/members/${user.toLowerCase()}/contribTotal`).once('value');
+            myContrib = mSnap.val() || 0;
         }
+
+        const clanMilestones = [
+            { key: "clan_join", name: "Gia Nhập Tông Môn", cond: (clanName !== ""), desc: "Gia nhập hoặc tự lập 1 Tông Môn", coin: 999, chest: 0 },
+            { key: "clan_create", name: "Khai Tông Lập Phái", cond: (role === "chu"), desc: "Trở thành Tông Chủ của 1 Tông Môn", coin: 1000, chest: 1 },
+            { key: "clan_1000", name: "Cống Hiến Đạt 1.000", cond: (myContrib >= 1000), desc: "Tích lũy 1.000 điểm cống hiến", coin: 200, chest: 0 },
+            { key: "clan_3000", name: "Cống Hiến Đạt 3.000", cond: (myContrib >= 3000), desc: "Tích lũy 3.000 điểm cống hiến", coin: 500, chest: 0 },
+            { key: "clan_5000", name: "Cống Hiến Đạt 5.000", cond: (myContrib >= 5000), desc: "Tích lũy 5.000 điểm cống hiến", coin: 1000, chest: 0 },
+            { key: "clan_10000", name: "Cống Hiến Đạt 10.000", cond: (myContrib >= 10000), desc: "Tích lũy 10.000 điểm cống hiến", coin: 2000, chest: 0 }
+        ];
+
+        let html2 = "";
+        clanMilestones.forEach(m => {
+            let isClaimed = stats.achievements[m.key] === true;
+            let isEligible = m.cond;
+            let rewardText = `+${m.coin} Linh Thạch` + (m.chest > 0 ? ` & +${m.chest} Rương Tím` : "");
+
+            html2 += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+                    <div>
+                        <b style="color:#00ffff; font-size:12.5px;">${m.name}</b>
+                        <div style="font-size:10.5px; color:#aaa;">${m.desc}</div>
+                        <div style="font-size:10.5px; color:#ffaa00;">Thưởng: <b>${rewardText}</b></div>
+                    </div>
+                    <button onclick="window.claimClanAchieve('${m.key}', ${m.coin}, ${m.chest}, ${isEligible})" style="background:${isClaimed ? '#555' : (isEligible ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
+                        ${isClaimed ? 'Đã Nhận' : (isEligible ? 'Nhận' : 'Chưa Đạt')}
+                    </button>
+                </div>
+            `;
+        });
+        clanPane.innerHTML = html2;
     }
 
-    window.checkQuestNotification();
+    // 4. Render Nhóm 3: Chiêu Mộ Đạo Hữu (Mời người Streak >= 7)
+    const refPane = document.getElementById("achieve-group-pane-3");
+    if (refPane) {
+        let db = window.database || firebase.database();
+        let refSnap = await db.ref(`referrals/${user.toLowerCase()}`).once('value');
+        let refs = refSnap.val() || {};
+        let eligibleInviteCount = 0;
+
+        for (let targetUser of Object.keys(refs)) {
+            let uSnap = await db.ref(`users/${targetUser}/streak`).once('value');
+            let uStreak = uSnap.val() || 0;
+            if (uStreak >= 7) eligibleInviteCount++;
+        }
+
+        const inviteMilestones = [
+            { key: "inv_1", count: 1, rewardCucPham: 1 },
+            { key: "inv_2", count: 2, rewardCucPham: 1 },
+            { key: "inv_3", count: 3, rewardCucPham: 1 },
+            { key: "inv_4", count: 4, rewardCucPham: 1 },
+            { key: "inv_5", count: 5, rewardCucPham: 2 }
+        ];
+
+        let html3 = `
+            <div style="background:rgba(255,204,0,0.1); border:1px dashed #ffcc00; padding:6px 10px; border-radius:6px; font-size:11px; color:#ffcc00; margin-bottom:4px;">
+                💡 Điều kiện: Người được mời phải đạt <b>Chuỗi 7 Ngày (Streak 7)</b> mới tính là 1 đạo hữu hợp lệ! (Hiện có: <b>${eligibleInviteCount} người</b>)
+            </div>
+        `;
+
+        inviteMilestones.forEach(m => {
+            let isClaimed = stats.achievements[m.key] === true;
+            let isEligible = eligibleInviteCount >= m.count;
+
+            html3 += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+                    <div>
+                        <b style="color:#ffcc00; font-size:12.5px;">Chiêu Mộ ${m.count} Đạo Hữu</b>
+                        <div style="font-size:10.5px; color:#aaa;">Tiến độ: ${Math.min(eligibleInviteCount, m.count)}/${m.count}</div>
+                        <div style="font-size:10.5px; color:#00ffff;">Thưởng: 💎 <b>+${m.rewardCucPham} Linh Thạch Cực Phẩm</b></div>
+                    </div>
+                    <button onclick="window.claimInviteAchieve('${m.key}', ${m.rewardCucPham}, ${isEligible})" style="background:${isClaimed ? '#555' : (isEligible ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
+                        ${isClaimed ? 'Đã Nhận' : (isEligible ? 'Nhận' : 'Chưa Đạt')}
+                    </button>
+                </div>
+            `;
+        });
+        refPane.innerHTML = html3;
+    }
+};
+
+window.claimTuViAchieve = function(key, chestCount, minLv) {
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || stats.achievements[key]) return;
+    if ((stats.level || 1) < minLv) return alert("Chưa đạt Cảnh giới yêu cầu!");
+
+    stats.achievements[key] = true;
+    stats.inventory.ruongCucPham = (stats.inventory.ruongCucPham || 0) + chestCount;
+
+    window.pushSecureUserData(user).then(() => {
+        window.refreshUIFields();
+        window.loadMasterQuestData();
+        alert(`🎉 THÀNH TỰU TU VI!\nNhận thành công: +${chestCount} [RƯƠNG CỰC PHẨM]!`);
+    });
+};
+
+window.claimClanAchieve = function(key, coin, chest, isEligible) {
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || stats.achievements[key]) return;
+    if (!isEligible) return alert("Chưa đủ điều kiện nhận mốc này!");
+
+    stats.achievements[key] = true;
+    stats.coin = (stats.coin || 0) + coin;
+    if (chest > 0) {
+        stats.inventory.ruongCucPham = (stats.inventory.ruongCucPham || 0) + chest;
+    }
+
+    window.pushSecureUserData(user).then(() => {
+        window.refreshUIFields();
+        window.loadMasterQuestData();
+        alert(`🎉 THÀNH TỰU TÔNG MÔN!\nNhận thành công: +${coin} Linh Thạch${chest > 0 ? ` & +${chest} Rương Tím` : ""}!`);
+    });
+};
+
+window.claimInviteAchieve = function(key, cucPhamCoin, isEligible) {
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || stats.achievements[key]) return;
+    if (!isEligible) return alert("Chưa đủ số người đạt Streak 7 ngày!");
+
+    stats.achievements[key] = true;
+    stats.cucPhamCoin = (stats.cucPhamCoin || 0) + cucPhamCoin;
+
+    window.pushSecureUserData(user).then(() => {
+        window.refreshUIFields();
+        window.loadMasterQuestData();
+        alert(`🎉 THÀNH TỰU CHIÊU MỘ!\nNhận thành công: +${cucPhamCoin} [LINH THẠCH CỰC PHẨM] 💎!`);
+    });
 };
 
 window.executeClaimDailyMineQuest = function() {
