@@ -920,7 +920,7 @@ window.executeClaimAchieveClan = function() {
     const stats = window.userStats;
     if (!user) return;
 
-    if (stats.achieveClanClaimed) {
+    if (stats.achieveClanClaimed === true) {
         return alert("⚠️ Bạn đã nhận phần thưởng thành tựu này rồi (Chỉ nhận 1 lần duy nhất)!");
     }
 
@@ -932,10 +932,14 @@ window.executeClaimAchieveClan = function() {
     stats.achieveClanClaimed = true;
     stats.coin = (stats.coin || 0) + 999;
 
-    window.pushSecureUserData(user).then(() => {
-        window.refreshUIFields();
-        window.loadMasterQuestData();
-        alert(`🎉 THÀNH TỰU KHAI TÔNG NHẬP PHÁI!\nBạn đã nhận thành công +999 Linh Thạch.`);
+    // Lưu trực tiếp cờ lên Firebase root trước, sau đó lưu payload bảo mật
+    const db = window.database || firebase.database();
+    db.ref('users/' + user).update({ achieveClanClaimed: true }).then(() => {
+        window.pushSecureUserData(user, { achieveClanClaimed: true }).then(() => {
+            window.refreshUIFields();
+            window.loadMasterQuestData();
+            alert(`🎉 THÀNH TỰU KHAI TÔNG NHẬP PHÁI!\nBạn đã nhận thành công +999 Linh Thạch.`);
+        });
     });
 };
 
