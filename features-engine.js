@@ -21,7 +21,8 @@ window.FeatureNotifications = {
     hero: false,
     farm: false,
     quest: false,
-    invest: false // 🌟 Thêm mục này
+    invest: false,
+    referral: false // 🌟 Thêm mục này
 };
 
 const MASTER_IMG_DEFAULT = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/btn-chucnang1.webp";
@@ -51,6 +52,8 @@ window.triggerSubFeature = function(featureName) {
         window.openQuestMasterModal();
     } else if (featureName === 'invest') {
         window.openInvestModal(); // 🌟 Nút Đầu Tư mở modal tại đây
+    } else if (featureName === 'referral') {
+        window.openReferralModal(); // Mở Modal Đạo Duyên
     }
 };
 
@@ -1420,4 +1423,156 @@ window.tradeInvestStock = function(ticker, action) {
             alert(`🎉 THANH KHOẢN THÀNH CÔNG!\nĐã bán toàn bộ ${ticker}, nhận về ${netReceived.toLocaleString()} Linh Thạch vào túi đồ.`);
         });
     }
+};
+
+// =========================================================================
+// 💰 MODULE ĐẠO DUYÊN CHIÊU MỘ (BỔNG LỘC ĐỒ ĐỆ)
+// =========================================================================
+function createReferralModalDOM() {
+    if (document.getElementById("referral-master-modal-layer")) return;
+
+    const layer = document.createElement("div");
+    layer.className = "modal-layer";
+    layer.id = "referral-master-modal-layer";
+    layer.style.zIndex = "13500";
+
+    layer.innerHTML = `
+        <div class="modal-box" style="max-width: 480px; width: 95%; background: #0c0d14; color: #fff; border: 2px solid #ffcc00; box-shadow: 0 0 25px rgba(255, 204, 0, 0.4); padding: 18px; border-radius: 12px; position: relative;">
+            <span class="modal-close" onclick="window.closeReferralModal()">×</span>
+            <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,204,0,0.3); font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-coins"></i> Đạo Duyên Chiêu Mộ
+                    <button onclick="window.showReferralHelp()" style="background: rgba(255,204,0,0.2); border: 1px solid #ffcc00; color: #ffcc00; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold; cursor: pointer;">?</button>
+                </div>
+                <span style="font-size: 11px; color: #aaa;">Slot: <b id="lbl-referral-slot-count" style="color:#00ffcc;">0/5</b></span>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(0,255,204,0.3); border-radius: 8px; padding: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 11px; color: #aaa;">Mã Giới Thiệu Của Bạn:</div>
+                    <b id="lbl-referral-my-id" style="color: #ffcc00; font-size: 18px; letter-spacing: 1px;">------</b>
+                </div>
+                <button onclick="navigator.clipboard.writeText(document.getElementById('lbl-referral-my-id').innerText); alert('📋 Đã sao chép Mã ID!');" style="background:#008080; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">
+                    Sao Chép
+                </button>
+            </div>
+
+            <div style="font-size: 12px; font-weight: bold; color: #00ffcc; margin-bottom: 6px; text-align: left;">
+                👥 Danh Sách Đạo Hữu Đang Hưởng Bổng Lộc (Tối đa 5 người):
+            </div>
+            <div id="referral-disciples-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;"></div>
+        </div>
+    `;
+    document.body.appendChild(layer);
+}
+
+window.showReferralHelp = function() {
+    alert(`📜 BÍ KÍP ĐẠO DUYÊN CHIÊU MỘ:
+1. Chia sẻ Mã ID của bạn cho người mới nhập khi tạo tài khoản.
+2. Mỗi khi đạo hữu được mời đào linh thạch từ pháp trận, bạn sẽ nhận được phần trăm hoa hồng:
+   • 7 ngày đầu tiên: Nhận 50%
+   • Ngày 8 đến 30: Nhận 33%
+   • Từ ngày 31 trở đi: Nhận 10%
+3. Tối đa nhận hoa hồng từ 5 Đạo Hữu cùng lúc.
+4. Bấm "Nhận" để rút số Linh Thạch tích lũy về túi đồ.
+5. Bạn có quyền "Hủy Slot" đối với người lười biếng để nhường chỗ trống cho người khác.`);
+};
+
+window.openReferralModal = function() {
+    createReferralModalDOM();
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user) return alert("Vui lòng đăng nhập khế ước trước!");
+
+    document.getElementById("lbl-referral-my-id").innerText = stats.userId || "Chưa có";
+    document.getElementById("referral-master-modal-layer").classList.add("popup-active");
+    window.loadReferralDisciplesData();
+};
+
+window.closeReferralModal = function() {
+    const modal = document.getElementById("referral-master-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
+};
+
+window.loadReferralDisciplesData = function() {
+    const user = window.currentUser;
+    const db = window.database || firebase.database();
+    const listContainer = document.getElementById("referral-disciples-list");
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">Đang tải danh sách...</div>`;
+
+    db.ref(`referrals/${user.toLowerCase()}`).once('value').then(async snap => {
+        let refs = snap.val() || {};
+        let keys = Object.keys(refs);
+        let activeKeys = keys.filter(k => refs[k].activeSlot !== false).slice(0, 5);
+
+        document.getElementById("lbl-referral-slot-count").innerText = `${activeKeys.length}/5`;
+
+        if (activeKeys.length === 0) {
+            listContainer.innerHTML = `<div style="text-align:center; color:#888; font-style:italic; padding:25px;">Chưa có đạo hữu nào nhận khế ước giới thiệu của bạn!</div>`;
+            return;
+        }
+
+        let html = "";
+        for (let targetUser of activeKeys) {
+            let uSnap = await db.ref(`users/${targetUser}`).once('value');
+            let uData = uSnap.val() || {};
+            let rewSnap = await db.ref(`referral_rewards/${user.toLowerCase()}/${targetUser}/pendingCoin`).once('value');
+            let pendingCoin = rewSnap.val() || 0;
+
+            let regTime = refs[targetUser].registeredAt || Date.now();
+            let daysActive = Math.floor((Date.now() - regTime) / 86400000);
+            let rateText = daysActive <= 7 ? "50% (7 ngày đầu)" : (daysActive <= 30 ? "33% (Ngày 8-30)" : "10% (>30 ngày)");
+
+            html += `
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,204,0,0.2); border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 11.5px;">
+                    <div>
+                        <b style="color: #ffcc00; font-size: 13px;">${uData.name || targetUser}</b>
+                        <span style="color: #00ffcc; margin-left: 6px;">Lv.${uData.level || 1}</span>
+                        <div style="color: #aaa; font-size: 10px; margin-top: 2px;">Chuỗi: <b style="color:#ff5500;">${uData.streak || 0} ngày</b> | Hoa hồng: <b style="color:#2ecc71;">${rateText}</b></div>
+                        <div style="color: #ffaa00; font-size: 11px; margin-top: 2px;">Tích lũy: <b>${pendingCoin.toLocaleString()}</b> Linh Thạch</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                        <button onclick="window.claimReferralReward('${targetUser}', ${pendingCoin})" style="background: ${pendingCoin > 0 ? '#27ae60' : '#444'}; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 10.5px; cursor: ${pendingCoin > 0 ? 'pointer' : 'not-allowed'};" ${pendingCoin > 0 ? '' : 'disabled'}>
+                            Nhận
+                        </button>
+                        <button onclick="window.removeReferralSlot('${targetUser}')" style="background: transparent; color: #e74c3c; border: 1px solid #e74c3c; padding: 2px 6px; border-radius: 3px; font-size: 9.5px; cursor: pointer;">
+                            Hủy Slot
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        listContainer.innerHTML = html;
+    });
+};
+
+window.claimReferralReward = function(targetUser, amount) {
+    if (!amount || amount <= 0) return;
+    const user = window.currentUser;
+    const stats = window.userStats;
+    const db = window.database || firebase.database();
+
+    stats.coin = (stats.coin || 0) + amount;
+
+    db.ref(`referral_rewards/${user.toLowerCase()}/${targetUser}/pendingCoin`).set(0).then(() => {
+        window.pushSecureUserData(user).then(() => {
+            window.refreshUIFields();
+            window.loadReferralDisciplesData();
+            alert(`🎉 Nhận thành công +${amount.toLocaleString()} Linh Thạch hoa hồng từ đạo hữu ${targetUser}!`);
+        });
+    });
+};
+
+window.removeReferralSlot = function(targetUser) {
+    if (!confirm(`⚠️ HỦY SLOT ĐẠO HỮU ${targetUser}?\nBạn sẽ không nhận thêm hoa hồng từ người này để nhường slot trống cho người mới!`)) return;
+
+    const user = window.currentUser;
+    const db = window.database || firebase.database();
+
+    db.ref(`referrals/${user.toLowerCase()}/${targetUser}/activeSlot`).set(false).then(() => {
+        alert("Đã giải phóng 1 slot chiêu mộ thành công!");
+        window.loadReferralDisciplesData();
+    });
 };
