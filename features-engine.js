@@ -1183,6 +1183,16 @@ const COMPANY_SHORT_NAMES = {
     "ETH": "Ethereum (ETH)"
 };
 
+// 🌟 HÀM FORMAT GIÁ: CỔ PHIẾU HOSE GIỮ 2 SỐ THẬP PHÂN, VÀNG/CRYPTO GIỮ NGUYÊN
+function formatMarketPrice(ticker, price) {
+    const num = Number(price) || 0;
+    const cryptoOrder = ["GOLD", "BTC", "ETH"];
+    if (cryptoOrder.includes(ticker)) {
+        return Math.round(num).toLocaleString('en-US');
+    }
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 window.openInvestModal = function() {
     if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
     if (!window.userStats.portfolio) window.userStats.portfolio = {};
@@ -1210,14 +1220,14 @@ window.closeInvestModal = function() {
 window.showInvestRulesAlert = function() {
     let guide = `📜 BÍ KÍP ĐẦU TƯ THIÊN BẢO THƯƠNG HỘI:
 1. DANH MỤC TÀI SẢN:
-   - 7 Cổ phiếu VN (HOSE): Chốt giá lúc 15:00 hàng ngày (Nghỉ T7, CN).
+   - 7 Cổ phiếu VN (HOSE): Thị giá giữ 2 số thập phân, chốt lúc 15:00 hàng ngày (Nghỉ T7, CN).
    - Vàng & Tiền số (BTC, ETH): Cập nhật giá 24/7 lúc 15:00 mỗi ngày.
 2. GIAO DỊCH & PHÍ SÀN:
    - Phí mỗi lệnh Mua/Bán là 0.15% giá trị giao dịch.
-   - Có thể mua số lượng lẻ theo số Linh Thạch bạn muốn đầu tư.
+   - Cổ phiếu HOSE mua theo số lượng nguyên cổ phiếu. Vàng & Crypto cho phép mua số lẻ thập phân.
 3. KHO DANH MỤC & THANH KHOẢN:
    - Nhấp vào ô 'Giá trị danh mục' để xem các tài sản đang sở hữu và BÁN.
-   - Con số trong ngoặc hiển thị số Linh Thạch Lãi/Lỗ thực tế nếu bạn bán toàn bộ danh mục ngay lúc này.`;
+   - Khi BÁN, số Linh Thạch Lãi/Lỗ được tích lũy vĩnh viễn vào Bảng Phong Thần Thương Nhân.`;
     alert(guide);
 };
 
@@ -1245,7 +1255,6 @@ window.closeInvestLeaderboardModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
-// 🌟 RENDER BẢNG PHONG THẦN THƯƠNG NHÂN (BXH LÃI/LỖ)
 // 🌟 RENDER BẢNG PHONG THẦN THƯƠNG NHÂN (LÃI TẠM TÍNH + LÃI ĐÃ CHỐT)
 window.renderInvestLeaderboardUI = function() {
     const tbody = document.getElementById("invest-leaderboard-body");
@@ -1287,7 +1296,8 @@ window.renderInvestLeaderboardUI = function() {
                     let h = portfolio[t];
                     if (h && h.shares > 0 && quotes[t]) {
                         hasActiveHolding = true;
-                        let holdingVal = Math.round(h.shares * quotes[t].price);
+                        let curPrice = Number(quotes[t].price) || 0;
+                        let holdingVal = Math.round(h.shares * curPrice);
                         unrealizedProfit += (holdingVal - (h.totalInvested || 0));
                     }
                 });
@@ -1295,7 +1305,6 @@ window.renderInvestLeaderboardUI = function() {
                 // 2. Tổng lãi/lỗ = Lãi đã bán (realized) + Lãi đang giữ (unrealized)
                 let totalNetProfit = realizedProfit + unrealizedProfit;
 
-                // Điều kiện lên bảng: Có đang nắm giữ tài sản HOẶC đã từng phát sinh giao dịch chốt lãi/lỗ
                 if (hasActiveHolding || realizedProfit !== 0) {
                     list.push({
                         name: name,
@@ -1311,7 +1320,6 @@ window.renderInvestLeaderboardUI = function() {
             return;
         }
 
-        // Xếp theo tổng lãi/lỗ từ cao đến thấp
         list.sort((a, b) => b.profit - a.profit);
 
         let html = "";
@@ -1340,6 +1348,7 @@ window.renderInvestLeaderboardUI = function() {
     });
 };
 
+// 🌟 RENDER BẢNG THỊ TRƯỜNG (CỔ PHIẾU HOSE HIỂN THỊ CHUẨN 2 SỐ LẺ)
 window.renderInvestMarketUI = function() {
     const container = document.getElementById("invest-items-container");
     if (!container) return;
@@ -1358,7 +1367,8 @@ window.renderInvestMarketUI = function() {
         const q = quotes[ticker];
         const holding = portfolio[ticker];
         if (holding && holding.shares > 0) {
-            const holdingVal = Math.round(holding.shares * q.price);
+            const curPrice = Number(q.price) || 0;
+            const holdingVal = Math.round(holding.shares * curPrice);
             totalVal += holdingVal;
             totalInvested += (holding.totalInvested || 0);
         }
@@ -1376,13 +1386,13 @@ window.renderInvestMarketUI = function() {
         profitEl.innerText = `${isProfitable ? '+' : ''}${profit.toLocaleString()} (${isProfitable ? '+' : ''}${profitPct}%)`;
     }
 
-    // 2. Danh sách thứ tự cố định
+    // 2. Danh sách hiển thị
     const stockOrder = ["FPT", "HPG", "VCB", "VNM", "SSI", "VIC", "DGC"];
     const cryptoOrder = ["GOLD", "BTC", "ETH"];
 
     let html = `<div style="display:flex; flex-direction:column; gap:2px;">`;
 
-    // --- KHU VỰC 1: CỔ PHIẾU DOANH NGHIỆP ---
+    // --- KHU VỰC 1: CỔ PHIẾU DOANH NGHIỆP (HOSE) ---
     html += `
         <div style="font-size:10.5px; font-weight:bold; color:#00ffcc; padding:3px 6px; background:rgba(0,255,204,0.08); border-radius:4px; margin-bottom:2px; display:flex; justify-content:space-between;">
             <span>🏛️ CỔ PHIẾU DOANH NGHIỆP (HOSE)</span>
@@ -1406,7 +1416,7 @@ window.renderInvestMarketUI = function() {
                     <span style="font-size:10.5px; color:#ccc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${shortName}</span>
                 </div>
                 <div style="text-align:right; width:35%; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
-                    <b style="color:#00ffcc;">${q.price.toLocaleString()}</b>
+                    <b style="color:#00ffcc;">${formatMarketPrice(ticker, q.price)}</b>
                     <span style="color:${changeColor}; font-weight:bold; font-size:11px; min-width:52px; text-align:right;">${changeText}</span>
                 </div>
                 <div style="width:20%; text-align:right;">
@@ -1418,7 +1428,7 @@ window.renderInvestMarketUI = function() {
         `;
     });
 
-    // --- KHU VỰC 2: VÀNG & TIỀN ĐIỆN TỬ (Ở DƯỚI CÙNG) ---
+    // --- KHU VỰC 2: VÀNG & TIỀN ĐIỆN TỬ ---
     html += `
         <div style="font-size:10.5px; font-weight:bold; color:#ffaa00; padding:3px 6px; background:rgba(255,170,0,0.08); border-radius:4px; margin-top:5px; margin-bottom:2px; display:flex; justify-content:space-between;">
             <span>💎 TÀI SẢN TOÀN CẦU (VÀNG & TIỀN SỐ)</span>
@@ -1442,7 +1452,7 @@ window.renderInvestMarketUI = function() {
                     <span style="font-size:10.5px; color:#ccc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${shortName}</span>
                 </div>
                 <div style="text-align:right; width:35%; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
-                    <b style="color:#00ffcc;">${q.price.toLocaleString()}</b>
+                    <b style="color:#00ffcc;">${formatMarketPrice(ticker, q.price)}</b>
                     <span style="color:${changeColor}; font-weight:bold; font-size:11px; min-width:52px; text-align:right;">${changeText}</span>
                 </div>
                 <div style="width:20%; text-align:right;">
@@ -1458,7 +1468,7 @@ window.renderInvestMarketUI = function() {
     container.innerHTML = html;
 };
 
-// 🌟 RENDER BẢNG KHO NẮM GIỮ (LÀM TRÒN CỔ PHIẾU VN NẾU CÓ DỮ LIỆU CŨ LẺ)
+// 🌟 RENDER BẢNG KHO NẮM GIỮ
 window.renderInvestPortfolioList = function() {
     const container = document.getElementById("portfolio-items-list");
     if (!container) return;
@@ -1478,7 +1488,7 @@ window.renderInvestPortfolioList = function() {
         const holding = portfolio[ticker];
 
         if (holding && holding.shares > 0) {
-            // TỰ ĐỘNG CHUẨN HÓA DỮ LIỆU CŨ: Cổ phiếu VN (không nằm trong cryptoOrder) làm tròn xuống số nguyên
+            // TỰ ĐỘNG LÀM TRÒN SỐ CỔ PHIẾU CŨ: Cổ phiếu VN làm tròn xuống số nguyên
             if (!cryptoOrder.includes(ticker) && holding.shares % 1 !== 0) {
                 holding.shares = Math.floor(holding.shares);
                 needCleanSync = true;
@@ -1486,7 +1496,8 @@ window.renderInvestPortfolioList = function() {
             }
 
             hasHolding = true;
-            const holdingVal = Math.round(holding.shares * q.price);
+            const curPrice = Number(q.price) || 0;
+            const holdingVal = Math.round(holding.shares * curPrice);
             const profit = holdingVal - (holding.totalInvested || 0);
             const profitPct = holding.totalInvested > 0 ? ((profit / holding.totalInvested) * 100).toFixed(2) : 0;
             const isProfit = profit >= 0;
@@ -1529,7 +1540,6 @@ window.renderInvestPortfolioList = function() {
         }
     });
 
-    // Nếu vừa sửa làm tròn số cổ phiếu cũ thì đồng bộ ngầm lên Firebase
     if (needCleanSync && window.currentUser) {
         window.pushSecureUserData(window.currentUser);
     }
@@ -1563,20 +1573,22 @@ window.renderInvestPortfolioList = function() {
     container.innerHTML = headerSummaryHtml + rowsHtml;
 };
 
-// 🌟 XỬ LÝ MUA & BÁN (LÀM TRÒN CỔ PHIẾU VN + TÍCH LŨY LÃI/LỖ ĐÃ BÁN)
+// 🌟 XỬ LÝ MUA & BÁN (MUA CP NGUYÊN THEO THỊ GIÁ CHUẨN 2 SỐ LẺ + CỘNG DỒN REALIZED PROFIT)
 window.tradeInvestStock = function(ticker, action) {
     if (!window.cachedInvestQuotes || !window.cachedInvestQuotes.quotes[ticker]) return;
     const q = window.cachedInvestQuotes.quotes[ticker];
     const feeRate = window.cachedInvestQuotes.feeRate || 0.0015;
     const cryptoOrder = ["GOLD", "BTC", "ETH"];
     const isCryptoOrGold = cryptoOrder.includes(ticker);
+    const priceNum = Number(q.price) || 0;
 
     if (!window.userStats.portfolio) window.userStats.portfolio = {};
     if (window.userStats.realizedProfit === undefined) window.userStats.realizedProfit = 0;
     const holding = window.userStats.portfolio[ticker] || { shares: 0, totalInvested: 0 };
 
     if (action === "BUY") {
-        let amountStr = prompt(`Nhập số LINH THẠCH muốn đầu tư vào [ ${ticker} - ${COMPANY_SHORT_NAMES[ticker] || q.name} ]:\n(Giá hiện tại: ${q.price.toLocaleString()} Thạch / đơn vị | Phí sàn: 0.15%)\n${!isCryptoOrGold ? '* Cổ phiếu VN sẽ tự làm tròn thành số lượng nguyên.' : '* Cho phép mua số lẻ thập phân.'}`);
+        let formattedPrice = formatMarketPrice(ticker, priceNum);
+        let amountStr = prompt(`Nhập số LINH THẠCH muốn đầu tư vào [ ${ticker} - ${COMPANY_SHORT_NAMES[ticker] || q.name} ]:\n(Giá hiện tại: ${formattedPrice} Thạch / đơn vị | Phí sàn: 0.15%)\n${!isCryptoOrGold ? '* Cổ phiếu VN sẽ tự tính số lượng nguyên cổ phiếu có thể mua.' : '* Cho phép mua số lẻ thập phân.'}`);
         let investAmount = parseInt(amountStr);
         if (isNaN(investAmount) || investAmount <= 0) return;
 
@@ -1584,16 +1596,15 @@ window.tradeInvestStock = function(ticker, action) {
         let actualSpentAmount = 0;
 
         if (isCryptoOrGold) {
-            // Vàng & Crypto: Cho phép mua số lượng lẻ theo đúng số tiền nhập
-            sharesBought = investAmount / q.price;
+            sharesBought = investAmount / priceNum;
             actualSpentAmount = investAmount;
         } else {
-            // Cổ phiếu VN: Chỉ mua số nguyên cổ phiếu
-            sharesBought = Math.floor(investAmount / q.price);
+            // Cổ phiếu VN: Tính số nguyên cổ phiếu mua được
+            sharesBought = Math.floor(investAmount / priceNum);
             if (sharesBought <= 0) {
-                return alert(`⚠️ Số linh thạch không đủ để mua tối thiểu 1 cổ phiếu ${ticker}! (Cần ít nhất ${q.price.toLocaleString()} Linh Thạch).`);
+                return alert(`⚠️ Số linh thạch không đủ mua tối thiểu 1 cổ phiếu ${ticker}! (Cần ít nhất ${formattedPrice} Linh Thạch).`);
             }
-            actualSpentAmount = sharesBought * q.price; // Tiền thực tế tiêu tốn
+            actualSpentAmount = Math.round(sharesBought * priceNum);
         }
 
         let fee = Math.ceil(actualSpentAmount * feeRate);
@@ -1619,7 +1630,7 @@ window.tradeInvestStock = function(ticker, action) {
         if (!holding.shares || holding.shares <= 0) return alert(`Bạn không sở hữu ${ticker} để bán!`);
 
         let sharesToSell = holding.shares;
-        let grossValue = Math.round(sharesToSell * q.price);
+        let grossValue = Math.round(sharesToSell * priceNum);
         let fee = Math.ceil(grossValue * feeRate);
         let netReceived = grossValue - fee;
         let profit = grossValue - (holding.totalInvested || 0);
@@ -1631,13 +1642,13 @@ window.tradeInvestStock = function(ticker, action) {
             return;
         }
 
-        // 1. Cộng tiền nhận được vào túi
+        // 1. Cộng tiền vào túi
         window.userStats.coin = (window.userStats.coin || 0) + netReceived;
 
-        // 2. 🌟 CỘNG DỒN LÃI/LỖ ĐÃ BÁN VÀO realizedProfit ĐỂ BXH KHÔNG BỊ TRỪ ĐI
+        // 2. Cộng dồn vào realizedProfit để giữ thành tích trên BXH vĩnh viễn
         window.userStats.realizedProfit = (window.userStats.realizedProfit || 0) + profit;
 
-        // 3. Xóa mã này khỏi danh mục nắm giữ
+        // 3. Xóa khỏi danh mục nắm giữ
         delete window.userStats.portfolio[ticker];
 
         window.pushSecureUserData(window.currentUser).then(() => {
