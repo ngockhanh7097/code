@@ -1512,7 +1512,7 @@ window.renderInvestPortfolioList = function() {
             totalVal += holdingVal;
             totalInvested += (holding.totalInvested || 0);
 
-            let sharesDisplay = cryptoOrder.includes(ticker) ? holding.shares.toFixed(3) : holding.shares.toString();
+            let sharesDisplay = cryptoOrder.includes(ticker) ? holding.shares.toFixed(7) : holding.shares.toString();
 
             rowsHtml += `
                 <div style="background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
