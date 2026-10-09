@@ -891,6 +891,11 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
 
             renderFarmPlotsOnly(activeUser);
             showFarmAlert(`🎉 THU HOẠCH THÀNH CÔNG!\nCây trồng: ${cfg.name}\nNhận được: ${summary.join(', ')}`);
+            // 🔥 TÍNH TIẾN ĐỘ NHIỆM VỤ NGÀY (THU HOẠCH CÂY +1)
+            if (typeof window.incrementDailyQuestProgress === "function") {
+                window.incrementDailyQuestProgress('farmHarvestCount', 1);
+            }
+
             // 🔥 Thêm dòng này: sau khi thu hoạch, ô đất trở thành đất trống nên sẽ kích hoạt lại thông báo cần gieo hạt
             if (typeof window.checkFarmNotification === "function") {
                 window.checkFarmNotification();
@@ -966,6 +971,10 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
             renderFarmPlotsOnly(targetUser);
             isStealingInProgress = false;
             showFarmAlert(`🥷 HÁI TRỘM THÀNH CÔNG!\nBạn thu được: ${stolenItems.join(', ')}`);
+            // 🔥 TÍNH TIẾN ĐỘ NHIỆM VỤ NGÀY (TRỘM CÂY +1)
+            if (typeof window.incrementDailyQuestProgress === "function") {
+                window.incrementDailyQuestProgress('farmHarvestCount', 1);
+            }
         }).catch(() => {
             isStealingInProgress = false;
         });
