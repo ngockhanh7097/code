@@ -910,7 +910,12 @@ window.loadMasterQuestData = async function() {
                     });
 
                     totalMarketPool += uTotalInvested;
-                    investList.push({ name: uName, netProfit: rProfit + uProfit });
+
+                    // 🔥 CHỈ XẾP HẠNG NHỮNG NGƯỜI CÓ THAM GIA ĐẦU TƯ
+                    let hasActiveHolding = Object.keys(pFolio).some(t => pFolio[t] && pFolio[t].shares > 0);
+                    if (hasActiveHolding || rProfit !== 0) {
+                        investList.push({ name: uName, netProfit: rProfit + uProfit });
+                    }
                 });
 
                 investList.sort((a, b) => b.netProfit - a.netProfit);
