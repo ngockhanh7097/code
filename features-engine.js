@@ -789,6 +789,7 @@ window.checkHeroTournamentNotification = function() {
 };
 
 // =========================================================================
+// =========================================================================
 // 📜 4. MODULE NHIỆM VỤ & THÀNH TỰU (BẢN ĐẦY ĐỦ 6 NHIỆM VỤ NGÀY MỚI)
 // =========================================================================
 window.openQuestMasterModal = function() {
@@ -798,7 +799,6 @@ window.openQuestMasterModal = function() {
     const modal = document.getElementById("quest-master-modal-layer");
     if (modal) modal.classList.add("popup-active");
 
-    // Luôn mở ở tab Nhiệm Vụ Ngày đầu tiên để hiện bảng ngay lập tức
     window.switchMasterQuestTab(0);
     window.loadMasterQuestData();
 };
@@ -852,7 +852,6 @@ window.loadMasterQuestData = async function() {
 
         let todayStr = getSafeCurrentDate();
 
-        // 🌟 Tự động reset tất cả nhiệm vụ ngày nếu sang ngày mới
         if (stats.lastDailyQuestDate !== todayStr) {
             stats.dailyMinedCoin = 0;
             stats.dailyFarmActions = 0;
@@ -865,11 +864,6 @@ window.loadMasterQuestData = async function() {
 
         const paneDaily = document.getElementById("pane-master-daily");
         if (paneDaily) {
-            // -------------------------------------------------------------
-            // TÍNH TOÁN QUỸ THƯỞNG VÀ XẾP HẠNG TOP 1-10 ĐẦU TƯ
-            // Tổng quỹ chia = 2% Tổng giá trị đầu tư của toàn bộ người chơi
-            // Top 1,2,3 mỗi người nhận 12.5% của quỹ. Top 4-10 mỗi người nhận 7.5% của quỹ.
-            // -------------------------------------------------------------
             let db = window.database || firebase.database();
             let quotes = window.cachedInvestQuotes?.quotes || {};
             let myInvestRank = 0;
@@ -911,7 +905,7 @@ window.loadMasterQuestData = async function() {
 
                     totalMarketPool += uTotalInvested;
 
-                    // 🔥 CHỈ XẾP HẠNG NHỮNG NGƯỜI CÓ THAM GIA ĐẦU TƯ
+                    // Chỉ xếp hạng những người THỰC SỰ có chơi đầu tư
                     let hasActiveHolding = Object.keys(pFolio).some(t => pFolio[t] && pFolio[t].shares > 0);
                     if (hasActiveHolding || rProfit !== 0) {
                         investList.push({ name: uName, netProfit: rProfit + uProfit });
@@ -925,24 +919,22 @@ window.loadMasterQuestData = async function() {
                 console.warn("Lỗi tính rank đầu tư:", err);
             }
 
-            // Quỹ thưởng 2% của tổng vốn đầu tư toàn server
+            // Tỷ lệ giảm dần từ Top 1 -> Top 10 (tổng vừa đúng 100%)
+            const INVEST_RANK_RATES = [0.25, 0.18, 0.14, 0.10, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03];
             let rewardPool = Math.floor(totalMarketPool * 0.02);
             let myInvestReward = 0;
             let rankTextDesc = "";
 
-            if (myInvestRank >= 1 && myInvestRank <= 3) {
-                myInvestReward = Math.floor(rewardPool * 0.125); // 12.5%
-                rankTextDesc = `Hạng hiện tại: Top ${myInvestRank} (Được chia 12.5% quỹ = ${myInvestReward.toLocaleString()} Thạch)`;
-            } else if (myInvestRank >= 4 && myInvestRank <= 10) {
-                myInvestReward = Math.floor(rewardPool * 0.075); // 7.5%
-                rankTextDesc = `Hạng hiện tại: Top ${myInvestRank} (Được chia 7.5% quỹ = ${myInvestReward.toLocaleString()} Thạch)`;
+            if (myInvestRank >= 1 && myInvestRank <= 10) {
+                let rate = INVEST_RANK_RATES[myInvestRank - 1];
+                let percentText = (rate * 100) + "%";
+                myInvestReward = Math.floor(rewardPool * rate);
+                rankTextDesc = `Hạng hiện tại: Top ${myInvestRank} (Được chia ${percentText} quỹ = ${myInvestReward.toLocaleString()} Thạch)`;
             } else {
                 rankTextDesc = `Hạng hiện tại: ${myInvestRank > 0 ? 'Top ' + myInvestRank : 'Chưa xếp hạng'} (Cần lọt vào Top 1-10)`;
             }
 
-            // Trạng thái từng nhiệm vụ
             let qClaims = stats.claimedDailyQuests || {};
-
             let isClaimMine = qClaims.mine === true;
             let isClaimInvest = qClaims.topInvest === true;
             let isClaimFarm = qClaims.farm === true;
@@ -1173,7 +1165,6 @@ window.loadMasterQuestData = async function() {
     }
 };
 
-// 🌟 HÀM NHẬN THƯỞNG CHO 5 NHIỆM VỤ THƯỜNG
 window.claimNewDailyQuest = function(type) {
     const user = window.currentUser;
     const stats = window.userStats;
@@ -1231,7 +1222,6 @@ window.claimNewDailyQuest = function(type) {
     });
 };
 
-// 🌟 HÀM NHẬN THƯỞNG CHO NHIỆM VỤ TOP 1-10 ĐẦU TƯ
 window.claimTopInvestQuest = function(rewardCoin, rank) {
     const user = window.currentUser;
     const stats = window.userStats;
@@ -1339,7 +1329,6 @@ window.executeClaimAchieveClan = function() {
     });
 };
 
-// 🌟 HÀM CHECK THÔNG BÁO VÀ CHẤM ĐỎ TRÊN ICON NHIỆM VỤ / MASTER
 window.checkQuestNotification = function() {
     const user = window.currentUser;
     const stats = window.userStats;
