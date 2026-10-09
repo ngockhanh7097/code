@@ -941,7 +941,7 @@ window.loadMasterQuestData = async function() {
 
             if (myInvestRank >= 1 && myInvestRank <= 10) {
                 let rate = INVEST_RANK_RATES[myInvestRank - 1];
-                let percentText = (rate * 100) + "%";
+                let percentText = Math.round(rate * 100) + "%";
                 myInvestReward = Math.floor(rewardPool * rate);
                 rankTextDesc = `Hạng hiện tại: Top ${myInvestRank} (Được chia ${percentText} quỹ = ${myInvestReward.toLocaleString()} Thạch)`;
             } else {
