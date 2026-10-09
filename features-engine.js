@@ -982,7 +982,7 @@ window.loadMasterQuestData = async function() {
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">📈 Top 1 - 10 Thương Nhân Đầu Tư</b>
                             <div style="font-size:10.5px; color:#aaa;">${rankTextDesc}</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Quỹ thưởng 2% server: <b>${rewardPool.toLocaleString()} Thạch</b></div>
+                            <div style="font-size:10.5px; color:#00ffcc;">Quỹ thưởng 2% tổng tài sản đầu tư toàn server: <b>${rewardPool.toLocaleString()} Thạch</b></div>
                         </div>
                         <button onclick="window.claimTopInvestQuest(${myInvestReward}, ${myInvestRank})" style="background:${isClaimInvest ? '#555' : (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 && !isClaimInvest ? 'pointer' : 'not-allowed'};" ${myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 && !isClaimInvest ? '' : 'disabled'}>
                             ${isClaimInvest ? 'Đã Nhận' : (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 ? 'Nhận' : 'Chưa Đạt')}
