@@ -852,6 +852,7 @@ window.loadMasterQuestData = async function() {
 
         let todayStr = getSafeCurrentDate();
 
+        // 🌟 Tự động reset tất cả nhiệm vụ ngày nếu sang ngày mới
         if (stats.lastDailyQuestDate !== todayStr) {
             stats.dailyMinedCoin = 0;
             stats.dailyFarmActions = 0;
@@ -864,12 +865,23 @@ window.loadMasterQuestData = async function() {
 
         const paneDaily = document.getElementById("pane-master-daily");
         if (paneDaily) {
+            // -------------------------------------------------------------
+            // TÍNH TOÁN QUỸ THƯỞNG VÀ XẾP HẠNG TOP 1-10 ĐẦU TƯ (BẢN FIX ĐỘC LẬP)
+            // -------------------------------------------------------------
             let db = window.database || firebase.database();
-            let quotes = window.cachedInvestQuotes?.quotes || {};
             let myInvestRank = 0;
             let totalMarketPool = 0;
 
             try {
+                // 🔥 1. ĐỌC TRỰC TIẾP GIÁ THỊ TRƯỜNG TỪ FIREBASE (KHÔNG PHỤ THUỘC CACHE)
+                let quotesSnap = await db.ref('market_quotes').once('value');
+                let marketData = quotesSnap.val() || {};
+                let quotes = marketData.quotes || {};
+
+                // Đồng bộ lại cache toàn cục nếu có dữ liệu
+                if (marketData.quotes) window.cachedInvestQuotes = marketData;
+
+                // 🔥 2. ĐỌC DANH SÁCH TÀI KHOẢN NGƯỜI CHƠI
                 let snap = await db.ref('users').once('value');
                 let investList = [];
 
@@ -892,11 +904,14 @@ window.loadMasterQuestData = async function() {
 
                     let uProfit = 0;
                     let uTotalInvested = 0;
+                    let hasActiveHolding = false;
 
                     Object.keys(pFolio).forEach(t => {
                         let h = pFolio[t];
-                        if (h && h.shares > 0 && quotes[t]) {
-                            let curPrice = Number(quotes[t].price) || 0;
+                        if (h && h.shares > 0) {
+                            hasActiveHolding = true;
+                            // Nếu có giá thị trường thì tính theo giá, nếu không có tạm tính theo giá vốn
+                            let curPrice = quotes[t] ? (Number(quotes[t].price) || 0) : (h.totalInvested / h.shares);
                             let val = Math.round(h.shares * curPrice);
                             uProfit += (val - (h.totalInvested || 0));
                             uTotalInvested += (h.totalInvested || 0);
@@ -905,8 +920,7 @@ window.loadMasterQuestData = async function() {
 
                     totalMarketPool += uTotalInvested;
 
-                    // Chỉ xếp hạng những người THỰC SỰ có chơi đầu tư
-                    let hasActiveHolding = Object.keys(pFolio).some(t => pFolio[t] && pFolio[t].shares > 0);
+                    // 🔥 3. CHỈ XẾP HẠNG NHỮNG NGƯỜI THỰC SỰ CÓ CHƠI ĐẦU TƯ
                     if (hasActiveHolding || rProfit !== 0) {
                         investList.push({ name: uName, netProfit: rProfit + uProfit });
                     }
@@ -919,7 +933,7 @@ window.loadMasterQuestData = async function() {
                 console.warn("Lỗi tính rank đầu tư:", err);
             }
 
-            // Tỷ lệ giảm dần từ Top 1 -> Top 10 (tổng vừa đúng 100%)
+            // 🌟 MẢNG TỶ LỆ CHIA GIẢM DẦN CHO TOP 1 - 10 (TỔNG 100%)
             const INVEST_RANK_RATES = [0.25, 0.18, 0.14, 0.10, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03];
             let rewardPool = Math.floor(totalMarketPool * 0.02);
             let myInvestReward = 0;
@@ -1084,7 +1098,7 @@ window.loadMasterQuestData = async function() {
                 { key: "clan_5000", name: "Cống Hiến Đạt 5.000", cond: (myContrib >= 5000), desc: "Tích lũy 5.000 điểm cống hiến", coin: 1000, chest: 0 },
                 { key: "clan_10000", name: "Cống Hiến Đạt 10.000", cond: (myContrib >= 10000), desc: "Tích lũy 10.000 điểm cống hiến", coin: 2000, chest: 0 },
                 { key: "clan_20000", name: "Cống Hiến Đạt 20.000", cond: (myContrib >= 20000), desc: "Tích lũy 20.000 điểm cống hiến", coin: 4000, chest: 0 },
-                { key: "clan_50000", name: "Cống Hiến Đạt 5.000", cond: (myContrib >= 50000), desc: "Tích lũy 50.000 điểm cống hiến", coin: 10000, chest: 0 }
+                { key: "clan_50000", name: "Cống Hiến Đạt 50.000", cond: (myContrib >= 50000), desc: "Tích lũy 50.000 điểm cống hiến", coin: 10000, chest: 0 }
             ];
 
             let html2 = "";
