@@ -874,6 +874,22 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
         }
     });
 
+    // 🔥 Ghi nhận 1 lần thu hoạch cho Nhiệm Vụ Ngày (Dược Nông Cần Mẫn)
+    let todayStr = (typeof getSafeCurrentDate === "function") 
+        ? getSafeCurrentDate() 
+        : (new Date().toISOString().slice(0, 10));
+
+    if (uStats.lastDailyQuestDate !== todayStr) {
+        uStats.dailyMinedCoin = 0;
+        uStats.dailyFarmActions = 0;
+        uStats.dailySpeakingCount = 0;
+        uStats.dailyAlchemyCount = 0;
+        uStats.dailyMarketPostCount = 0;
+        uStats.claimedDailyQuests = {};
+        uStats.lastDailyQuestDate = todayStr;
+    }
+    uStats.dailyFarmActions = (uStats.dailyFarmActions || 0) + 1;
+
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
     const db = window.database || (typeof database !== 'undefined' ? database : null);
     const pushFn = window.pushSecureUserData || (typeof pushSecureUserData !== 'undefined' ? pushSecureUserData : null);
@@ -891,9 +907,13 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
 
             renderFarmPlotsOnly(activeUser);
             showFarmAlert(`🎉 THU HOẠCH THÀNH CÔNG!\nCây trồng: ${cfg.name}\nNhận được: ${summary.join(', ')}`);
-            // 🔥 Thêm dòng này: sau khi thu hoạch, ô đất trở thành đất trống nên sẽ kích hoạt lại thông báo cần gieo hạt
+            
+            // Cập nhật thông báo cây trồng & chấm đỏ nhiệm vụ ngày
             if (typeof window.checkFarmNotification === "function") {
                 window.checkFarmNotification();
+            }
+            if (typeof window.checkQuestNotification === "function") {
+                window.checkQuestNotification();
             }
         });
     }).catch(err => {
@@ -901,7 +921,6 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
         alert("Lỗi khi kết nối thu hoạch: " + err.message);
     });
 }
-
 // 9. Trộm cây
 function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
     if (isStealingInProgress) return;
@@ -945,6 +964,22 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
     isStealingInProgress = true;
     plotData.isStolen = true;
 
+    // 🔥 Ghi nhận 1 lần trộm cây cho Nhiệm Vụ Ngày (Dược Nông Cần Mẫn)
+    let todayStr = (typeof getSafeCurrentDate === "function") 
+        ? getSafeCurrentDate() 
+        : (new Date().toISOString().slice(0, 10));
+
+    if (uStats.lastDailyQuestDate !== todayStr) {
+        uStats.dailyMinedCoin = 0;
+        uStats.dailyFarmActions = 0;
+        uStats.dailySpeakingCount = 0;
+        uStats.dailyAlchemyCount = 0;
+        uStats.dailyMarketPostCount = 0;
+        uStats.claimedDailyQuests = {};
+        uStats.lastDailyQuestDate = todayStr;
+    }
+    uStats.dailyFarmActions = (uStats.dailyFarmActions || 0) + 1;
+
     const db = window.database || (typeof database !== 'undefined' ? database : null);
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
     const pushFn = window.pushSecureUserData || (typeof pushSecureUserData !== 'undefined' ? pushSecureUserData : null);
@@ -965,6 +1000,12 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
             if (typeof refreshUIFields === "function") refreshUIFields();
             renderFarmPlotsOnly(targetUser);
             isStealingInProgress = false;
+            
+            // Kích hoạt cập nhật chấm đỏ nhiệm vụ ngày
+            if (typeof window.checkQuestNotification === "function") {
+                window.checkQuestNotification();
+            }
+
             showFarmAlert(`🥷 HÁI TRỘM THÀNH CÔNG!\nBạn thu được: ${stolenItems.join(', ')}`);
         }).catch(() => {
             isStealingInProgress = false;
