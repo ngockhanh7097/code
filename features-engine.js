@@ -488,7 +488,7 @@ window.executeClaimHeroReward = function() {
 };
 
 function preloadNextHeroWord(callbackOnLoaded) {
-    let pool = window.gameActivePool;
+    let pool = window.heroActivePool;
     if (!pool || pool.length === 0) {
         nextHeroWord = null;
         if (typeof callbackOnLoaded === "function") callbackOnLoaded();
@@ -518,15 +518,15 @@ window.startHeroTournamentMatch = function() {
 
     window.closeHeroTournamentModal();
 
-    window.gameActivePool = [];
+    window.heroActivePool = [];
     heroConfigChapters.forEach(ch => {
         let startIdx = (ch - 1) * 400;
         let endIdx = ch * 400;
-        window.gameActivePool = window.gameActivePool.concat(window.wordList.slice(startIdx, endIdx));
+        window.heroActivePool = window.heroActivePool.concat(window.wordList.slice(startIdx, endIdx));
     });
 
-    if (window.gameActivePool.length === 0) return alert("Không có từ vựng nào trong các chương đã chọn!");
-    window.gameActivePool.sort(() => Math.random() - 0.5);
+    if (window.heroActivePool.length === 0) return alert("Không có từ vựng nào trong các chương đã chọn!");
+    window.heroActivePool.sort(() => Math.random() - 0.5);
 
     isHeroMatchActive = true;
     isHeroFrozen = false;
@@ -585,7 +585,7 @@ function triggerNextHeroWordLoop() {
     if (nextHeroWord) {
         window.currentGameWord = nextHeroWord;
     } else {
-        window.currentGameWord = window.gameActivePool[Math.floor(Math.random() * window.gameActivePool.length)];
+        window.currentGameWord = window.heroActivePool[Math.floor(Math.random() * window.heroActivePool.length)]; // Đổi từ gameActivePool sang heroActivePool
     }
 
     document.getElementById("word-display").innerText = window.currentGameWord.viet;
@@ -661,6 +661,7 @@ function finishHeroTournamentMatch() {
     const inputField = document.getElementById("txt-game-input");
     inputField.disabled = false;
     inputField.classList.remove("input-frozen");
+    inputField.onkeydown = null; // 👉 THÊM DÒNG NÀY: Hủy trỏ phím Enter vào hàm Đại Hội
 
     const user = window.currentUser;
     const stats = window.userStats;
