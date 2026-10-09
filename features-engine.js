@@ -50,6 +50,10 @@ window.triggerSubFeature = function(featureName) {
         if (typeof window.openFarmModal === "function") window.openFarmModal();
     } else if (featureName === 'quest') {
         window.openQuestMasterModal();
+        // 👉 THÊM DÒNG NÀY ĐỂ RENDER TOÀN BỘ TIẾN ĐỘ & NÚT BẤM KHI VỪA MỞ BẢNG:
+        if (typeof renderAllDailyQuestsUI === "function") {
+            renderAllDailyQuestsUI();
+        }
     } else if (featureName === 'invest') {
         window.openInvestModal(); // 🌟 Nút Đầu Tư mở modal tại đây
     } else if (featureName === 'referral') {
@@ -799,7 +803,16 @@ window.openQuestMasterModal = function() {
 
     // Luôn mở ở tab Nhiệm Vụ Ngày đầu tiên để hiện bảng ngay lập tức
     window.switchMasterQuestTab(0);
-    window.loadMasterQuestData();
+    
+    // Nạp dữ liệu thành tựu/nhiệm vụ cũ
+    if (typeof window.loadMasterQuestData === "function") {
+        window.loadMasterQuestData();
+    }
+
+    // 👉 RENDER 5 NHIỆM VỤ NGÀY MỚI & TÍNH QUỸ ĐẦU TƯ TOP 10
+    if (typeof renderAllDailyQuestsUI === "function") {
+        renderAllDailyQuestsUI();
+    }
 };
 
 window.closeQuestMasterModal = function() {
@@ -815,7 +828,15 @@ window.switchMasterQuestTab = function(idx) {
 
     if (tab1) tab1.classList.toggle("active", idx === 0);
     if (tab2) tab2.classList.toggle("active", idx === 1);
-    if (paneDaily) paneDaily.style.display = (idx === 0) ? "block" : "none";
+    
+    if (paneDaily) {
+        paneDaily.style.display = (idx === 0) ? "block" : "none";
+        // 👉 KHI BẤM QUA TAB NHIỆM VỤ NGÀY THÌ RENDER LẠI TIẾN ĐỘ & NÚT
+        if (idx === 0 && typeof renderAllDailyQuestsUI === "function") {
+            renderAllDailyQuestsUI();
+        }
+    }
+    
     if (paneAchieve) {
         paneAchieve.style.display = (idx === 1) ? "block" : "none";
         if (idx === 1) {
@@ -1815,3 +1836,238 @@ window.removeReferralSlot = function(targetUser) {
         window.loadReferralDisciplesData();
     });
 };
+// =========================================================================
+// 🌟 LOGIC HIỂN THỊ VÀ NHẬN THƯỞNG 5 NHIỆM VỤ NGÀY MỚI
+// =========================================================================
+
+// Kiểm tra và reset sang ngày mới
+function ensureDailyQuestFresh() {
+    let todayStr = getFormattedCurrentDate();
+    if (!userStats.dailyQuestProgress || userStats.dailyQuestProgress.lastDate !== todayStr) {
+        userStats.dailyQuestProgress = {
+            lastDate: todayStr,
+            farmHarvestCount: 0,
+            speakingCount: 0,
+            luyenDanCount: 0,
+            marketSellCount: 0
+        };
+        userStats.dailyQuestClaimed = {};
+    }
+}
+
+// Hàm render toàn bộ tiến độ nhiệm vụ ngày lên Modal
+async function renderAllDailyQuestsUI() {
+    ensureDailyQuestFresh();
+    const qp = userStats.dailyQuestProgress;
+    const qc = userStats.dailyQuestClaimed || {};
+
+    // 1. Khai thác 100 linh thạch
+    const mineEl = document.getElementById("lbl-quest-mine-progress");
+    if (mineEl) mineEl.innerText = Math.min(userStats.dailyMinedCoin || 0, 100);
+    updateQuestBtnStyle("btn-claim-daily-mine", (userStats.dailyMinedCoin || 0) >= 100, userStats.claimedDailyMinedQuest);
+
+    // 2. Thu hoạch / Trộm 3 cây
+    const farmEl = document.getElementById("lbl-quest-farm-progress");
+    if (farmEl) farmEl.innerText = Math.min(qp.farmHarvestCount || 0, 3);
+    updateQuestBtnStyle("btn-claim-daily-farm", (qp.farmHarvestCount || 0) >= 3, qc.farm === true);
+
+    // 3. Hoàn thành 3 bài Speaking
+    const spkEl = document.getElementById("lbl-quest-speak-progress");
+    if (spkEl) spkEl.innerText = Math.min(qp.speakingCount || 0, 3);
+    updateQuestBtnStyle("btn-claim-daily-speak", (qp.speakingCount || 0) >= 3, qc.speak === true);
+
+    // 4. Luyện đan 1 lần
+    const danEl = document.getElementById("lbl-quest-dan-progress");
+    if (danEl) danEl.innerText = Math.min(qp.luyenDanCount || 0, 1);
+    updateQuestBtnStyle("btn-claim-daily-dan", (qp.luyenDanCount || 0) >= 1, qc.dan === true);
+
+    // 5. Bán 1 món Chợ Đen
+    const mktEl = document.getElementById("lbl-quest-market-progress");
+    if (mktEl) mktEl.innerText = Math.min(qp.marketSellCount || 0, 1);
+    updateQuestBtnStyle("btn-claim-daily-market", (qp.marketSellCount || 0) >= 1, qc.market === true);
+
+    // 6. Xử lý tính toán NV Đầu Tư (Top 10)
+    await evaluateInvestQuestUI(qc.invest === true);
+}
+
+// Cập nhật kiểu dáng nút nhận thưởng
+function updateQuestBtnStyle(btnId, isReady, isClaimed) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (isClaimed) {
+        btn.disabled = true;
+        btn.innerText = "Đã Nhận";
+        btn.style.background = "#555";
+        btn.style.color = "#888";
+        btn.style.cursor = "default";
+    } else if (isReady) {
+        btn.disabled = false;
+        btn.innerText = "Nhận Quà";
+        btn.style.background = "#27ae60";
+        btn.style.color = "#fff";
+        btn.style.cursor = "pointer";
+    } else {
+        btn.disabled = true;
+        btn.innerText = "Chưa Đạt";
+        btn.style.background = "#444";
+        btn.style.color = "#aaa";
+        btn.style.cursor = "not-allowed";
+    }
+}
+
+// Quét toàn bộ server tính Quỹ 2% và Thứ hạng Đầu tư
+async function evaluateInvestQuestUI(isClaimed) {
+    const rankLbl = document.getElementById("lbl-quest-invest-rank");
+    const hintLbl = document.getElementById("lbl-quest-invest-reward-hint");
+    const btn = document.getElementById("btn-claim-daily-invest");
+    if (!rankLbl || !btn) return;
+
+    try {
+        const snap = await database.ref('users').once('value');
+        let totalServerInvest = 0;
+        let traders = [];
+
+        snap.forEach(child => {
+            let uVal = child.val();
+            let profit = 0;
+            let pVal = 0;
+            if (uVal.securePayload) {
+                let dec = GameCrypt.decrypt(uVal.securePayload);
+                if (dec) {
+                    profit = dec.realizedProfit || 0;
+                    if (dec.portfolio) {
+                        for (let k in dec.portfolio) {
+                            pVal += (dec.portfolio[k].quantity || 0) * (dec.portfolio[k].buyPrice || 0);
+                        }
+                    }
+                }
+            } else {
+                profit = uVal.realizedProfit || 0;
+            }
+            totalServerInvest += pVal;
+            traders.push({ name: child.key, profit: profit });
+        });
+
+        // Sắp xếp theo lãi/lỗ chốt (Realized Profit)
+        traders.sort((a, b) => b.profit - a.profit);
+        let myRank = traders.findIndex(t => t.name.toLowerCase() === currentUser.toLowerCase()) + 1;
+
+        // Quỹ thưởng = 2% tổng tiền đầu tư server (chia 50)
+        let totalPool = Math.floor(totalServerInvest / 50);
+        let myShare = 0;
+
+        if (myRank >= 1 && myRank <= 3) {
+            myShare = Math.floor(totalPool * 0.125); // 12.5% mỗi top
+            rankLbl.innerHTML = `<span style="color:#ffcc00; font-weight:bold;">Hạng ${myRank}</span> (Thưởng 12.5% Quỹ)`;
+        } else if (myRank >= 4 && myRank <= 10) {
+            myShare = Math.floor(totalPool * 0.075); // 7.5% mỗi top
+            rankLbl.innerHTML = `<span style="color:#00ffcc; font-weight:bold;">Hạng ${myRank}</span> (Thưởng 7.5% Quỹ)`;
+        } else {
+            rankLbl.innerText = myRank > 0 ? `Hạng ${myRank} (Chưa vào Top 10)` : `Chưa có giao dịch`;
+        }
+
+        if (hintLbl) {
+            hintLbl.innerText = `Quỹ 2% Server: ${totalPool} Thạch. Bạn ước tính nhận: ${myShare} Thạch`;
+        }
+
+        let isEligible = (myRank >= 1 && myRank <= 10 && myShare > 0);
+        updateQuestBtnStyle("btn-claim-daily-invest", isEligible, isClaimed);
+
+        // Lưu tạm giá trị tính được vào DOM để nhận thưởng
+        btn.dataset.calculatedReward = myShare;
+    } catch (e) {
+        console.error("Lỗi tính toán NV Đầu tư:", e);
+    }
+}
+
+// ---------------------- CÁC HÀM XỬ LÝ CLAIM ----------------------
+
+// NV 1: Claim Đầu Tư
+function executeClaimDailyInvestQuest() {
+    ensureDailyQuestFresh();
+    if (userStats.dailyQuestClaimed.invest) return alert("Đạo hữu đã nhận thưởng hôm nay rồi!");
+
+    const btn = document.getElementById("btn-claim-daily-invest");
+    let reward = parseInt(btn.dataset.calculatedReward) || 0;
+    if (reward <= 0) return alert("⚠️ Quỹ thưởng hiện tại chưa đủ hoặc bạn chưa nằm trong Top 10!");
+
+    userStats.coin = (userStats.coin || 0) + reward;
+    userStats.dailyQuestClaimed.invest = true;
+
+    pushSecureUserData(currentUser).then(() => {
+        refreshUIFields();
+        renderAllDailyQuestsUI();
+        alert(`🎉 NHẬN THƯỞNG ĐẦU TƯ THÀNH CÔNG!\nBạn nhận được: +${reward} Linh Thạch từ Quỹ Cổ Đông Server.`);
+    });
+}
+
+// NV 2: Claim Nông Trại (3 cây)
+function executeClaimDailyFarmQuest() {
+    ensureDailyQuestFresh();
+    if (userStats.dailyQuestClaimed.farm) return alert("Đã nhận thưởng hôm nay rồi!");
+    if ((userStats.dailyQuestProgress.farmHarvestCount || 0) < 3) return alert("Chưa thu hoạch hoặc trộm đủ 3 cây!");
+
+    if (!userStats.inventory) userStats.inventory = {};
+    userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + 30;
+    userStats.linhdich = (userStats.linhdich || 0) + 30;
+    userStats.dailyQuestClaimed.farm = true;
+
+    pushSecureUserData(currentUser).then(() => {
+        refreshUIFields();
+        renderAllDailyQuestsUI();
+        alert("🎉 HOÀN THÀNH NHIỆM VỤ NÔNG TRẠI!\nNhận được: ⚔️ +30 Kiếm Khí & 💧 +30 Linh Dịch.");
+    });
+}
+
+// NV 3: Claim Speaking (3 bài)
+function executeClaimDailySpeakQuest() {
+    ensureDailyQuestFresh();
+    if (userStats.dailyQuestClaimed.speak) return alert("Đã nhận thưởng hôm nay rồi!");
+    if ((userStats.dailyQuestProgress.speakingCount || 0) < 3) return alert("Chưa hoàn thành đủ 3 cuộc hội thoại!");
+
+    userStats.coin = (userStats.coin || 0) + 90;
+    userStats.dailyQuestClaimed.speak = true;
+
+    pushSecureUserData(currentUser).then(() => {
+        refreshUIFields();
+        renderAllDailyQuestsUI();
+        alert("🎉 HOÀN THÀNH KHẨU ÂM!\nNhận được: 💰 +90 Linh Thạch.");
+    });
+}
+
+// NV 4: Claim Luyện Đan (1 lần)
+function executeClaimDailyDanQuest() {
+    ensureDailyQuestFresh();
+    if (userStats.dailyQuestClaimed.dan) return alert("Đã nhận thưởng hôm nay rồi!");
+    if ((userStats.dailyQuestProgress.luyenDanCount || 0) < 1) return alert("Hôm nay chưa tiến hành luyện đan lần nào!");
+
+    if (!userStats.inventory) userStats.inventory = {};
+    userStats.coin = (userStats.coin || 0) + 20;
+    userStats.inventory.thaoduoc = (userStats.inventory.thaoduoc || 0) + 2;
+    userStats.dailyQuestClaimed.dan = true;
+
+    pushSecureUserData(currentUser).then(() => {
+        refreshUIFields();
+        renderAllDailyQuestsUI();
+        alert("🎉 ĐAN ĐẠO HOÀN THÀNH!\nNhận được: 💰 +20 Linh Thạch & 🌿 +2 Thảo Dược.");
+    });
+}
+
+// NV 5: Claim Chợ Đen (1 lần)
+function executeClaimDailyMarketQuest() {
+    ensureDailyQuestFresh();
+    if (userStats.dailyQuestClaimed.market) return alert("Đã nhận thưởng hôm nay rồi!");
+    if ((userStats.dailyQuestProgress.marketSellCount || 0) < 1) return alert("Hôm nay chưa treo bán món đồ nào trên Chợ Đen!");
+
+    if (!userStats.inventory) userStats.inventory = {};
+    userStats.coin = (userStats.coin || 0) + 10;
+    userStats.inventory.kiemkhi = (userStats.inventory.kiemkhi || 0) + 10;
+    userStats.linhdich = (userStats.linhdich || 0) + 10;
+    userStats.dailyQuestClaimed.market = true;
+
+    pushSecureUserData(currentUser).then(() => {
+        refreshUIFields();
+        renderAllDailyQuestsUI();
+        alert("🎉 GIAO THƯƠNG HOÀN THÀNH!\nNhận được: 💰 +10 Linh Thạch, ⚔️ +10 Kiếm Khí & 💧 +10 Linh Dịch.");
+    });
+}
