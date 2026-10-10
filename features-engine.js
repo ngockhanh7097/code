@@ -4,7 +4,6 @@
  * =========================================================================
  */
 
-// Helper lấy ngày an toàn
 function getSafeCurrentDate() {
     if (typeof window.getFormattedCurrentDate === "function") {
         return window.getFormattedCurrentDate();
@@ -22,7 +21,7 @@ window.FeatureNotifications = {
     farm: false,
     quest: false,
     invest: false,
-    referral: false // 🌟 Thêm mục này
+    referral: false
 };
 
 const MASTER_IMG_DEFAULT = "https://cdn.jsdelivr.net/gh/ngockhanh7097/jooaris-picture@main/btn-chucnang1.webp";
@@ -51,9 +50,13 @@ window.triggerSubFeature = function(featureName) {
     } else if (featureName === 'quest') {
         window.openQuestMasterModal();
     } else if (featureName === 'invest') {
-        window.openInvestModal(); // 🌟 Nút Đầu Tư mở modal tại đây
+        if (typeof window.openInvestModal === "function") {
+            window.openInvestModal();
+        } else if (typeof window.openInvestModalFallback === "function") {
+            window.openInvestModalFallback();
+        }
     } else if (featureName === 'referral') {
-        window.openReferralModal(); // Mở Modal Đạo Duyên
+        window.openReferralModal();
     }
 };
 
@@ -88,7 +91,7 @@ window.setMasterFeatureNotification = function(hasNotification) {
 };
 
 window.updateMasterFeatureNotificationState = function() {
-    let hasAny = window.FeatureNotifications.wheel || window.FeatureNotifications.hero || window.FeatureNotifications.farm || window.FeatureNotifications.quest || window.FeatureNotifications.invest;
+    let hasAny = window.FeatureNotifications.wheel || window.FeatureNotifications.hero || window.FeatureNotifications.farm || window.FeatureNotifications.quest || window.FeatureNotifications.invest || window.FeatureNotifications.referral;
     window.setMasterFeatureNotification(hasAny);
 };
 
@@ -254,7 +257,7 @@ window.checkLuckyWheelNotification = function() {
 // =========================================================================
 // 🏆 3. MODULE ĐẠI HỘI ANH HÙNG (CHỦ NHẬT / 5 PHÚT)
 // =========================================================================
-let isHeroMatchActive = false;
+window.isHeroMatchActive = false;
 let heroTotalTimeLeft = 300;
 let heroTotalTimerInterval = null;
 let heroCurrentQuestionStartTime = 0;
@@ -528,7 +531,7 @@ window.startHeroTournamentMatch = function() {
     if (window.heroActivePool.length === 0) return alert("Không có từ vựng nào trong các chương đã chọn!");
     window.heroActivePool.sort(() => Math.random() - 0.5);
 
-    isHeroMatchActive = true;
+    window.isHeroMatchActive = true;
     isHeroFrozen = false;
     heroScore = 0;
     heroTotalTimeLeft = 300;
@@ -578,14 +581,14 @@ function startHeroTotalCountdown() {
 }
 
 function triggerNextHeroWordLoop() {
-    if (!isHeroMatchActive || heroTotalTimeLeft <= 0) return;
+    if (!window.isHeroMatchActive || heroTotalTimeLeft <= 0) return;
 
     document.getElementById("txt-game-input").value = "";
 
     if (nextHeroWord) {
         window.currentGameWord = nextHeroWord;
     } else {
-        window.currentGameWord = window.heroActivePool[Math.floor(Math.random() * window.heroActivePool.length)]; // Đổi từ gameActivePool sang heroActivePool
+        window.currentGameWord = window.heroActivePool[Math.floor(Math.random() * window.heroActivePool.length)];
     }
 
     document.getElementById("word-display").innerText = window.currentGameWord.viet;
@@ -611,7 +614,7 @@ function triggerNextHeroWordLoop() {
 }
 
 function evaluateHeroAnswer() {
-    if (!isHeroMatchActive || isHeroFrozen) return;
+    if (!window.isHeroMatchActive || isHeroFrozen) return;
 
     const inputField = document.getElementById("txt-game-input");
     const userAns = inputField.value.trim().toLowerCase();
@@ -652,7 +655,7 @@ function evaluateHeroAnswer() {
 }
 
 function finishHeroTournamentMatch() {
-    isHeroMatchActive = false;
+    window.isHeroMatchActive = false;
     clearInterval(heroTotalTimerInterval);
 
     document.getElementById("hero-match-banner").style.display = "none";
@@ -661,7 +664,13 @@ function finishHeroTournamentMatch() {
     const inputField = document.getElementById("txt-game-input");
     inputField.disabled = false;
     inputField.classList.remove("input-frozen");
-    inputField.onkeydown = null; // 👉 THÊM DÒNG NÀY: Hủy trỏ phím Enter vào hàm Đại Hội
+    
+    // Khôi phục bộ lắng nghe Enter cho chế độ chơi bình thường
+    inputField.onkeydown = function(e) {
+        if (e.key === "Enter" && typeof evaluateGameAnswer === "function") {
+            evaluateGameAnswer();
+        }
+    };
 
     const user = window.currentUser;
     const stats = window.userStats;
@@ -789,8 +798,7 @@ window.checkHeroTournamentNotification = function() {
 };
 
 // =========================================================================
-// =========================================================================
-// 📜 4. MODULE NHIỆM VỤ & THÀNH TỰU (BẢN ĐẦY ĐỦ 6 NHIỆM VỤ NGÀY MỚI)
+// 📜 4. MODULE NHIỆM VỤ & THÀNH TỰU
 // =========================================================================
 window.openQuestMasterModal = function() {
     const user = window.currentUser;
@@ -852,7 +860,6 @@ window.loadMasterQuestData = async function() {
 
         let todayStr = getSafeCurrentDate();
 
-        // 🌟 Tự động reset tất cả nhiệm vụ ngày nếu sang ngày mới
         if (stats.lastDailyQuestDate !== todayStr) {
             stats.dailyMinedCoin = 0;
             stats.dailyFarmActions = 0;
@@ -865,23 +872,17 @@ window.loadMasterQuestData = async function() {
 
         const paneDaily = document.getElementById("pane-master-daily");
         if (paneDaily) {
-            // -------------------------------------------------------------
-            // TÍNH TOÁN QUỸ THƯỞNG VÀ XẾP HẠNG TOP 1-10 ĐẦU TƯ (BẢN FIX ĐỘC LẬP)
-            // -------------------------------------------------------------
             let db = window.database || firebase.database();
             let myInvestRank = 0;
             let totalMarketPool = 0;
 
             try {
-                // 🔥 1. ĐỌC TRỰC TIẾP GIÁ THỊ TRƯỜNG TỪ FIREBASE (KHÔNG PHỤ THUỘC CACHE)
                 let quotesSnap = await db.ref('market_quotes').once('value');
                 let marketData = quotesSnap.val() || {};
                 let quotes = marketData.quotes || {};
 
-                // Đồng bộ lại cache toàn cục nếu có dữ liệu
                 if (marketData.quotes) window.cachedInvestQuotes = marketData;
 
-                // 🔥 2. ĐỌC DANH SÁCH TÀI KHOẢN NGƯỜI CHƠI
                 let snap = await db.ref('users').once('value');
                 let investList = [];
 
@@ -910,7 +911,6 @@ window.loadMasterQuestData = async function() {
                         let h = pFolio[t];
                         if (h && h.shares > 0) {
                             hasActiveHolding = true;
-                            // Nếu có giá thị trường thì tính theo giá, nếu không có tạm tính theo giá vốn
                             let curPrice = quotes[t] ? (Number(quotes[t].price) || 0) : (h.totalInvested / h.shares);
                             let val = Math.round(h.shares * curPrice);
                             uProfit += (val - (h.totalInvested || 0));
@@ -920,7 +920,6 @@ window.loadMasterQuestData = async function() {
 
                     totalMarketPool += uTotalInvested;
 
-                    // 🔥 3. CHỈ XẾP HẠNG NHỮNG NGƯỜI THỰC SỰ CÓ CHƠI ĐẦU TƯ
                     if (hasActiveHolding || rProfit !== 0) {
                         investList.push({ name: uName, netProfit: rProfit + uProfit });
                     }
@@ -933,7 +932,6 @@ window.loadMasterQuestData = async function() {
                 console.warn("Lỗi tính rank đầu tư:", err);
             }
 
-            // 🌟 MẢNG TỶ LỆ CHIA GIẢM DẦN CHO TOP 1 - 10 (TỔNG 100%)
             const INVEST_RANK_RATES = [0.25, 0.18, 0.14, 0.10, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03];
             let rewardPool = Math.floor(totalMarketPool * 0.02);
             let myInvestReward = 0;
@@ -964,8 +962,6 @@ window.loadMasterQuestData = async function() {
 
             paneDaily.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
-                    
-                    <!-- NV 1: Đào 100 Linh Thạch -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">⛏️ Khai Thác Linh Thạch (${Math.min(minedCount, 100)}/100)</b>
@@ -977,7 +973,6 @@ window.loadMasterQuestData = async function() {
                         </button>
                     </div>
 
-                    <!-- NV 2: Nằm trong Top 1-10 Đầu Tư Thương Hội -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">📈 Top 1 - 10 Thương Nhân Đầu Tư</b>
@@ -989,7 +984,6 @@ window.loadMasterQuestData = async function() {
                         </button>
                     </div>
 
-                    <!-- NV 3: Thu hoạch hoặc trộm 3 cây -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">🌿 Dược Nông Cần Mẫn (${Math.min(farmCount, 3)}/3)</b>
@@ -1001,7 +995,6 @@ window.loadMasterQuestData = async function() {
                         </button>
                     </div>
 
-                    <!-- NV 4: Hoàn thành 3 bài Speaking -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">🎙️ Khẩu Âm Tinh Thông (${Math.min(speakCount, 3)}/3)</b>
@@ -1013,7 +1006,6 @@ window.loadMasterQuestData = async function() {
                         </button>
                     </div>
 
-                    <!-- NV 5: Luyện đan 1 lần -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">💊 Thần Nông Khởi Lò (${Math.min(alchCount, 1)}/1)</b>
@@ -1025,7 +1017,6 @@ window.loadMasterQuestData = async function() {
                         </button>
                     </div>
 
-                    <!-- NV 6: Đặt bán 1 món đồ ở Chợ Đen -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
                         <div style="text-align:left;">
                             <b style="color:#ffcc00; font-size:12.5px;">🏪 Thương Gia Nhập Sạp (${Math.min(marketCount, 1)}/1)</b>
@@ -1036,12 +1027,10 @@ window.loadMasterQuestData = async function() {
                             ${isClaimMarket ? 'Đã Nhận' : (marketCount >= 1 ? 'Nhận' : 'Chưa Đạt')}
                         </button>
                     </div>
-
                 </div>
             `;
         }
 
-        // 2. Render Nhóm 1: Tu Vi Cảnh Giới
         const tuviPane = document.getElementById("achieve-group-pane-1");
         if (tuviPane) {
             const tuviMilestones = [
@@ -1075,7 +1064,6 @@ window.loadMasterQuestData = async function() {
             tuviPane.innerHTML = html1;
         }
 
-        // 3. Render Nhóm 2: Tông Môn Khai Sáng
         const clanPane = document.getElementById("achieve-group-pane-2");
         if (clanPane) {
             let clanName = window.myTongPhaiName || "";
@@ -1123,7 +1111,6 @@ window.loadMasterQuestData = async function() {
             clanPane.innerHTML = html2;
         }
 
-        // 4. Render Nhóm 3: Chiêu Mộ Đạo Hữu
         const refPane = document.getElementById("achieve-group-pane-3");
         if (refPane) {
             let db = window.database || firebase.database();
@@ -1389,8 +1376,9 @@ window.checkQuestNotification = function() {
     }
     window.updateMasterFeatureNotificationState();
 };
+
 // =========================================================================
-// 📈 MODULE THIÊN BẢO THƯƠNG HỘI (HƯỚNG DẪN + BXH LÃI LỖ TOÀN TAM GIỚI)
+// 📈 MODULE THIÊN BẢO THƯƠNG HỘI
 // =========================================================================
 window.cachedInvestQuotes = {
     updatedTime: "Đang nạp...",
@@ -1411,7 +1399,6 @@ const COMPANY_SHORT_NAMES = {
     "ETH": "Ethereum (ETH)"
 };
 
-// 🌟 HÀM FORMAT GIÁ: CỔ PHIẾU HOSE GIỮ 2 SỐ THẬP PHÂN, VÀNG/CRYPTO GIỮ NGUYÊN
 function formatMarketPrice(ticker, price) {
     const num = Number(price) || 0;
     const cryptoOrder = ["GOLD", "BTC", "ETH"];
@@ -1444,7 +1431,6 @@ window.closeInvestModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
-// 🌟 HÀM HIỂN THỊ HƯỚNG DẪN
 window.showInvestRulesAlert = function() {
     let guide = `📜 BÍ KÍP ĐẦU TƯ THIÊN BẢO THƯƠNG HỘI:
 1. DANH MỤC TÀI SẢN:
@@ -1459,7 +1445,6 @@ window.showInvestRulesAlert = function() {
     alert(guide);
 };
 
-// 🌟 MỞ / ĐÓNG MODAL DANH MỤC NẮM GIỮ (CHUYÊN ĐỂ BÁN)
 window.openInvestPortfolioModal = function() {
     window.renderInvestPortfolioList();
     const modal = document.getElementById("invest-portfolio-modal-layer");
@@ -1471,7 +1456,6 @@ window.closeInvestPortfolioModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
-// 🌟 MỞ / ĐÓNG MODAL BẢNG XẾP HẠNG LÃI LỖ
 window.openInvestLeaderboardModal = function() {
     const modal = document.getElementById("invest-leaderboard-modal-layer");
     if (modal) modal.classList.add("popup-active");
@@ -1483,7 +1467,6 @@ window.closeInvestLeaderboardModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
-// 🌟 RENDER BẢNG PHONG THẦN THƯƠNG NHÂN (LÃI TẠM TÍNH + LÃI ĐÃ CHỐT)
 window.renderInvestLeaderboardUI = function() {
     const tbody = document.getElementById("invest-leaderboard-body");
     if (!tbody) return;
@@ -1573,7 +1556,6 @@ window.renderInvestLeaderboardUI = function() {
     });
 };
 
-// 🌟 RENDER BẢNG THỊ TRƯỜNG (CỔ PHIẾU HOSE HIỂN THỊ CHUẨN 2 SỐ LẺ)
 window.renderInvestMarketUI = function() {
     const container = document.getElementById("invest-items-container");
     if (!container) return;
@@ -1615,7 +1597,6 @@ window.renderInvestMarketUI = function() {
 
     let html = `<div style="display:flex; flex-direction:column; gap:2px;">`;
 
-    // --- KHU VỰC 1: CỔ PHIẾU DOANH NGHIỆP (HOSE) ---
     html += `
         <div style="font-size:10.5px; font-weight:bold; color:#00ffcc; padding:3px 6px; background:rgba(0,255,204,0.08); border-radius:4px; margin-bottom:2px; display:flex; justify-content:space-between;">
             <span>🏛️ CỔ PHIẾU DOANH NGHIỆP (HOSE)</span>
@@ -1651,7 +1632,6 @@ window.renderInvestMarketUI = function() {
         `;
     });
 
-    // --- KHU VỰC 2: VÀNG & TIỀN ĐIỆN TỬ ---
     html += `
         <div style="font-size:10.5px; font-weight:bold; color:#ffaa00; padding:3px 6px; background:rgba(255,170,0,0.08); border-radius:4px; margin-top:5px; margin-bottom:2px; display:flex; justify-content:space-between;">
             <span>💎 TÀI SẢN TOÀN CẦU (VÀNG & TIỀN SỐ)</span>
@@ -1691,7 +1671,6 @@ window.renderInvestMarketUI = function() {
     container.innerHTML = html;
 };
 
-// 🌟 RENDER BẢNG KHO NẮM GIỮ (ĐÃ FIX LỖI TÍNH LỖ DO DỮ LIỆU CŨ LẺ)
 window.renderInvestPortfolioList = function() {
     const container = document.getElementById("portfolio-items-list");
     if (!container) return;
@@ -1711,13 +1690,11 @@ window.renderInvestPortfolioList = function() {
         const holding = portfolio[ticker];
 
         if (holding && holding.shares > 0) {
-            // 🔥 TỰ ĐỘNG CÂN BẰNG LẠI DỮ LIỆU CŨ: Cổ phiếu VN làm tròn CP thì PHẢI chia lại giá vốn tương ứng
             if (!cryptoOrder.includes(ticker) && holding.shares % 1 !== 0) {
                 let originalShares = holding.shares;
                 let roundedShares = Math.floor(originalShares);
                 
                 if (roundedShares > 0) {
-                    // Cân chỉnh lại vốn mua đúng với số CP được giữ
                     holding.totalInvested = Math.round((holding.totalInvested || 0) * (roundedShares / originalShares));
                     holding.shares = roundedShares;
                 } else {
@@ -1806,7 +1783,6 @@ window.renderInvestPortfolioList = function() {
     container.innerHTML = headerSummaryHtml + rowsHtml;
 };
 
-// 🌟 XỬ LÝ MUA & BÁN (CHÍNH XÁC: TIỀN THỪA KHÔNG BỊ TRỪ VÀ KHÔNG BỊ TÍNH VÀO VỐN)
 window.tradeInvestStock = function(ticker, action) {
     if (!window.cachedInvestQuotes || !window.cachedInvestQuotes.quotes[ticker]) return;
     const q = window.cachedInvestQuotes.quotes[ticker];
@@ -1832,12 +1808,10 @@ window.tradeInvestStock = function(ticker, action) {
             sharesBought = investAmount / priceNum;
             actualSpentAmount = investAmount;
         } else {
-            // Mua số nguyên CP: 1000 thạch giá 132.50 -> mua 7 CP
             sharesBought = Math.floor(investAmount / priceNum);
             if (sharesBought <= 0) {
                 return alert(`⚠️ Số linh thạch không đủ mua tối thiểu 1 cổ phiếu ${ticker}! (Cần ít nhất ${formattedPrice} Linh Thạch).`);
             }
-            // Tiền gốc thực tế chỉ tính trên 7 CP, số tiền thừa còn lại người chơi vẫn giữ
             actualSpentAmount = Math.round(sharesBought * priceNum);
         }
 
@@ -1848,10 +1822,8 @@ window.tradeInvestStock = function(ticker, action) {
             return alert(`⚠️ Hành trang không đủ Linh Thạch! Cần ${totalCost.toLocaleString()} Thạch (gồm ${fee} Thạch phí sàn 0.15%).`);
         }
 
-        // Chỉ trừ đúng số tiền thực mua + phí (tiền thừa không bị trừ)
         window.userStats.coin -= totalCost;
         holding.shares = (holding.shares || 0) + sharesBought;
-        // Giá vốn chỉ lưu số tiền thực chi, không tính tiền thừa nhập vào prompt
         holding.totalInvested = (holding.totalInvested || 0) + actualSpentAmount;
         window.userStats.portfolio[ticker] = holding;
 
