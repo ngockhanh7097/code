@@ -1893,6 +1893,12 @@ function createReferralModalDOM() {
                 <span style="font-size: 11px; color: #aaa;">Slot: <b id="lbl-referral-slot-count" style="color:#00ffcc;">0/5</b></span>
             </div>
 
+            <!-- 🌟 Ô NGƯỜI GIỚI THIỆU (NẰM TRÊN Ô MÃ CỦA BẠN) -->
+            <div id="referral-bind-inviter-box" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,204,0,0.3); border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+                <!-- Trạng thái sẽ được render tự động bằng JS -->
+            </div>
+
+            <!-- Ô MÃ GIỚI THIỆU CỦA BẠN -->
             <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(0,255,204,0.3); border-radius: 8px; padding: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="font-size: 11px; color: #aaa;">Mã Giới Thiệu Của Bạn:</div>
@@ -1906,7 +1912,7 @@ function createReferralModalDOM() {
             <div style="font-size: 12px; font-weight: bold; color: #00ffcc; margin-bottom: 6px; text-align: left;">
                 👥 Danh Sách Đạo Hữu Đang Hưởng Bổng Lộc (Tối đa 5 người):
             </div>
-            <div id="referral-disciples-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;"></div>
+            <div id="referral-disciples-list" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;"></div>
         </div>
     `;
     document.body.appendChild(layer);
@@ -1931,10 +1937,124 @@ window.openReferralModal = function() {
     if (!user) return alert("Vui lòng đăng nhập khế ước trước!");
 
     document.getElementById("lbl-referral-my-id").innerText = stats.userId || "Chưa có";
+    
+    // Cập nhật giao diện ô Người Giới Thiệu
+    window.renderInviterBindingUI();
+
     document.getElementById("referral-master-modal-layer").classList.add("popup-active");
     window.loadReferralDisciplesData();
 };
+// 🌟 1. Render giao diện ô Người Giới Thiệu
+window.renderInviterBindingUI = function() {
+    const box = document.getElementById("referral-bind-inviter-box");
+    if (!box) return;
 
+    const stats = window.userStats || {};
+    const inviter = stats.invitedBy;
+
+    if (inviter && inviter.trim() !== "") {
+        // ĐÃ CÓ NGƯỜI GIỚI THIỆU: Hiển thị cố định dạng thẻ đã khóa
+        box.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 11px; color: #aaa;">Đạo Hữu Dẫn Lối (Người Giới Thiệu):</div>
+                    <b style="color: #00ffcc; font-size: 14px;">${inviter}</b>
+                </div>
+                <span style="background: rgba(39, 174, 96, 0.2); border: 1px solid #27ae60; color: #2ecc71; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">
+                    ✓ Đã Liên Kết
+                </span>
+            </div>
+        `;
+    } else {
+        // CHƯA CÓ NGƯỜI GIỚI THIỆU: Hiển thị ô nhập 6 số ID
+        box.innerHTML = `
+            <div style="text-align: left;">
+                <div style="font-size: 11px; color: #ffcc00; font-weight: bold; margin-bottom: 4px;">
+                    🔗 Nhập Mã Người Giới Thiệu (Chỉ 1 lần duy nhất):
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <input id="txt-late-bind-id" maxlength="6" placeholder="Nhập 6 số ID đạo hữu..." type="text" style="flex: 1; padding: 6px 10px; background: #161824; border: 1px solid #ffcc00; border-radius: 4px; color: #fff; font-size: 12px; outline: none; box-sizing: border-box;" />
+                    <button onclick="window.executeBindLateInviter()" style="background: #27ae60; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap;">
+                        Xác Nhận
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+};
+
+// 🌟 2. Thực hiện gắn kết người giới thiệu
+window.executeBindLateInviter = async function() {
+    const user = window.currentUser;
+    const stats = window.userStats;
+    if (!user || !stats) return;
+
+    if (stats.invitedBy && stats.invitedBy.trim() !== "") {
+        return alert("⚠️ Bạn đã có người giới thiệu rồi, không thể liên kết lại!");
+    }
+
+    const inputId = document.getElementById("txt-late-bind-id");
+    const refCode = inputId ? inputId.value.trim() : "";
+
+    if (!refCode || refCode.length < 6) {
+        return alert("Vui lòng nhập đúng 6 số ID của người giới thiệu!");
+    }
+
+    const db = window.database || firebase.database();
+
+    // 1. Kiểm tra ID có tồn tại trên node user_ids không
+    const invSnap = await db.ref('user_ids/' + refCode).once('value');
+    if (!invSnap.exists()) {
+        return alert("❌ Mã ID người giới thiệu không tồn tại trong Tam Giới!");
+    }
+
+    const inviterUsername = invSnap.val();
+
+    // 2. Không cho phép tự nhập ID của chính mình
+    if (inviterUsername.toLowerCase() === user.toLowerCase()) {
+        return alert("❌ Đạo hữu không thể tự nhập mã ID của chính bản thân!");
+    }
+
+    // 3. Kiểm tra xem người giới thiệu đã đầy 5 slot đệ tử chưa
+    const refListSnap = await db.ref(`referrals/${inviterUsername.toLowerCase()}`).once('value');
+    let refs = refListSnap.val() || {};
+    let activeKeys = Object.keys(refs).filter(k => refs[k].activeSlot !== false);
+
+    if (activeKeys.length >= 5) {
+        return alert(`⚠️ Đạo hữu "${inviterUsername}" đã đạt tối đa 5 người đệ tử cùng lúc, không thể kết duyên thêm!`);
+    }
+
+    if (!confirm(`Xác nhận liên kết đạo hữu [ ${inviterUsername} ] làm Người Giới Thiệu?\n(Lưu ý: Chỉ được liên kết duy nhất 1 lần và không thể hoàn tác)`)) {
+        return;
+    }
+
+    // 4. Cập nhật dữ liệu vào tài khoản bản thân
+    stats.invitedBy = inviterUsername;
+    if (!stats.registeredAt) stats.registeredAt = Date.now();
+
+    // 5. Ghi danh mình vào danh sách đệ tử của người giới thiệu
+    await db.ref(`referrals/${inviterUsername.toLowerCase()}/${user.toLowerCase()}`).set({
+        name: user,
+        userId: stats.userId || "",
+        registeredAt: Date.now(),
+        activeSlot: true
+    });
+
+    // 6. Lưu vào node user chính
+    await db.ref('users/' + user).update({
+        invitedBy: inviterUsername,
+        registeredAt: stats.registeredAt
+    });
+
+    // 7. Đồng bộ gói bảo mật
+    window.pushSecureUserData(user, {
+        invitedBy: inviterUsername,
+        registeredAt: stats.registeredAt
+    }).then(() => {
+        window.renderInviterBindingUI();
+        alert(`🎉 Liên kết thành công! Đạo hữu "${inviterUsername}" đã trở thành người dẫn lối cho bạn.`);
+    });
+};
 window.closeReferralModal = function() {
     const modal = document.getElementById("referral-master-modal-layer");
     if (modal) modal.classList.remove("popup-active");
