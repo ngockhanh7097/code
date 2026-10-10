@@ -965,74 +965,82 @@ window.loadMasterQuestData = async function() {
             let marketCount = stats.dailyMarketPostCount || 0;
 
             paneDaily.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
-                        <div style="text-align:left;">
-                            <b style="color:#ffcc00; font-size:12.5px;">⛏️ Khai Thác Linh Thạch (${Math.min(minedCount, 100)}/100)</b>
-                            <div style="font-size:10.5px; color:#aaa;">Đào linh thạch qua dịch từ vựng hôm nay</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>100 Linh Thạch</b></div>
-                        </div>
-                        <button onclick="window.claimNewDailyQuest('mine')" style="background:${isClaimMine ? '#555' : (minedCount >= 100 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${minedCount >= 100 && !isClaimMine ? 'pointer' : 'not-allowed'};" ${minedCount >= 100 && !isClaimMine ? '' : 'disabled'}>
-                            ${isClaimMine ? 'Đã Nhận' : (minedCount >= 100 ? 'Nhận' : 'Chưa Đạt')}
-                        </button>
-                    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+        
+        <!-- NV 1: Đào 100 Linh Thạch -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+            <div style="text-align:left;">
+                <b style="color:#ffcc00; font-size:12.5px;">⛏️ Khai Thác Linh Thạch (${Math.min(minedCount, 100)}/100)</b>
+                <div style="font-size:10.5px; color:#aaa;">Đào linh thạch qua dịch từ vựng hôm nay</div>
+                <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>100 Linh Thạch</b></div>
+            </div>
+            <button onclick="window.claimNewDailyQuest('mine')" style="background:${isClaimMine ? '#555555' : (minedCount >= 100 ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimMine || minedCount >= 100 ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${minedCount >= 100 && !isClaimMine ? 'pointer' : 'not-allowed'};" ${minedCount >= 100 && !isClaimMine ? '' : 'disabled'}>
+                ${isClaimMine ? 'Đã Nhận' : (minedCount >= 100 ? 'Nhận' : 'Chưa Đạt')}
+            </button>
+        </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
-                        <div style="text-align:left;">
-                            <b style="color:#ffcc00; font-size:12.5px;">📈 Top 1 - 10 Thương Nhân Đầu Tư</b>
-                            <div style="font-size:10.5px; color:#aaa;">${rankTextDesc}</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Quỹ thưởng 2% tổng tài sản đầu tư toàn server: <b>${rewardPool.toLocaleString()} Thạch</b></div>
-                        </div>
-                        <button onclick="window.claimTopInvestQuest(${myInvestReward}, ${myInvestRank})" style="background:${isClaimInvest ? '#555' : (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 && !isClaimInvest ? 'pointer' : 'not-allowed'};" ${myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 && !isClaimInvest ? '' : 'disabled'}>
-                            ${isClaimInvest ? 'Đã Nhận' : (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 ? 'Nhận' : 'Chưa Đạt')}
-                        </button>
-                    </div>
+        <!-- NV 2: Nằm trong Top 1-10 Đầu Tư -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+            <div style="text-align:left;">
+                <b style="color:#ffcc00; font-size:12.5px;">📈 Top 1 - 10 Thương Nhân Đầu Tư</b>
+                <div style="font-size:10.5px; color:#aaa;">${rankTextDesc}</div>
+                <div style="font-size:10.5px; color:#00ffcc;">Quỹ thưởng 2% tổng tài sản đầu tư toàn server: <b>${rewardPool.toLocaleString()} Thạch</b></div>
+            </div>
+            <button onclick="window.claimTopInvestQuest(${myInvestReward}, ${myInvestRank})" style="background:${isClaimInvest ? '#555555' : (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimInvest || (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0) ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 && !isClaimInvest ? 'pointer' : 'not-allowed'};" ${myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 && !isClaimInvest ? '' : 'disabled'}>
+                ${isClaimInvest ? 'Đã Nhận' : (myInvestRank >= 1 && myInvestRank <= 10 && myInvestReward > 0 ? 'Nhận' : 'Chưa Đạt')}
+            </button>
+        </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
-                        <div style="text-align:left;">
-                            <b style="color:#ffcc00; font-size:12.5px;">🌿 Dược Nông Cần Mẫn (${Math.min(farmCount, 3)}/3)</b>
-                            <div style="font-size:10.5px; color:#aaa;">Thu hoạch hoặc hái trộm 3 cây dược liệu</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>30 Kiếm Khí + 30 Linh Dịch</b></div>
-                        </div>
-                        <button onclick="window.claimNewDailyQuest('farm')" style="background:${isClaimFarm ? '#555' : (farmCount >= 3 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${farmCount >= 3 && !isClaimFarm ? 'pointer' : 'not-allowed'};" ${farmCount >= 3 && !isClaimFarm ? '' : 'disabled'}>
-                            ${isClaimFarm ? 'Đã Nhận' : (farmCount >= 3 ? 'Nhận' : 'Chưa Đạt')}
-                        </button>
-                    </div>
+        <!-- NV 3: Thu hoạch hoặc trộm 3 cây -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+            <div style="text-align:left;">
+                <b style="color:#ffcc00; font-size:12.5px;">🌿 Dược Nông Cần Mẫn (${Math.min(farmCount, 3)}/3)</b>
+                <div style="font-size:10.5px; color:#aaa;">Thu hoạch hoặc hái trộm 3 cây dược liệu</div>
+                <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>30 Kiếm Khí + 30 Linh Dịch</b></div>
+            </div>
+            <button onclick="window.claimNewDailyQuest('farm')" style="background:${isClaimFarm ? '#555555' : (farmCount >= 3 ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimFarm || farmCount >= 3 ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${farmCount >= 3 && !isClaimFarm ? 'pointer' : 'not-allowed'};" ${farmCount >= 3 && !isClaimFarm ? '' : 'disabled'}>
+                ${isClaimFarm ? 'Đã Nhận' : (farmCount >= 3 ? 'Nhận' : 'Chưa Đạt')}
+            </button>
+        </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
-                        <div style="text-align:left;">
-                            <b style="color:#ffcc00; font-size:12.5px;">🎙️ Khẩu Âm Tinh Thông (${Math.min(speakCount, 3)}/3)</b>
-                            <div style="font-size:10.5px; color:#aaa;">Hoàn thành 3 cuộc hội thoại trong Speaking</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>90 Linh Thạch</b></div>
-                        </div>
-                        <button onclick="window.claimNewDailyQuest('speaking')" style="background:${isClaimSpeak ? '#555' : (speakCount >= 3 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${speakCount >= 3 && !isClaimSpeak ? 'pointer' : 'not-allowed'};" ${speakCount >= 3 && !isClaimSpeak ? '' : 'disabled'}>
-                            ${isClaimSpeak ? 'Đã Nhận' : (speakCount >= 3 ? 'Nhận' : 'Chưa Đạt')}
-                        </button>
-                    </div>
+        <!-- NV 4: Hoàn thành 3 bài Speaking -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+            <div style="text-align:left;">
+                <b style="color:#ffcc00; font-size:12.5px;">🎙️ Khẩu Âm Tinh Thông (${Math.min(speakCount, 3)}/3)</b>
+                <div style="font-size:10.5px; color:#aaa;">Hoàn thành 3 cuộc hội thoại trong Speaking</div>
+                <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>90 Linh Thạch</b></div>
+            </div>
+            <button onclick="window.claimNewDailyQuest('speaking')" style="background:${isClaimSpeak ? '#555555' : (speakCount >= 3 ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimSpeak || speakCount >= 3 ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${speakCount >= 3 && !isClaimSpeak ? 'pointer' : 'not-allowed'};" ${speakCount >= 3 && !isClaimSpeak ? '' : 'disabled'}>
+                ${isClaimSpeak ? 'Đã Nhận' : (speakCount >= 3 ? 'Nhận' : 'Chưa Đạt')}
+            </button>
+        </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
-                        <div style="text-align:left;">
-                            <b style="color:#ffcc00; font-size:12.5px;">💊 Thần Nông Khởi Lò (${Math.min(alchCount, 1)}/1)</b>
-                            <div style="font-size:10.5px; color:#aaa;">Tiến hành Luyện Đan 1 lần tại Đan Các</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>20 Linh Thạch + 2 Thảo Dược</b></div>
-                        </div>
-                        <button onclick="window.claimNewDailyQuest('alchemy')" style="background:${isClaimAlchemy ? '#555' : (alchCount >= 1 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${alchCount >= 1 && !isClaimAlchemy ? 'pointer' : 'not-allowed'};" ${alchCount >= 1 && !isClaimAlchemy ? '' : 'disabled'}>
-                            ${isClaimAlchemy ? 'Đã Nhận' : (alchCount >= 1 ? 'Nhận' : 'Chưa Đạt')}
-                        </button>
-                    </div>
+        <!-- NV 5: Luyện đan 1 lần -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+            <div style="text-align:left;">
+                <b style="color:#ffcc00; font-size:12.5px;">💊 Thần Nông Khởi Lò (${Math.min(alchCount, 1)}/1)</b>
+                <div style="font-size:10.5px; color:#aaa;">Tiến hành Luyện Đan 1 lần tại Đan Các</div>
+                <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>20 Linh Thạch + 2 Thảo Dược</b></div>
+            </div>
+            <button onclick="window.claimNewDailyQuest('alchemy')" style="background:${isClaimAlchemy ? '#555555' : (alchCount >= 1 ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimAlchemy || alchCount >= 1 ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${alchCount >= 1 && !isClaimAlchemy ? 'pointer' : 'not-allowed'};" ${alchCount >= 1 && !isClaimAlchemy ? '' : 'disabled'}>
+                ${isClaimAlchemy ? 'Đã Nhận' : (alchCount >= 1 ? 'Nhận' : 'Chưa Đạt')}
+            </button>
+        </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
-                        <div style="text-align:left;">
-                            <b style="color:#ffcc00; font-size:12.5px;">🏪 Thương Gia Nhập Sạp (${Math.min(marketCount, 1)}/1)</b>
-                            <div style="font-size:10.5px; color:#aaa;">Treo bán 1 món hàng tại Chợ Đen Khương Thị</div>
-                            <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>10 Thạch + 10 Kiếm Khí + 10 Linh Dịch</b></div>
-                        </div>
-                        <button onclick="window.claimNewDailyQuest('market')" style="background:${isClaimMarket ? '#555' : (marketCount >= 1 ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${marketCount >= 1 && !isClaimMarket ? 'pointer' : 'not-allowed'};" ${marketCount >= 1 && !isClaimMarket ? '' : 'disabled'}>
-                            ${isClaimMarket ? 'Đã Nhận' : (marketCount >= 1 ? 'Nhận' : 'Chưa Đạt')}
-                        </button>
-                    </div>
-                </div>
-            `;
+        <!-- NV 6: Đặt bán 1 món đồ ở Chợ Đen -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border:1px solid rgba(0,255,204,0.2);">
+            <div style="text-align:left;">
+                <b style="color:#ffcc00; font-size:12.5px;">🏪 Thương Gia Nhập Sạp (${Math.min(marketCount, 1)}/1)</b>
+                <div style="font-size:10.5px; color:#aaa;">Treo bán 1 món hàng tại Chợ Đen Khương Thị</div>
+                <div style="font-size:10.5px; color:#00ffcc;">Thưởng: <b>10 Thạch + 10 Kiếm Khí + 10 Linh Dịch</b></div>
+            </div>
+            <button onclick="window.claimNewDailyQuest('market')" style="background:${isClaimMarket ? '#555555' : (marketCount >= 1 ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimMarket || marketCount >= 1 ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${marketCount >= 1 && !isClaimMarket ? 'pointer' : 'not-allowed'};" ${marketCount >= 1 && !isClaimMarket ? '' : 'disabled'}>
+                ${isClaimMarket ? 'Đã Nhận' : (marketCount >= 1 ? 'Nhận' : 'Chưa Đạt')}
+            </button>
+        </div>
+
+    </div>
+`;
         }
 
         const tuviPane = document.getElementById("achieve-group-pane-1");
@@ -1059,7 +1067,7 @@ window.loadMasterQuestData = async function() {
                             <div style="font-size:10.5px; color:#aaa;">Yêu cầu: Đạt Cảnh giới Lv.${m.lv}</div>
                             <div style="font-size:10.5px; color:#00ffcc;">Thưởng: 🎁 <b>+${m.rewardChest} Rương Cực Phẩm</b></div>
                         </div>
-                        <button onclick="window.claimTuViAchieve('${m.key}', ${m.rewardChest}, ${m.lv})" style="background:${isClaimed ? '#555' : (isEligible ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
+                        <button onclick="window.claimTuViAchieve('${m.key}', ${m.rewardChest}, ${m.lv})" style="background:${isClaimed ? '#555555' : (isEligible ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimed || isEligible ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
                             ${isClaimed ? 'Đã Nhận' : (isEligible ? 'Nhận' : 'Chưa Đạt')}
                         </button>
                     </div>
@@ -1106,7 +1114,7 @@ window.loadMasterQuestData = async function() {
                             <div style="font-size:10.5px; color:#aaa;">${m.desc}</div>
                             <div style="font-size:10.5px; color:#ffaa00;">Thưởng: <b>${rewardText}</b></div>
                         </div>
-                        <button onclick="window.claimClanAchieve('${m.key}', ${m.coin}, ${m.chest}, ${isEligible})" style="background:${isClaimed ? '#555' : (isEligible ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
+                        <button onclick="window.claimClanAchieve('${m.key}', ${m.coin}, ${m.chest}, ${isEligible})" style="background:${isClaimed ? '#555555' : (isEligible ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimed || isEligible ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
                             ${isClaimed ? 'Đã Nhận' : (isEligible ? 'Nhận' : 'Chưa Đạt')}
                         </button>
                     </div>
@@ -1157,7 +1165,7 @@ window.loadMasterQuestData = async function() {
                             <div style="font-size:10.5px; color:#aaa;">Tiến độ: ${Math.min(eligibleInviteCount, m.count)}/${m.count}</div>
                             <div style="font-size:10.5px; color:#00ffff;">Thưởng: 💎 <b>+${m.rewardCucPham} Linh Thạch Cực Phẩm</b></div>
                         </div>
-                        <button onclick="window.claimInviteAchieve('${m.key}', ${m.rewardCucPham}, ${isEligible})" style="background:${isClaimed ? '#555' : (isEligible ? '#27ae60' : '#444')}; color:#fff; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
+                        <button onclick="window.claimInviteAchieve('${m.key}', ${m.rewardCucPham}, ${isEligible})" style="background:${isClaimed ? '#555555' : (isEligible ? '#27ae60' : '#6c25be')}; color:#fff; border:${isClaimed || isEligible ? 'none' : '1px solid #8e44ad'}; padding:5px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:${isEligible && !isClaimed ? 'pointer' : 'not-allowed'};" ${isEligible && !isClaimed ? '' : 'disabled'}>
                             ${isClaimed ? 'Đã Nhận' : (isEligible ? 'Nhận' : 'Chưa Đạt')}
                         </button>
                     </div>
