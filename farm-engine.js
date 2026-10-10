@@ -4,13 +4,78 @@
  */
 
 const FARM_SEEDS_CONFIG = {
-    // 🔥 ĐÃ CẬP NHẬT: Thêm 20 Linh Thạch + 10 Thảo Dược khi thu hoạch
-    d: { name: "Ngưng Khí Thảo", rank: "D", minLv: 1, reqRoleText: "Phàm Nhân", priceType: "coin", price: 20, growHours: 2, reqWater: 2, rewardText: "20 Thạch, 10 Thảo Dược", rewards: { coin: 20, thaoduoc: 10 } },
-    c: { name: "Thanh Phong Mộc", rank: "C", minLv: 16, reqRoleText: "Trúc Cơ", priceType: "kiemkhi", price: 50, growHours: 6, reqWater: 5, rewardText: "200 Kiếm Khí", rewards: { kiemkhi: 200 } },
-    b: { name: "Tử Vong Đằng", rank: "B", minLv: 23, reqRoleText: "Kết Đan", priceType: "coin", price: 100, growHours: 12, reqWater: 10, rewardText: "100 Thạch, 20 Linh Dịch, 10 Thảo Dược", rewards: { coin: 100, linhdich: 20, thaoduoc: 10 } },
-    a: { name: "Cửu Diệp Huyết Liên", rank: "A", minLv: 29, reqRoleText: "Nguyên Anh", priceType: "coin", price: 200, growHours: 12, reqWater: 20, rewardText: "200 Thạch, 200 Kiếm Khí, 20 Thảo Dược", rewards: { coin: 200, kiemkhi: 200, thaoduoc: 20 } },
-    s: { name: "Thái Cổ Thần Thụ", rank: "S", minLv: 41, reqRoleText: "Hóa Thần", priceType: "coin", price: 500, growHours: 24, reqWater: 40, rewardText: "500 Thạch, 1 Vé Vòng Quay", rewards: { coin: 500, wheelTicket: 1 } },
-    ss: { name: "Vạn Kiếp Luân Hồi Mộc", rank: "SS", minLv: 57, reqRoleText: "Anh Biến", priceType: "coin", price: 1000, growHours: 48, reqWater: 100, rewardText: "1.000 Thạch, 50 Linh Dịch, 3 Vé Vòng Quay", rewards: { coin: 1000, linhdich: 50, wheelTicket: 3 } }
+    d: { 
+        name: "Ngưng Khí Thảo", 
+        rank: "D", 
+        minLv: 1, 
+        reqRoleText: "Phàm Nhân", 
+        priceType: "coin", 
+        price: 20, 
+        growHours: 2, 
+        reqWater: 2, 
+        rewardText: "20 Thạch, 10 Thảo Dược", 
+        rewards: { coin: 20, thaoduoc: 10 } 
+    },
+    c: { 
+        name: "Thanh Phong Mộc", 
+        rank: "C", 
+        minLv: 16, 
+        reqRoleText: "Trúc Cơ", 
+        priceType: "kiemkhi", 
+        price: 50, 
+        growHours: 6, 
+        reqWater: 5, 
+        rewardText: "200 Kiếm Khí", 
+        rewards: { kiemkhi: 200 } 
+    },
+    b: { 
+        name: "Tử Vong Đằng", 
+        rank: "B", 
+        minLv: 23, 
+        reqRoleText: "Kết Đan", 
+        priceType: "coin", 
+        price: 100, 
+        growHours: 12, 
+        reqWater: 10, 
+        rewardText: "100 Thạch, 20 Linh Dịch, 10 Thảo Dược, 1 Nhân Sâm 100 Năm", 
+        rewards: { coin: 100, linhdich: 20, thaoduoc: 10, nhansam100: 1 } 
+    },
+    a: { 
+        name: "Cửu Diệp Huyết Liên", 
+        rank: "A", 
+        minLv: 29, 
+        reqRoleText: "Nguyên Anh", 
+        priceType: "coin", 
+        price: 200, 
+        growHours: 12, 
+        reqWater: 20, 
+        rewardText: "200 Thạch, 200 Kiếm Khí, 20 Thảo Dược, 2 Nhân Sâm 100 Năm", 
+        rewards: { coin: 200, kiemkhi: 200, thaoduoc: 20, nhansam100: 2 } 
+    },
+    s: { 
+        name: "Thái Cổ Thần Thụ", 
+        rank: "S", 
+        minLv: 41, 
+        reqRoleText: "Hóa Thần", 
+        priceType: "coin", 
+        price: 500, 
+        growHours: 24, 
+        reqWater: 40, 
+        rewardText: "500 Thạch, 5 Nhân Sâm 100 Năm, 1 Nhân Sâm 200 Năm", 
+        rewards: { coin: 500, nhansam100: 5, nhansam200: 1 } 
+    },
+    ss: { 
+        name: "Vạn Kiếp Luân Hồi Mộc", 
+        rank: "SS", 
+        minLv: 57, 
+        reqRoleText: "Anh Biến", 
+        priceType: "coin", 
+        price: 1000, 
+        growHours: 48, 
+        reqWater: 100, 
+        rewardText: "1.000 Thạch, 50 Linh Dịch, 5 Nhân Sâm 200 Năm", 
+        rewards: { coin: 1000, linhdich: 50, nhansam200: 5 } 
+    }
 };
 
 const FARM_PLOT_LEVELS = [
@@ -25,6 +90,7 @@ const FARM_PLOT_LEVELS = [
 let farmCurrentVisitingUser = null;
 let farmUpdateTimer = null;
 let isStealingInProgress = false;
+let currentBuyingSeedKey = null;
 
 const PLOT_COORDINATES = {
     1: { top: "28.5%", left: "22.2%", width: "26.5%", height: "15.6%" },
@@ -303,6 +369,36 @@ function createFarmModalDOM() {
         </div>
     `;
     document.body.appendChild(shopLayer);
+
+    // 🌟 MODAL NHẬP SỐ LƯỢNG MUA HẠT GIỐNG
+    const buyQtyLayer = document.createElement("div");
+    buyQtyLayer.className = "modal-layer";
+    buyQtyLayer.id = "farm-buy-qty-modal-layer";
+    buyQtyLayer.style.zIndex = "13800";
+    buyQtyLayer.innerHTML = `
+        <div class="modal-box" style="max-width: 330px; background: #0c0d14; color: #fff; border: 2px solid #00ffcc; text-align: center; border-radius: 10px; padding: 18px;">
+            <span class="modal-close" onclick="closeFarmBuyQtyModal()" style="color: #aaa; cursor: pointer; font-size: 20px;">×</span>
+            <div class="modal-title" style="color: #00ffcc; font-size: 15px; border-bottom: 1px dashed rgba(255,255,255,0.2); margin-bottom: 12px; padding-bottom: 6px;">
+                🛒 Mua Hạt Giống
+            </div>
+            <div id="farm-buy-item-name" style="font-size: 14px; font-weight: bold; color: #ffcc00; margin-bottom: 6px;">---</div>
+            <div id="farm-buy-item-price" style="font-size: 11.5px; color: #ccc; margin-bottom: 12px;">Đơn giá: ---</div>
+            
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
+                <button onclick="changeBuySeedQty(-1)" style="width: 32px; height: 32px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">-</button>
+                <input id="txt-buy-seed-qty" type="number" min="1" max="999" value="1" oninput="updateBuySeedTotalPrice()" style="width: 80px; height: 32px; text-align: center; background: #161824; border: 1px solid #00ffcc; color: #fff; font-size: 14px; font-weight: bold; border-radius: 4px; outline: none; box-sizing: border-box;" />
+                <button onclick="changeBuySeedQty(1)" style="width: 32px; height: 32px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer;">+</button>
+                <button onclick="setBuySeedMaxQty()" style="height: 32px; padding: 0 8px; background: #ff8c00; color: #fff; border: none; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">Tối đa</button>
+            </div>
+
+            <div id="farm-buy-total-price" style="font-size: 12px; color: #00ffff; font-weight: bold; margin-bottom: 14px;">Tổng chi phí: 0</div>
+            
+            <button onclick="executeConfirmBuySeed()" style="width: 100%; padding: 9px; background: linear-gradient(135deg, #27ae60 0%, #1e7e34 100%); color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px rgba(39, 174, 96, 0.4);">
+                Xác Nhận Mua
+            </button>
+        </div>
+    `;
+    document.body.appendChild(buyQtyLayer);
 
     const visitLayer = document.createElement("div");
     visitLayer.className = "modal-layer";
@@ -806,6 +902,18 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
             } else if (rKey === "wheelTicket") {
                 uStats.inventory.wheelTicket = (uStats.inventory.wheelTicket || 0) + realVal;
                 summary.push(`+${realVal} Vé Vòng Quay`);
+            } else if (rKey === "nhansam100") {
+                uStats.inventory.nhansam100 = (uStats.inventory.nhansam100 || 0) + realVal;
+                summary.push(`+${realVal} Nhân Sâm Trăm Năm`);
+            } else if (rKey === "nhansam200") {
+                uStats.inventory.nhansam200 = (uStats.inventory.nhansam200 || 0) + realVal;
+                summary.push(`+${realVal} Nhân Sâm 200 Năm`);
+            } else if (rKey === "thaoduoc") {
+                uStats.inventory.thaoduoc = (uStats.inventory.thaoduoc || 0) + realVal;
+                summary.push(`+${realVal} Thảo Dược`);
+            } else if (rKey === "kiemkhi") {
+                uStats.inventory.kiemkhi = (uStats.inventory.kiemkhi || 0) + realVal;
+                summary.push(`+${realVal} Kiếm Khí`);
             } else {
                 uStats.inventory[rKey] = (uStats.inventory[rKey] || 0) + realVal;
                 summary.push(`+${realVal} ${rKey}`);
@@ -884,6 +992,18 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
                 } else if (rKey === "wheelTicket") {
                     uStats.inventory.wheelTicket = (uStats.inventory.wheelTicket || 0) + stealVal;
                     stolenItems.push(`+${stealVal} Vé Vòng Quay`);
+                } else if (rKey === "nhansam100") {
+                    uStats.inventory.nhansam100 = (uStats.inventory.nhansam100 || 0) + stealVal;
+                    stolenItems.push(`+${stealVal} Nhân Sâm 100 Năm`);
+                } else if (rKey === "nhansam200") {
+                    uStats.inventory.nhansam200 = (uStats.inventory.nhansam200 || 0) + stealVal;
+                    stolenItems.push(`+${stealVal} Nhân Sâm 200 Năm`);
+                } else if (rKey === "thaoduoc") {
+                    uStats.inventory.thaoduoc = (uStats.inventory.thaoduoc || 0) + stealVal;
+                    stolenItems.push(`+${stealVal} Thảo Dược`);
+                } else if (rKey === "kiemkhi") {
+                    uStats.inventory.kiemkhi = (uStats.inventory.kiemkhi || 0) + stealVal;
+                    stolenItems.push(`+${stealVal} Kiếm Khí`);
                 } else {
                     uStats.inventory[rKey] = (uStats.inventory[rKey] || 0) + stealVal;
                     stolenItems.push(`+${stealVal} ${rKey}`);
@@ -1070,7 +1190,7 @@ window.openFarmShopModal = function() {
                     </div>
                 </div>
                 <div>
-                    <button onclick="window.executeBuySeed('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
+                    <button onclick="window.openBuySeedQtyModal('${sKey}')" style="background: ${isEligible ? '#27ae60' : '#555'}; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: ${isEligible ? 'pointer' : 'not-allowed'};" ${isEligible ? '' : 'disabled'}>
                         Mua ${item.price} ${priceUnit}
                     </button>
                 </div>
@@ -1086,32 +1206,116 @@ window.closeFarmShopModal = function() {
     document.getElementById("farm-shop-modal-layer").classList.remove("popup-active");
 };
 
-window.executeBuySeed = function(seedKey) {
+// 🌟 HÀM MỞ BẢNG NHẬP SỐ LƯỢNG MUA HẠT GIỐNG
+window.openBuySeedQtyModal = function(seedKey) {
+    currentBuyingSeedKey = seedKey;
     const item = FARM_SEEDS_CONFIG[seedKey];
-    if (!window.userStats) window.userStats = {};
-    if (!window.userStats.inventory) window.userStats.inventory = {};
+    if (!item) return;
 
-    if (item.priceType === "coin" && (window.userStats.coin || 0) < item.price) {
-        return showFarmAlert("Không đủ Linh Thạch!");
+    const priceUnit = item.priceType === "coin" ? "Linh Thạch" : "Kiếm Khí";
+    document.getElementById("farm-buy-item-name").innerText = `[${item.rank}] ${item.name}`;
+    document.getElementById("farm-buy-item-price").innerText = `Đơn giá: ${item.price} ${priceUnit}/hạt`;
+    
+    const inputQty = document.getElementById("txt-buy-seed-qty");
+    if (inputQty) inputQty.value = 1;
+
+    updateBuySeedTotalPrice();
+
+    const layer = document.getElementById("farm-buy-qty-modal-layer");
+    if (layer) layer.classList.add("popup-active");
+};
+
+window.closeFarmBuyQtyModal = function() {
+    const layer = document.getElementById("farm-buy-qty-modal-layer");
+    if (layer) layer.classList.remove("popup-active");
+    currentBuyingSeedKey = null;
+};
+
+window.changeBuySeedQty = function(delta) {
+    const input = document.getElementById("txt-buy-seed-qty");
+    if (!input) return;
+    let val = parseInt(input.value) || 1;
+    val = Math.max(1, Math.min(999, val + delta));
+    input.value = val;
+    updateBuySeedTotalPrice();
+};
+
+window.setBuySeedMaxQty = function() {
+    if (!currentBuyingSeedKey) return;
+    const item = FARM_SEEDS_CONFIG[currentBuyingSeedKey];
+    const uStats = (typeof userStats !== 'undefined') ? userStats : (window.userStats || {});
+    const inv = uStats.inventory || {};
+
+    let currentFunds = item.priceType === "coin" ? (uStats.coin || 0) : (inv.kiemkhi || 0);
+    let maxCanBuy = Math.floor(currentFunds / item.price);
+    if (maxCanBuy < 1) maxCanBuy = 1;
+    if (maxCanBuy > 999) maxCanBuy = 999;
+
+    const input = document.getElementById("txt-buy-seed-qty");
+    if (input) {
+        input.value = maxCanBuy;
+        updateBuySeedTotalPrice();
     }
-    if (item.priceType === "kiemkhi" && (window.userStats.inventory.kiemkhi || 0) < item.price) {
-        return showFarmAlert("Không đủ Kiếm Khí!");
+};
+
+window.updateBuySeedTotalPrice = function() {
+    if (!currentBuyingSeedKey) return;
+    const item = FARM_SEEDS_CONFIG[currentBuyingSeedKey];
+    const input = document.getElementById("txt-buy-seed-qty");
+    const totalEl = document.getElementById("farm-buy-total-price");
+    if (!input || !totalEl) return;
+
+    let qty = parseInt(input.value) || 1;
+    if (qty < 1) { qty = 1; input.value = 1; }
+    if (qty > 999) { qty = 999; input.value = 999; }
+
+    const priceUnit = item.priceType === "coin" ? "Linh Thạch" : "Kiếm Khí";
+    const total = qty * item.price;
+    totalEl.innerText = `Tổng chi phí: ${total.toLocaleString()} ${priceUnit}`;
+};
+
+window.executeConfirmBuySeed = function() {
+    if (!currentBuyingSeedKey) return;
+    const item = FARM_SEEDS_CONFIG[currentBuyingSeedKey];
+    const input = document.getElementById("txt-buy-seed-qty");
+    let qty = parseInt(input ? input.value : 1) || 1;
+    if (qty < 1) qty = 1;
+
+    const uStats = (typeof userStats !== 'undefined') ? userStats : (window.userStats || {});
+    if (!uStats.inventory) uStats.inventory = {};
+
+    const totalCost = item.price * qty;
+    const priceUnit = item.priceType === "coin" ? "Linh Thạch" : "Kiếm Khí";
+
+    if (item.priceType === "coin" && (uStats.coin || 0) < totalCost) {
+        return showFarmAlert(`Không đủ Linh Thạch! Cần ${totalCost.toLocaleString()} Linh Thạch (Hiện có: ${(uStats.coin || 0).toLocaleString()}).`);
+    }
+    if (item.priceType === "kiemkhi" && (uStats.inventory.kiemkhi || 0) < totalCost) {
+        return showFarmAlert(`Không đủ Kiếm Khí! Cần ${totalCost.toLocaleString()} Kiếm Khí (Hiện có: ${(uStats.inventory.kiemkhi || 0).toLocaleString()}).`);
     }
 
     if (item.priceType === "coin") {
-        window.userStats.coin -= item.price;
+        uStats.coin -= totalCost;
     } else {
-        window.userStats.inventory.kiemkhi -= item.price;
+        uStats.inventory.kiemkhi -= totalCost;
     }
 
-    if (!window.userStats.farmSeeds) window.userStats.farmSeeds = {};
-    window.userStats.farmSeeds[seedKey] = (window.userStats.farmSeeds[seedKey] || 0) + 1;
+    if (!uStats.farmSeeds) uStats.farmSeeds = {};
+    uStats.farmSeeds[currentBuyingSeedKey] = (uStats.farmSeeds[currentBuyingSeedKey] || 0) + qty;
 
-    window.pushSecureUserData(window.currentUser).then(() => {
-        window.refreshUIFields();
-        window.openFarmShopModal();
-        showFarmAlert(`🎉 Mua thành công 1 hạt giống ${item.name}! Đã cất vào Túi Hạt.`);
-    });
+    const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
+    const pushFn = window.pushSecureUserData || (typeof pushSecureUserData !== 'undefined' ? pushSecureUserData : null);
+
+    if (pushFn) {
+        pushFn(activeUser).then(() => {
+            if (typeof refreshUIFields === "function") refreshUIFields();
+            window.closeFarmBuyQtyModal();
+            window.openFarmShopModal();
+            showFarmAlert(`🎉 Mua thành công ${qty} hạt giống ${item.name}!\nChi phí: -${totalCost.toLocaleString()} ${priceUnit}.\nHạt giống đã được cất vào Túi Hạt.`);
+        });
+    } else {
+        window.closeFarmBuyQtyModal();
+    }
 };
 
 window.openFarmVisitModal = function() {
@@ -1158,7 +1362,6 @@ function closeFarmVisitModal() {
     if (modal) modal.classList.remove("popup-active");
 }
 
-// 🌟 BỔ SUNG: Kiểm tra thông báo có cây chín để hiện chấm đỏ
 window.checkFarmNotification = function() {
     const user = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
     if (!user) return;
@@ -1200,7 +1403,6 @@ window.checkFarmNotification = function() {
     });
 };
 
-// 🌟 XUẤT TOÀN BỘ HÀM ĐIỀU KHIỂN RA WINDOW
 window.openFarmModal = openFarmModal;
 window.closeFarmModal = closeFarmModal;
 window.openFarmSeedBagModal = openFarmSeedBagModal;
@@ -1209,3 +1411,9 @@ window.executePlantSeed = executePlantSeed;
 window.loadFarmGarden = loadFarmGarden;
 window.openFarmVisitModal = openFarmVisitModal;
 window.closeFarmVisitModal = closeFarmVisitModal;
+window.openBuySeedQtyModal = openBuySeedQtyModal;
+window.closeFarmBuyQtyModal = closeFarmBuyQtyModal;
+window.executeConfirmBuySeed = executeConfirmBuySeed;
+window.changeBuySeedQty = changeBuySeedQty;
+window.setBuySeedMaxQty = setBuySeedMaxQty;
+window.updateBuySeedTotalPrice = updateBuySeedTotalPrice;
