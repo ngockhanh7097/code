@@ -1233,18 +1233,36 @@ window.claimTopInvestQuest = function(rewardCoin, rank) {
     if (!user || !stats) return;
     if (!stats.claimedDailyQuests) stats.claimedDailyQuests = {};
 
-    if (stats.claimedDailyQuests.topInvest) {
-        return alert("Đạo hữu đã nhận thưởng chia cổ tức đầu tư hôm nay rồi!");
+    let todayStr = getSafeCurrentDate();
+
+    // 1. Kiểm tra ngày và trạng thái đã nhận
+    if (stats.lastDailyQuestDate === todayStr && stats.claimedDailyQuests.topInvest === true) {
+        return alert("⚠️ Đạo hữu đã nhận thưởng chia cổ tức đầu tư hôm nay rồi! Hãy quay lại vào ngày mai.");
     }
 
     if (!rank || rank < 1 || rank > 10 || rewardCoin <= 0) {
         return alert("Chưa đạt điều kiện Top 1-10 hoặc quỹ chia không đủ!");
     }
 
+    // 2. Cập nhật dữ liệu
     stats.coin = (stats.coin || 0) + rewardCoin;
     stats.claimedDailyQuests.topInvest = true;
+    stats.lastDailyQuestDate = todayStr; // Cố định ngày nhận
 
-    window.pushSecureUserData(user).then(() => {
+    const db = window.database || firebase.database();
+
+    // 3. Đẩy đồng bộ lên cả payload bảo mật lẫn node raw trên Firebase
+    window.pushSecureUserData(user, {
+        coin: stats.coin,
+        claimedDailyQuests: stats.claimedDailyQuests,
+        lastDailyQuestDate: todayStr
+    }).then(() => {
+        // Ghi thêm 1 bản dự phòng trực tiếp vào node user để khi F5 không bao giờ bị mất
+        db.ref('users/' + user).update({
+            lastDailyQuestDate: todayStr,
+            'claimedDailyQuests/topInvest': true
+        });
+
         window.refreshUIFields();
         window.loadMasterQuestData();
         window.checkQuestNotification();
