@@ -1467,11 +1467,12 @@ window.closeInvestLeaderboardModal = function() {
     if (modal) modal.classList.remove("popup-active");
 };
 
+// 🌟 RENDER BẢNG PHONG THẦN THƯƠNG NHÂN (THÊM CỘT GIÁ TRỊ NẮM GIỮ)
 window.renderInvestLeaderboardUI = function() {
     const tbody = document.getElementById("invest-leaderboard-body");
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="4" style="padding:15px; color:#888; font-style:italic; text-align:center;">Đang thu thập thần thức thương nhân...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:15px; color:#888; font-style:italic; text-align:center;">Đang thu thập thần thức thương nhân...</td></tr>`;
 
     const db = window.database || firebase.database();
     const quotes = window.cachedInvestQuotes.quotes || {};
@@ -1499,6 +1500,7 @@ window.renderInvestLeaderboardUI = function() {
                 }
 
                 let unrealizedProfit = 0;
+                let currentHoldingValue = 0;
                 let hasActiveHolding = false;
 
                 Object.keys(portfolio).forEach(t => {
@@ -1507,6 +1509,7 @@ window.renderInvestLeaderboardUI = function() {
                         hasActiveHolding = true;
                         let curPrice = Number(quotes[t].price) || 0;
                         let holdingVal = Math.round(h.shares * curPrice);
+                        currentHoldingValue += holdingVal;
                         unrealizedProfit += (holdingVal - (h.totalInvested || 0));
                     }
                 });
@@ -1517,6 +1520,7 @@ window.renderInvestLeaderboardUI = function() {
                     list.push({
                         name: name,
                         level: level,
+                        holdingValue: currentHoldingValue,
                         profit: totalNetProfit
                     });
                 }
@@ -1524,7 +1528,7 @@ window.renderInvestLeaderboardUI = function() {
         });
 
         if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; color:#888; font-style:italic; text-align:center;">Chưa có đạo hữu nào tham gia đầu tư!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="padding:20px; color:#888; font-style:italic; text-align:center;">Chưa có đạo hữu nào tham gia đầu tư!</td></tr>`;
             return;
         }
 
@@ -1544,8 +1548,11 @@ window.renderInvestLeaderboardUI = function() {
             html += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${isMe ? 'background: rgba(0, 255, 204, 0.1); font-weight:bold;' : ''}">
                     <td style="padding: 7px 4px; text-align: center;"><b style="color:${rank <= 3 ? '#ffcc00' : '#fff'};">${rank}</b></td>
-                    <td style="padding: 7px 4px; text-align: left;"><span style="color:#ffcc00;">${u.name}</span></td>
+                    <td style="padding: 7px 4px; text-align: left;"><span style="color:#ffcc00; font-weight:600;">${u.name}</span></td>
                     <td style="padding: 7px 4px; text-align: center;">${tuviHtml}</td>
+                    <td style="padding: 7px 4px; text-align: right; color:#00ffcc; font-weight:bold;">
+                        ${u.holdingValue.toLocaleString()} Thạch
+                    </td>
                     <td style="padding: 7px 6px; text-align: right; color:${profitColor}; font-weight:bold;">
                         ${profitSign}${u.profit.toLocaleString()} Thạch
                     </td>
