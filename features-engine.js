@@ -57,6 +57,10 @@ window.triggerSubFeature = function(featureName) {
         }
     } else if (featureName === 'referral') {
         window.openReferralModal();
+    }else if (featureName === 'social') {
+        if (typeof window.openSocialModal === "function") {
+            window.openSocialModal();
+        }
     }
 };
 
