@@ -799,6 +799,64 @@ window.closeFarmSeedBagModal = function() {
     document.getElementById("farm-seedbag-modal-layer").classList.remove("popup-active");
 };
 
+// 🌟 HIỆU ỨNG CHỮ NỔI BAY LÊN TRONG 2 GIÂY TRÊN Ô ĐẤT
+function showFarmFloatBadge(plotIndex, text, type = 'water') {
+    const plotEl = document.querySelector(`.farm-plot-cell[onclick*="${plotIndex}"]`);
+    if (!plotEl) return;
+
+    // Đảm bảo ô đất có style relative
+    plotEl.style.position = "absolute";
+
+    const badge = document.createElement("div");
+    badge.innerText = text;
+    badge.style.position = "absolute";
+    badge.style.left = "50%";
+    badge.style.top = "15%";
+    badge.style.transform = "translate(-50%, 0)";
+    badge.style.zIndex = "99999";
+    badge.style.pointerEvents = "none";
+    badge.style.padding = "4px 10px";
+    badge.style.borderRadius = "6px";
+    badge.style.fontSize = "13px";
+    badge.style.fontWeight = "900";
+    badge.style.whiteSpace = "nowrap";
+    badge.style.boxShadow = "0 0 15px rgba(0,0,0,0.85)";
+
+    if (type === 'water') {
+        // Màu xanh giọt nước linh dịch
+        badge.style.background = "rgba(0, 204, 255, 0.92)";
+        badge.style.color = "#ffffff";
+        badge.style.border = "1.5px solid #00ffff";
+        badge.style.textShadow = "0 1px 3px rgba(0,0,0,0.8)";
+    } else {
+        // Màu vàng kim cho vật phẩm thu hoạch / hái trộm
+        badge.style.background = "rgba(255, 204, 0, 0.95)";
+        badge.style.color = "#000000";
+        badge.style.border = "1.5px solid #ffffff";
+    }
+
+    // Hiệu ứng chuyển động bay lên
+    badge.animate([
+        { opacity: 0, transform: "translate(-50%, 0) scale(0.85)" },
+        { opacity: 1, transform: "translate(-50%, -15px) scale(1.1)", offset: 0.2 },
+        { opacity: 1, transform: "translate(-50%, -35px) scale(1)", offset: 0.75 },
+        { opacity: 0, transform: "translate(-50%, -50px) scale(0.9)" }
+    ], {
+        duration: 2000,
+        easing: "ease-out",
+        fill: "forwards"
+    });
+
+    plotEl.appendChild(badge);
+
+    setTimeout(() => {
+        if (badge && badge.parentNode) {
+            badge.parentNode.removeChild(badge);
+        }
+    }, 2000);
+}
+
+// 1. GIEO HẠT TỰ ĐỘNG (BỎ XÁC NHẬN)
 window.executePlantSeed = function(seedKey) {
     if (!selectedPlotToPlant) {
         window.closeFarmSeedBagModal();
@@ -839,23 +897,19 @@ window.executePlantSeed = function(seedKey) {
     });
 };
 
+// 2. TƯỚI NƯỚC TỰ ĐỘNG (BỎ CONFIRM + NHẢY CHỮ XANH 2 GIÂY)
 function executeWaterCrop(plotIndex, plotData, cfg, isWateringForFriend) {
     if (plotData && plotData.isWatered) {
-        return showFarmAlert(`🌱 ${cfg.name} đã được hấp thụ đủ Linh Dịch, không cần tưới thêm!`);
+        return;
     }
 
     const uStats = (typeof userStats !== 'undefined') ? userStats : (window.userStats || {});
     const userLinhDich = uStats.linhdich || 0;
     if (userLinhDich < cfg.reqWater) {
-        return showFarmAlert(`⚠️ Không đủ Linh Dịch! Cây cần ${cfg.reqWater} giọt Linh Dịch (Bạn đang có: ${userLinhDich}). Hãy giải đúng câu hỏi để kiếm thêm!`);
+        return showFarmAlert(`⚠️ Không đủ Linh Dịch! Cần ${cfg.reqWater} giọt Linh Dịch (Bạn đang có: ${userLinhDich}). Hãy giải đúng câu hỏi để kiếm thêm!`);
     }
 
-    const confirmMsg = isWateringForFriend
-        ? `Dùng ${cfg.reqWater} Linh Dịch tưới hộ cho đạo hữu ${farmCurrentVisitingUser}?`
-        : `Dùng ${cfg.reqWater} Linh Dịch tưới cho ${cfg.name}? (Đảm bảo thu hoạch 100% sản vật)`;
-
-    if (!confirm(confirmMsg)) return;
-
+    // Tự động trừ linh dịch, không hỏi confirm
     uStats.linhdich -= cfg.reqWater;
 
     const activeUser = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : "");
@@ -874,12 +928,15 @@ function executeWaterCrop(plotIndex, plotData, cfg, isWateringForFriend) {
         }
 
         renderFarmPlotsOnly(targetUser);
-        showFarmAlert("💧 Tưới Linh Dịch thành công!");
+
+        // Hiển thị chữ nhảy màu xanh ngọc linh dịch
+        showFarmFloatBadge(plotIndex, `+${cfg.reqWater} Giọt Nước 💧`, "water");
     });
 }
 
+// 3. THU HOẠCH TỰ ĐỘNG (BỎ CONFIRM + NHẢY CHỮ VÀNG VẬT PHẨM 2 GIÂY)
 function executeHarvestCrop(plotIndex, plotData, cfg) {
-    if (!cfg) return showFarmAlert("Không tìm thấy thông tin cấu hình cây trồng!");
+    if (!cfg) return;
 
     let multiplier = plotData.isWatered ? 1.0 : 0.5;
     let stolenDeduction = plotData.isStolen ? 0.1 : 0.0;
@@ -895,7 +952,7 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
         if (realVal > 0) {
             if (rKey === "coin") {
                 uStats.coin = (uStats.coin || 0) + realVal;
-                summary.push(`+${realVal} Linh Thạch`);
+                summary.push(`+${realVal} Thạch`);
             } else if (rKey === "linhdich") {
                 uStats.linhdich = (uStats.linhdich || 0) + realVal;
                 summary.push(`+${realVal} Linh Dịch`);
@@ -940,7 +997,7 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
     const db = window.database || (typeof database !== 'undefined' ? database : null);
     const pushFn = window.pushSecureUserData || (typeof pushSecureUserData !== 'undefined' ? pushSecureUserData : null);
 
-    if (!db) return alert("Không tìm thấy kết nối cơ sở dữ liệu!");
+    if (!db) return;
 
     db.ref(`farms/${activeUser.toLowerCase()}/plots/plot_${plotIndex}`).remove().then(() => {
         const finishSync = pushFn ? pushFn(activeUser) : Promise.resolve();
@@ -952,8 +1009,11 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
             if (lblLd) lblLd.innerText = uStats.linhdich || 0;
 
             renderFarmPlotsOnly(activeUser);
-            showFarmAlert(`🎉 THU HOẠCH THÀNH CÔNG!\nCây trồng: ${cfg.name}\nNhận được: ${summary.join(', ')}`);
-            
+
+            // Chữ nhảy màu vàng kim hiển thị phần thưởng thu hoạch
+            let floatText = summary.length > 0 ? `${summary.join(', ')} 🌾` : "+ Đã Thu Hoạch 🌾";
+            showFarmFloatBadge(plotIndex, floatText, "item");
+
             if (typeof window.checkFarmNotification === "function") {
                 window.checkFarmNotification();
             }
@@ -963,10 +1023,10 @@ function executeHarvestCrop(plotIndex, plotData, cfg) {
         });
     }).catch(err => {
         console.error("Lỗi thu hoạch:", err);
-        alert("Lỗi khi kết nối thu hoạch: " + err.message);
     });
 }
 
+// 4. HÁI TRỘM TỰ ĐỘNG (BỎ CONFIRM + NHẢY CHỮ VÀNG VẬT PHẨM 2 GIÂY)
 function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
     if (isStealingInProgress) return;
 
@@ -985,13 +1045,13 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
             if (stealVal > 0) {
                 if (rKey === "coin") {
                     uStats.coin = (uStats.coin || 0) + stealVal;
-                    stolenItems.push(`+${stealVal} Linh Thạch`);
+                    stolenItems.push(`+${stealVal} Thạch`);
                 } else if (rKey === "linhdich") {
                     uStats.linhdich = (uStats.linhdich || 0) + stealVal;
                     stolenItems.push(`+${stealVal} Linh Dịch`);
                 } else if (rKey === "wheelTicket") {
                     uStats.inventory.wheelTicket = (uStats.inventory.wheelTicket || 0) + stealVal;
-                    stolenItems.push(`+${stealVal} Vé Vòng Quay`);
+                    stolenItems.push(`+${stealVal} Vé`);
                 } else if (rKey === "nhansam100") {
                     uStats.inventory.nhansam100 = (uStats.inventory.nhansam100 || 0) + stealVal;
                     stolenItems.push(`+${stealVal} Nhân Sâm 100 Năm`);
@@ -1016,8 +1076,7 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
         return showFarmAlert("Sản vật trên cây này quá hiếm hoặc số lượng dưới 10, thiên địa pháp trận bảo vệ không cho phép hái trộm!");
     }
 
-    if (!confirm(`Xác nhận hái trộm 10% sản vật trên cây của đạo hữu ${targetUser}?`)) return;
-
+    // Tự động hái trộm, không hỏi confirm
     isStealingInProgress = true;
     plotData.isStolen = true;
 
@@ -1061,7 +1120,8 @@ function executeStealCrop(targetUser, plotIndex, plotData, cfg) {
                 window.checkQuestNotification();
             }
 
-            showFarmAlert(`🥷 HÁI TRỘM THÀNH CÔNG!\nBạn thu được: ${stolenItems.join(', ')}`);
+            // Chữ nhảy màu vàng kim hiển thị vật phẩm hái trộm được
+            showFarmFloatBadge(plotIndex, `${stolenItems.join(', ')} 🥷`, "item");
         }).catch(() => {
             isStealingInProgress = false;
         });
