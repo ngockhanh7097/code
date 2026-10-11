@@ -517,7 +517,21 @@ function preloadNextHeroWord(callbackOnLoaded) {
 }
 
 window.startHeroTournamentMatch = function() {
-    if (!window.wordList || window.wordList.length === 0) return alert("Thiên thư chưa tải xong dữ liệu từ vựng!");
+    // Tự động kiểm tra và phục hồi dữ liệu từ vựng từ localStorage nếu window.wordList bị rỗng
+    if (!window.wordList || window.wordList.length === 0) {
+        const cached = localStorage.getItem("jooaris_vocab_data");
+        if (cached) {
+            try {
+                window.wordList = JSON.parse(cached);
+            } catch(e) {
+                console.error("Lỗi parse cache vocab:", e);
+            }
+        }
+    }
+
+    if (!window.wordList || window.wordList.length === 0) {
+        return alert("Thiên thư chưa tải xong dữ liệu từ vựng! Vui lòng tải lại trang hoặc chờ ít giây.");
+    }
 
     if (!confirm("⚔️ XÁC NHẬN BẮT ĐẦU THI ĐẤU ĐẠI HỘI ANH HÙNG?\n- Thời gian: Đúng 5 Phút đếm ngược liên tục.\n- Bạn chỉ có duy nhất 1 lần tham gia trong tuần!")) {
         return;
@@ -564,7 +578,6 @@ window.startHeroTournamentMatch = function() {
         triggerNextHeroWordLoop();
     });
 };
-
 function startHeroTotalCountdown() {
     if (heroTotalTimerInterval) clearInterval(heroTotalTimerInterval);
 
