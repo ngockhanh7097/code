@@ -5,7 +5,8 @@
  */
 
 (function () {
-  const BASE_CDN_PATH = "https://raw.githack.com/ngockhanh7097/code/main/voki-data/";
+  // Ưu tiên dùng jsDelivr CDN để tải siêu tốc, không bị chặn
+  const BASE_CDN_PATH = "https://cdn.jsdelivr.net/gh/ngockhanh7097/code@main/voki-data/";
 
   let currentTopic = null;
   let currentTenseKey = "ht_don";  // Mặc định: Hiện Tại Đơn
@@ -26,7 +27,7 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  // 1. INJECT TOÀN BỘ MODAL VÀO DOM (BỐ CỤC CHUẨN TÚI ĐỒ)
+  // 1. INJECT TOÀN BỘ MODAL VÀO DOM
   function injectVokiModals() {
     if (document.getElementById("voki-main-modal-layer")) return;
 
@@ -88,7 +89,7 @@
         }
       </style>
 
-      <!-- MODAL 1: CHỌN CHUYÊN ĐỀ (ĐÃ ĐẶT NÚT BXH Ở ĐÂY) -->
+      <!-- MODAL 1: CHỌN CHUYÊN ĐỀ -->
       <div class="modal-layer" id="voki-main-modal-layer" style="z-index: 13600;">
         <div class="modal-box voki-fixed-box" style="max-width: 580px !important; max-height: 540px !important;">
           <span class="modal-close" onclick="window.closeVokiMainModal()">×</span>
@@ -96,7 +97,6 @@
           <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <span><i class="fas fa-book-open"></i> Võ Kĩ Ngữ Pháp</span>
             
-            <!-- 🏆 NÚT BXH NGOÀI MENU TỔNG VÕ KĨ -->
             <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(243,156,18,0.4);" title="Bảng Phong Thần Võ Kĩ">
               🏆 BXH Võ Kĩ
             </button>
@@ -108,7 +108,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: GIAO DIỆN CHỌN ĐỀ BÊN TRONG (CHỈ CÒN NÚT CÔNG THỨC) -->
+      <!-- MODAL 2: GIAO DIỆN CHỌN ĐỀ BÊN TRONG -->
       <div class="modal-layer" id="voki-exam-select-modal-layer" style="z-index: 13650;">
         <div class="modal-box voki-fixed-box">
           <span class="modal-close" onclick="window.closeVokiExamSelectModal()">×</span>
@@ -116,7 +116,6 @@
           <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <span id="voki-selected-topic-title">Nhóm Thì Hiện Tại</span>
             
-            <!-- 📘 NÚT MỞ BẢNG CÔNG THỨC CHI TIẾT RIÊNG -->
             <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
               📘 Xem Công Thức Chi Tiết
             </button>
@@ -165,7 +164,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2.5: BẢNG CÔNG THỨC CHI TIẾT RIÊNG BIỆT (FONT TO 14.5px) -->
+      <!-- MODAL 2.5: BẢNG CÔNG THỨC CHI TIẾT -->
       <div class="modal-layer" id="voki-theory-modal-layer" style="z-index: 13680;">
         <div class="modal-box voki-fixed-box" style="max-width: 860px !important; border-color: #ffcc00 !important; box-shadow: 0 0 35px rgba(255,204,0,0.4) !important;">
           <span class="modal-close" onclick="window.closeVokiTheoryModal()" style="color:#ffcc00;">×</span>
@@ -174,17 +173,15 @@
             <i class="fas fa-graduation-cap"></i> Bí Kíp Công Thức & Dấu Hiệu Nhận Biết
           </div>
 
-          <!-- Tabs chọn 4 thì trong bảng lý thuyết -->
           <div id="voki-theory-nav-container" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;">
           </div>
 
-          <!-- Khung nội dung chi tiết -->
           <div id="voki-theory-body-content" style="flex: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 16px 20px; font-size: 14.5px; line-height: 1.7; color: #f1f2f6; text-align: left; overflow-y: auto;">
           </div>
         </div>
       </div>
 
-      <!-- 🏆 MODAL 2.8: BẢNG XẾP HẠNG VÕ KĨ (TỔNG KINH NGHIỆM TẤT CẢ CHUYÊN ĐỀ) -->
+      <!-- MODAL 2.8: BẢNG XẾP HẠNG VÕ KĨ -->
       <div class="modal-layer" id="voki-leaderboard-modal-layer" style="z-index: 13690;">
         <div class="modal-box voki-fixed-box" style="max-width: 620px !important; max-height: 620px !important; border-color: #ffcc00 !important; box-shadow: 0 0 35px rgba(255, 204, 0, 0.4) !important;">
           <span class="modal-close" onclick="window.closeVokiLeaderboardModal()" style="color:#ffcc00;">×</span>
@@ -192,7 +189,6 @@
           <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span><i class="fas fa-crown"></i> Bảng Phong Thần Võ Kĩ</span>
-              <!-- NÚT ? GIẢI THÍCH QUY TẮC -->
               <button onclick="window.showVokiExpRulesAlert()" style="background: rgba(255,204,0,0.2); border: 1px solid #ffcc00; color: #ffcc00; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: center;" title="Quy tắc kiếm kinh nghiệm">?</button>
             </div>
             <span style="font-size:12px; color:#00ffcc;">EXP của bạn: <b id="lbl-my-voki-exp" style="color:#ffcc00; font-size:14px;">0</b></span>
@@ -229,7 +225,6 @@
             </button>
             <span id="voki-quiz-progress" style="font-size: 14px; font-weight: bold; color: #ffcc00;">Câu 1 / 20</span>
             
-            <!-- 💡 NÚT ĐÈN KHAI SÁNG (-5 THẠCH KHI KẾT TOÁN) -->
             <button id="btn-voki-hint" onclick="window.triggerVokiHint()" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: #fff; border: 1px solid #ffcc00; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(243,156,18,0.5);">
               💡 Khai Sáng (-5 💰)
             </button>
@@ -282,6 +277,14 @@
     const divWrapper = document.createElement("div");
     divWrapper.innerHTML = modalHTML;
     document.body.appendChild(divWrapper);
+
+    // Tự động đóng modal khi click ra ngoài màn mờ
+    window.addEventListener('click', function(e) {
+      if (e.target === document.getElementById('voki-main-modal-layer')) window.closeVokiMainModal();
+      if (e.target === document.getElementById('voki-exam-select-modal-layer')) window.closeVokiExamSelectModal();
+      if (e.target === document.getElementById('voki-theory-modal-layer')) window.closeVokiTheoryModal();
+      if (e.target === document.getElementById('voki-leaderboard-modal-layer')) window.closeVokiLeaderboardModal();
+    });
   }
 
   // 2. MỞ / ĐÓNG CÁC MODAL
@@ -323,7 +326,6 @@
     if (el) el.classList.remove("popup-active");
   };
 
-  // Mở / Đóng Modal Công Thức
   window.openVokiTheoryModal = function () {
     const mod = window.CURRENT_VOKI_MODULE;
     if (!mod || !mod.theories || mod.theories.length === 0) return alert("Chưa có dữ liệu công thức!");
@@ -374,9 +376,7 @@
     }
   };
 
-  // =========================================================================
-  // 🏆 BẢNG XẾP HẠNG VÕ KĨ (TỔNG KINH NGHIỆM TẤT CẢ CHUYÊN ĐỀ)
-  // =========================================================================
+  // 🏆 BẢNG XẾP HẠNG VÕ KĨ
   window.openVokiLeaderboardModal = function () {
     injectVokiModals();
     const stats = window.userStats || {};
@@ -399,19 +399,19 @@
     let rules = `📜 QUY TẮC TÍCH LŨY KINH NGHIỆM VÕ KĨ (EXP):
 
 1. TÍNH ĐIỂM CÂU ĐÚNG:
-• Mỗi câu tự giải đúng: +1 EXP (Đúng trọn vẹn 20 câu = 20 EXP tối đa cho 1 đề).
-• Các câu sử dụng [💡 Đèn Khai Sáng] sẽ KHÔNG ĐƯỢC TÍNH EXP vào kỷ lục.
+- Mỗi câu tự giải đúng: +1 EXP (Đúng trọn vẹn 20 câu = 20 EXP tối đa cho 1 đề).
+- Các câu sử dụng [💡 Đèn Khai Sáng] sẽ KHÔNG ĐƯỢC TÍNH EXP vào kỷ lục.
 
 2. CƠ CHẾ LẤY ĐIỂM KỶ LỤC (CHỐNG SPAM CÀY ĐIỂM):
-• Điểm EXP trên BXH là TỔNG ĐIỂM KỶ LỤC CAO NHẤT của TẤT CẢ CÁC ĐỀ BÀI (Hiện tại, Quá khứ, Tương lai...) cộng lại.
-• Ví dụ:
+- Điểm EXP trên BXH là TỔNG ĐIỂM KỶ LỤC CAO NHẤT của TẤT CẢ CÁC ĐỀ BÀI (Hiện tại, Quá khứ, Tương lai...) cộng lại.
+- Ví dụ:
   - Lần 1 giải đúng 15/20 câu -> Nhận +15 EXP.
   - Lần 2 làm lại đạt 18/20 câu -> Hệ thống cộng thêm phần chênh lệch: +3 EXP (Kỷ lục đề này lên 18).
   - Lần 3 làm lại chỉ đúng 14/20 câu hoặc bằng 18/20 -> +0 EXP (Giữ nguyên kỷ lục 18).
   - Khi đã đạt 20/20 câu (Max điểm) -> Đề này hoàn hảo, không cộng thêm EXP nữa.
 
 3. MẸO LEO TOP:
-• Hãy hoàn thành nhiều chuyên đề và đề thi mới để gia tăng tổng điểm kỷ lục!`;
+- Hãy hoàn thành nhiều chuyên đề và đề thi mới để gia tăng tổng điểm kỷ lục!`;
     alert(rules);
   };
 
@@ -453,7 +453,6 @@
         return;
       }
 
-      // Sắp xếp giảm dần theo EXP
       list.sort((a, b) => b.exp - a.exp);
 
       let html = "";
@@ -642,7 +641,7 @@
 
   function renderCurrentQuizQuestion() {
     isAnswerLocked = false;
-    currentQHintUsed = false; // Reset cờ dùng đèn của câu này
+    currentQHintUsed = false;
 
     const qData = currentQuestions[currentQIndex];
     if (!qData) {
@@ -653,7 +652,6 @@
     document.getElementById("voki-quiz-progress").innerText = `Câu ${currentQIndex + 1} / ${currentQuestions.length}`;
     document.getElementById("voki-question-text").innerText = qData.q;
 
-    // Reset nút Đèn Khai Sáng
     const btnHint = document.getElementById("btn-voki-hint");
     if (btnHint) {
       btnHint.disabled = false;
@@ -679,7 +677,7 @@
     });
   }
 
-  // 6. XỬ LÝ CHỌN ĐÁP ÁN (CHỈ TÍNH ĐIỂM NẾU TỰ GIẢI, KHÔNG DÙNG ĐÈN)
+  // 6. XỬ LÝ CHỌN ĐÁP ÁN
   function handleSelectOption(chosenIdx) {
     if (isAnswerLocked) return;
     isAnswerLocked = true;
@@ -717,13 +715,21 @@
     showExplainBox(qData.explain);
   }
 
-  // 7. XỬ LÝ BẤM NÚT ĐÈN KHAI SÁNG 💡
+  // 7. XỬ LÝ BẤM NÚT ĐÈN KHAI SÁNG 💡 (ĐÃ CHECK TÀI CHÍNH)
   window.triggerVokiHint = function () {
     if (isAnswerLocked) return;
-    isAnswerLocked = true;
-    currentQHintUsed = true; // Đã dùng đèn ở câu này
 
-    hintUsedCount++; // Ghi nợ 5 linh thạch
+    // Kiểm tra số dư Linh Thạch hiện tại
+    const stats = window.userStats || {};
+    const currentCoin = stats.coin || 0;
+    const requiredCoin = (hintUsedCount + 1) * 5;
+    if (currentCoin < requiredCoin) {
+      return alert("⚠️ Hành trang không đủ Linh Thạch để thắp Đèn Khai Sáng (-5 Linh Thạch/lần)!");
+    }
+
+    isAnswerLocked = true;
+    currentQHintUsed = true;
+    hintUsedCount++;
 
     const qData = currentQuestions[currentQIndex];
     const correctBtn = document.getElementById(`voki-opt-btn-${qData.correct}`);
@@ -801,7 +807,6 @@
     let hintFeeTotal = hintUsedCount * 5;
     let netFinalCoin = baseEarned - hintFeeTotal;
 
-    // 🌟 TÍNH KINH NGHIỆM CHÊNH LỆCH KỶ LỤC CỦA ĐỀ NÀY
     let oldBest = stats.vokiBestScores[trackKey] || 0;
     let expDiff = 0;
     if (userScore > oldBest) {
@@ -857,31 +862,25 @@
     const user = window.currentUser;
     const stats = window.userStats;
 
-    // Cập nhật số lượt làm hôm nay
     stats.vokiDailyTracking.counts[res.trackKey] = (stats.vokiDailyTracking.counts[res.trackKey] || 0) + 1;
 
-    // Cập nhật điểm kỷ lục đề này
     if (!stats.vokiBestScores) stats.vokiBestScores = {};
     stats.vokiBestScores[res.trackKey] = res.newBest;
 
-    // Cộng EXP tích lũy nếu có chênh lệch kỷ lục
     if (res.expDiff > 0) {
       stats.vokiExp = (stats.vokiExp || 0) + res.expDiff;
     }
 
-    // Cộng hoặc trừ Linh Thạch thực nhận
     stats.coin = Math.max(0, (stats.coin || 0) + res.netFinalCoin);
 
     const db = window.database || firebase.database();
 
-    // Đồng bộ gói bảo mật
     window.pushSecureUserData(user, {
       coin: stats.coin,
       vokiExp: stats.vokiExp || 0,
       vokiBestScores: stats.vokiBestScores,
       vokiDailyTracking: stats.vokiDailyTracking
     }).then(() => {
-      // Ghi đồng thời ra node raw để lệnh lọc BXH đọc tức thì
       db.ref('users/' + user).update({
         vokiExp: stats.vokiExp || 0
       });
