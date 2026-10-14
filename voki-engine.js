@@ -545,13 +545,15 @@
   };
 
   function updateTenseButtonStyles() {
-    ["ht_don", "ht_tiepdien", "ht_hoanthanh", "ht_hoanthanh_td"].forEach(k => {
-      const btn = document.getElementById(`btn-tense-${k}`);
-      if (btn) {
-        btn.classList.toggle("active", k === currentTenseKey);
-      }
-    });
-  }
+  const mod = window.CURRENT_VOKI_MODULE;
+  if (!mod || !mod.matrix) return;
+  Object.keys(mod.matrix).forEach(k => {
+    const btn = document.getElementById(`btn-tense-${k}`);
+    if (btn) {
+      btn.classList.toggle("active", k === currentTenseKey);
+    }
+  });
+}
 
   window.switchVokiLevel = function (lvKey) {
     currentLevelKey = lvKey;
@@ -788,8 +790,8 @@ function renderDynamicSubTabs() {
 
     const stats = window.userStats || {};
     const currentCoin = stats.coin || 0;
-    const requiredCoin = (hintUsedCount + 1) * 5;
-    if (currentCoin < requiredCoin) {
+    const totalHintFeeSoFar = (hintUsedCount + 1) * 5;
+    if (currentCoin < totalHintFeeSoFar) {
       return alert("⚠️ Hành trang không đủ Linh Thạch để thắp Đèn Khai Sáng (-5 Linh Thạch/lần)!");
     }
 
