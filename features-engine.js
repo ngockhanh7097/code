@@ -61,7 +61,11 @@ window.triggerSubFeature = function(featureName) {
         if (typeof window.openSocialModal === "function") {
             window.openSocialModal();
         }
+    } else if (featureName === 'voki') {
+    if (typeof window.openVokiMainModal === "function") {
+        window.openVokiMainModal();
     }
+}
 };
 
 window.setMasterFeatureNotification = function(hasNotification) {
