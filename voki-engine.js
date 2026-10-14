@@ -1,6 +1,6 @@
 /**
  * =========================================================================
- * 📜 JOOARIS VÕ KĨ ENGINE (Ma Trận 4 Thì x 3 Level + Đèn Khai Sáng -5 Thạch)
+ * 📜 JOOARIS VÕ KĨ ENGINE (Ma Trận 4 Thì × 3 Level + Đèn Khai Sáng + BXH EXP)
  * =========================================================================
  */
 
@@ -14,7 +14,8 @@
   let currentQuestions = [];
   let currentQIndex = 0;
   let userScore = 0;
-  let hintUsedCount = 0;
+  let hintUsedCount = 0;           // Tổng số lần bấm đèn trong đề
+  let currentQHintUsed = false;    // Đánh dấu câu hiện tại có dùng đèn hay không
   let isAnswerLocked = false;
 
   function getTodayStr() {
@@ -67,6 +68,24 @@
           border-color: #00ffcc !important;
           box-shadow: 0 0 8px rgba(0,255,204,0.5);
         }
+        .voki-theory-nav-btn {
+          padding: 8px 12px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: bold;
+          cursor: pointer;
+          background: rgba(255,255,255,0.06);
+          color: #bbb;
+          border: 1px solid #444;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+        .voki-theory-nav-btn.active {
+          background: #008080 !important;
+          color: #fff !important;
+          border-color: #00ffcc !important;
+          box-shadow: 0 0 10px rgba(0,255,204,0.5);
+        }
       </style>
 
       <!-- MODAL 1: CHỌN CHUYÊN ĐỀ -->
@@ -82,7 +101,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: GIAO DIỆN CHỌN 2 CỤM NÚT (THÌ & LEVEL) + DANH SÁCH ĐỀ -->
+      <!-- MODAL 2: GIAO DIỆN CHỌN ĐỀ + NÚT BXH VÀ NÚT CÔNG THỨC -->
       <div class="modal-layer" id="voki-exam-select-modal-layer" style="z-index: 13650;">
         <div class="modal-box voki-fixed-box">
           <span class="modal-close" onclick="window.closeVokiExamSelectModal()">×</span>
@@ -90,13 +109,20 @@
           <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <span id="voki-selected-topic-title">Nhóm Thì Hiện Tại</span>
             
-            <!-- NÚT MỞ BẢNG CÔNG THỨC CHI TIẾT RIÊNG -->
-            <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
-              📘 Xem Công Thức Chi Tiết
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <!-- 🏆 NÚT BẢNG XẾP HẠNG VÕ KĨ -->
+              <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(243,156,18,0.4);" title="Bảng Phong Thần Võ Kĩ">
+                🏆 BXH
+              </button>
+              
+              <!-- 📘 NÚT MỞ BẢNG CÔNG THỨC CHI TIẾT RIÊNG -->
+              <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
+                📘 Xem Công Thức Chi Tiết
+              </button>
+            </div>
           </div>
 
-          <!-- CỤM NÚT 1: 4 NÚT CHỌN THÌ (Mặc định: Hiện Tại Đơn) -->
+          <!-- CỤM NÚT 1: 4 NÚT CHỌN THÌ -->
           <div style="margin-bottom: 10px;">
             <div style="font-size: 11.5px; font-weight: bold; color: #00ffcc; margin-bottom: 5px; text-align: left;">
               1. Chọn Loại Thì Luyện Tập:
@@ -109,7 +135,7 @@
             </div>
           </div>
 
-          <!-- CỤM NÚT 2: 3 NÚT CHỌN ĐỘ KHÓ (Mặc định: Tầng 1) -->
+          <!-- CỤM NÚT 2: 3 NÚT CHỌN ĐỘ KHÓ -->
           <div style="margin-bottom: 12px;">
             <div style="font-size: 11.5px; font-weight: bold; color: #ffcc00; margin-bottom: 5px; text-align: left;">
               2. Chọn Tầng Độ Khó:
@@ -152,9 +178,45 @@
           <div id="voki-theory-nav-container" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;">
           </div>
 
-          <!-- Khung nội dung chi tiết -->
+          <!-- Nội dung chi tiết của thì được chọn -->
           <div id="voki-theory-body-content" style="flex: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 16px 20px; font-size: 14.5px; line-height: 1.7; color: #f1f2f6; text-align: left; overflow-y: auto;">
           </div>
+        </div>
+      </div>
+
+      <!-- 🏆 MODAL 2.8: BẢNG XẾP HẠNG VÕ KĨ (TOP - TÊN - TU VI - KINH NGHIỆM) -->
+      <div class="modal-layer" id="voki-leaderboard-modal-layer" style="z-index: 13690;">
+        <div class="modal-box voki-fixed-box" style="max-width: 600px !important; max-height: 620px !important; border-color: #ffcc00 !important; box-shadow: 0 0 35px rgba(255, 204, 0, 0.4) !important;">
+          <span class="modal-close" onclick="window.closeVokiLeaderboardModal()" style="color:#ffcc00;">×</span>
+          
+          <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span><i class="fas fa-crown"></i> Bảng Phong Thần Võ Kĩ</span>
+              <!-- NÚT ? GIẢI THÍCH QUY TẮC -->
+              <button onclick="window.showVokiExpRulesAlert()" style="background: rgba(255,204,0,0.2); border: 1px solid #ffcc00; color: #ffcc00; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: center;" title="Quy tắc kiếm kinh nghiệm">?</button>
+            </div>
+            <span style="font-size:12px; color:#00ffcc;">Kinh nghiệm của bạn: <b id="lbl-my-voki-exp" style="color:#ffcc00; font-size:14px;">0</b> EXP</span>
+          </div>
+
+          <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="border-bottom: 1.5px solid rgba(255,204,0,0.4); color: #ffcc00; font-size: 12px;">
+                  <th style="padding: 8px 4px; text-align: center; width: 12%;">TOP</th>
+                  <th style="padding: 8px 6px; text-align: left; width: 36%;">Đạo Hữu</th>
+                  <th style="padding: 8px 4px; text-align: center; width: 28%;">Tu Vi</th>
+                  <th style="padding: 8px 6px; text-align: right; width: 24%;">Kinh Nghiệm</th>
+                </tr>
+              </thead>
+              <tbody id="voki-leaderboard-body">
+                <tr><td colspan="4" style="padding:25px; color:#888; font-style:italic; text-align:center;">Đang nạp bảng phong thần võ kĩ...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <button onclick="window.closeVokiLeaderboardModal()" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 10px;">
+            ĐÓNG BẢNG XẾP HẠNG
+          </button>
         </div>
       </div>
 
@@ -167,7 +229,7 @@
             </button>
             <span id="voki-quiz-progress" style="font-size: 14px; font-weight: bold; color: #ffcc00;">Câu 1 / 20</span>
             
-            <!-- 💡 NÚT ĐÈN KHAI SÁNG -->
+            <!-- 💡 NÚT ĐÈN KHAI SÁNG (-5 THẠCH KHI KẾT TOÁN) -->
             <button id="btn-voki-hint" onclick="window.triggerVokiHint()" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: #fff; border: 1px solid #ffcc00; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(243,156,18,0.5);">
               💡 Khai Sáng (-5 💰)
             </button>
@@ -202,6 +264,7 @@
 
           <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 15px; line-height: 1.8; font-size: 13.5px;">
             <div>Số câu tự giải đúng: <b id="lbl-voki-res-correct" style="color: #2ecc71; font-size: 16px;">0 / 20</b></div>
+            <div>Kinh nghiệm tích lũy: <b id="lbl-voki-res-exp-diff" style="color: #ffaa00; font-size: 15px;">+0 EXP</b></div>
             <div>Linh thạch cơ sở: <b id="lbl-voki-res-base-coin" style="color: #00ffcc;">+0</b></div>
             <div>Tỉ lệ thưởng hôm nay: <b id="lbl-voki-res-rate" style="color: #ffaa00;">100%</b></div>
             <div>Dùng Đèn Khai Sáng: <b id="lbl-voki-res-hints" style="color: #ff4d4d;">0 lần (-0 Thạch)</b></div>
@@ -221,7 +284,7 @@
     document.body.appendChild(divWrapper);
   }
 
-  // 2. MỞ / ĐÓNG MODAL
+  // 2. MỞ / ĐÓNG CÁC MODAL
   window.openVokiMainModal = function () {
     injectVokiModals();
     if (!window.currentUser) return alert("Vui lòng đăng nhập khế ước trước!");
@@ -311,6 +374,111 @@
     }
   };
 
+  // =========================================================================
+  // 🏆 BẢNG XẾP HẠNG VÕ KĨ & NÚT ? HƯỚNG DẪN
+  // =========================================================================
+  window.openVokiLeaderboardModal = function () {
+    injectVokiModals();
+    const stats = window.userStats || {};
+    const myExp = stats.vokiExp || 0;
+    const lblMy = document.getElementById("lbl-my-voki-exp");
+    if (lblMy) lblMy.innerText = myExp;
+
+    const modal = document.getElementById("voki-leaderboard-modal-layer");
+    if (modal) modal.classList.add("popup-active");
+
+    renderVokiLeaderboardTable();
+  };
+
+  window.closeVokiLeaderboardModal = function () {
+    const modal = document.getElementById("voki-leaderboard-modal-layer");
+    if (modal) modal.classList.remove("popup-active");
+  };
+
+  window.showVokiExpRulesAlert = function () {
+    let rules = `📜 QUY TẮC TÍCH LŨY KINH NGHIỆM VÕ KĨ (EXP):
+
+1. TÍNH ĐIỂM CÂU ĐÚNG:
+• Mỗi câu tự giải đúng: +1 EXP (Đúng trọn vẹn 20 câu = 20 EXP tối đa cho 1 đề).
+• Các câu sử dụng [💡 Đèn Khai Sáng] sẽ KHÔNG ĐƯỢC TÍNH EXP vào kỷ lục.
+
+2. CƠ CHẾ LẤY ĐIỂM KỶ LỤC (CHỐNG SPAM CÀY ĐIỂM):
+• Điểm EXP của đạo hữu trên BXH là TỔNG ĐIỂM KỶ LỤC CAO NHẤT của từng đề thi cộng lại.
+• Ví dụ:
+  - Lần 1 giải đúng 15/20 câu -> Nhận +15 EXP.
+  - Lần 2 làm lại đạt 18/20 câu -> Hệ thống cộng phần chênh lệch: +3 EXP (Kỷ lục đề này lên 18).
+  - Lần 3 làm lại chỉ đúng 14/20 câu hoặc bằng 18/20 -> +0 EXP (Giữ nguyên kỷ lục 18).
+  - Khi đã đạt 20/20 câu (Max điểm) -> Đề này hoàn hảo, không cộng thêm EXP nữa.
+
+3. MẸO LEO TOP:
+• Hãy hoàn thành nhiều đề mới và rèn luyện để đạt tối đa 20/20 ở tất cả các đề!`;
+    alert(rules);
+  };
+
+  function renderVokiLeaderboardTable() {
+    const tbody = document.getElementById("voki-leaderboard-body");
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; color:#888; font-style:italic; text-align:center;">Đang nạp bảng phong thần võ kĩ...</td></tr>`;
+
+    const db = window.database || firebase.database();
+    db.ref('users').once('value').then(snap => {
+      let list = [];
+      snap.forEach(child => {
+        let uVal = child.val();
+        if (!uVal) return;
+        let uName = child.key;
+        let uLevel = uVal.level || 1;
+        let uExp = Number(uVal.vokiExp) || 0;
+
+        if (uVal.securePayload && typeof GameCrypt !== "undefined") {
+          let dec = GameCrypt.decrypt(uVal.securePayload);
+          if (dec) {
+            uLevel = dec.level || uLevel;
+            if (dec.vokiExp !== undefined) uExp = Number(dec.vokiExp) || 0;
+          }
+        }
+
+        if (uExp > 0) {
+          list.push({
+            name: uName,
+            level: uLevel,
+            exp: uExp
+          });
+        }
+      });
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding:25px; color:#888; font-style:italic; text-align:center;">Chưa có đạo hữu nào tích lũy kinh nghiệm võ kĩ!</td></tr>`;
+        return;
+      }
+
+      // Sắp xếp giảm dần theo EXP
+      list.sort((a, b) => b.exp - a.exp);
+
+      let html = "";
+      let myName = (window.currentUser || "").toLowerCase();
+
+      list.forEach((u, idx) => {
+        let rank = idx + 1;
+        let isMe = u.name.toLowerCase() === myName;
+        let tuviHtml = (typeof window.getTuViTitleHtml === "function") ? window.getTuViTitleHtml(u.level) : `Lv.${u.level}`;
+
+        html += `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); ${isMe ? 'background: rgba(0, 255, 204, 0.1); font-weight:bold;' : ''}">
+            <td style="padding: 8px 4px; text-align: center;"><b style="color:${rank <= 3 ? '#ffcc00' : '#fff'};">${rank}</b></td>
+            <td style="padding: 8px 6px; text-align: left;"><span style="color:#ffcc00; font-weight:600;">${u.name}</span></td>
+            <td style="padding: 8px 4px; text-align: center;">${tuviHtml}</td>
+            <td style="padding: 8px 6px; text-align: right; color:#00ffcc; font-weight:bold; font-size:13.5px;">
+              ${u.exp.toLocaleString()} EXP
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    });
+  }
+
   function loadTopicDataScript(fileName, callback) {
     if (window.CURRENT_VOKI_MODULE && window.CURRENT_VOKI_MODULE.id === currentTopic.id) {
       if (typeof callback === "function") callback();
@@ -397,7 +565,6 @@
     renderExamsListUI();
   };
 
-  // Render danh sách đề thi theo cặp (Thì đang chọn + Level đang chọn)
   function renderExamsListUI() {
     const container = document.getElementById("voki-exams-list-container");
     const headerLbl = document.getElementById("lbl-voki-exams-header");
@@ -475,6 +642,8 @@
 
   function renderCurrentQuizQuestion() {
     isAnswerLocked = false;
+    currentQHintUsed = false; // Reset cờ dùng đèn của câu này
+
     const qData = currentQuestions[currentQIndex];
     if (!qData) {
       finishVokiQuiz();
@@ -510,7 +679,7 @@
     });
   }
 
-  // 6. XỬ LÝ CHỌN ĐÁP ÁN
+  // 6. XỬ LÝ CHỌN ĐÁP ÁN (CHỈ TÍNH ĐIỂM NẾU TỰ GIẢI, KHÔNG DÙNG ĐÈN)
   function handleSelectOption(chosenIdx) {
     if (isAnswerLocked) return;
     isAnswerLocked = true;
@@ -522,7 +691,10 @@
     const correctBtn = document.getElementById(`voki-opt-btn-${qData.correct}`);
 
     if (isCorrect) {
-      userScore++;
+      // Chỉ cộng điểm số nếu câu này KHÔNG bấm đèn khai sáng
+      if (!currentQHintUsed) {
+        userScore++;
+      }
       if (chosenBtn) {
         chosenBtn.style.background = "rgba(39, 174, 96, 0.3)";
         chosenBtn.style.borderColor = "#2ecc71";
@@ -550,6 +722,7 @@
   window.triggerVokiHint = function () {
     if (isAnswerLocked) return;
     isAnswerLocked = true;
+    currentQHintUsed = true; // Đánh dấu câu này đã dùng đèn (không tính điểm tự giải đúng)
 
     hintUsedCount++; // Ghi nợ 5 linh thạch
 
@@ -596,7 +769,7 @@
     }
   };
 
-  // 8. KẾT TOÁN TRẬN ĐẤU & KHẤU TRỪ ĐÈN KHAI SÁNG
+  // 8. KẾT TOÁN TRẬN ĐẤU & TÍNH EXP CHÊNH LỆCH KỶ LỤC
   function finishVokiQuiz() {
     document.getElementById("voki-quiz-modal-layer").classList.remove("popup-active");
 
@@ -606,6 +779,7 @@
     if (!stats.vokiDailyTracking || stats.vokiDailyTracking.lastDate !== todayStr) {
       stats.vokiDailyTracking = { lastDate: todayStr, counts: {} };
     }
+    if (!stats.vokiBestScores) stats.vokiBestScores = {};
 
     const trackKey = `${currentTenseKey}_${currentLevelKey}_${currentExamKey}`;
     const doneTimes = stats.vokiDailyTracking.counts[trackKey] || 0;
@@ -629,9 +803,27 @@
     let hintFeeTotal = hintUsedCount * 5;
     let netFinalCoin = baseEarned - hintFeeTotal;
 
+    // 🌟 TÍNH KINH NGHIỆM CHÊNH LỆCH KỶ LỤC CỦA ĐỀ NÀY
+    let oldBest = stats.vokiBestScores[trackKey] || 0;
+    let expDiff = 0;
+    if (userScore > oldBest) {
+      expDiff = userScore - oldBest;
+    }
+
     document.getElementById("lbl-voki-res-correct").innerText = `${userScore} / ${currentQuestions.length}`;
     document.getElementById("lbl-voki-res-base-coin").innerText = `+${userScore * coinPerQ} Linh Thạch`;
     document.getElementById("lbl-voki-res-rate").innerText = rateText;
+
+    const lblExpDiff = document.getElementById("lbl-voki-res-exp-diff");
+    if (lblExpDiff) {
+      if (expDiff > 0) {
+        lblExpDiff.style.color = "#2ecc71";
+        lblExpDiff.innerText = `+${expDiff} EXP (Kỷ lục mới: ${userScore}/20)`;
+      } else {
+        lblExpDiff.style.color = "#888";
+        lblExpDiff.innerText = `+0 EXP (Kỷ lục cũ: ${oldBest}/20)`;
+      }
+    }
 
     const lblHints = document.getElementById("lbl-voki-res-hints");
     if (lblHints) {
@@ -651,7 +843,9 @@
 
     window._lastVokiResult = {
       trackKey: trackKey,
-      netFinalCoin: netFinalCoin
+      netFinalCoin: netFinalCoin,
+      expDiff: expDiff,
+      newBest: Math.max(oldBest, userScore)
     };
 
     document.getElementById("voki-result-modal-layer").classList.add("popup-active");
@@ -665,16 +859,40 @@
     const user = window.currentUser;
     const stats = window.userStats;
 
+    // Cập nhật số lượt làm hôm nay
     stats.vokiDailyTracking.counts[res.trackKey] = (stats.vokiDailyTracking.counts[res.trackKey] || 0) + 1;
+
+    // Cập nhật điểm kỷ lục đề này
+    if (!stats.vokiBestScores) stats.vokiBestScores = {};
+    stats.vokiBestScores[res.trackKey] = res.newBest;
+
+    // Cộng EXP tích lũy nếu có chênh lệch kỷ lục
+    if (res.expDiff > 0) {
+      stats.vokiExp = (stats.vokiExp || 0) + res.expDiff;
+    }
+
+    // Cộng hoặc trừ Linh Thạch thực nhận
     stats.coin = Math.max(0, (stats.coin || 0) + res.netFinalCoin);
 
+    const db = window.database || firebase.database();
+
+    // Đồng bộ gói bảo mật
     window.pushSecureUserData(user, {
       coin: stats.coin,
+      vokiExp: stats.vokiExp || 0,
+      vokiBestScores: stats.vokiBestScores,
       vokiDailyTracking: stats.vokiDailyTracking
     }).then(() => {
+      // Ghi đồng thời ra node raw để lệnh lọc BXH đọc tức thì
+      db.ref('users/' + user).update({
+        vokiExp: stats.vokiExp || 0
+      });
+
       window.refreshUIFields();
       document.getElementById("voki-result-modal-layer").classList.remove("popup-active");
-      alert(`🎉 ĐÃ ĐỒNG BỘ THẦN THỨC!\nTài sản hiện tại: ${stats.coin.toLocaleString()} Linh Thạch.`);
+      
+      let expNotice = res.expDiff > 0 ? `\n⭐ Kinh nghiệm võ kĩ tăng: +${res.expDiff} EXP!` : "";
+      alert(`🎉 ĐÃ ĐỒNG BỘ THẦN THỨC!${expNotice}\nTài sản hiện tại: ${stats.coin.toLocaleString()} Linh Thạch.`);
     });
   };
 
