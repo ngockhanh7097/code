@@ -1,5 +1,5 @@
 /**
- * 📜 VÕ KĨ DATA - MA TRẬN 4 THÌ HIỆN TẠI × 3 LEVEL (240 CÂU HOÀN CHỈNH)
+ * 📜 VÕ KĨ DATA - MA TRẬN 4 THÌ HIỆN TẠI × 3 LEVEL (1200 CÂU HOÀN CHỈNH)
  */
 window.CURRENT_VOKI_MODULE = {
   id: "thi_hien_tai",
@@ -952,7 +952,7 @@ Ví dụ:<br/>
             { q: "Why ______ you ______ (smell) the fish? Does it smell fresh?", options: ["are / smelling", "do / smell", "did / smell", "have / smelled"], correct: 0, explain: "Vế 1 chủ động ngửi cá (tiếp diễn), vế 2 cá bốc mùi gì (trạng thái) -> 'are you smelling'." },
             { q: "We ______ (see) our financial advisor at the downtown branch at 2 PM.", options: ["are seeing", "see", "saw", "have seen"], correct: 0, explain: "'See' ở đây là gặp gỡ tư vấn tài chính theo lịch hẹn trước -> 'are seeing'." },
             { q: "He is normally very generous, but today he ______ (be) extremely stingy.", options: ["is being", "is", "was", "has been"], correct: 0, explain: "Hôm nay tự nhiên keo kiệt khác hẳn tính cách hào phóng ngày thường -> 'is being extremely stingy'." },
-            { q: "That driver ______ (forever / tailgating) cars on the highway!", options: ["is forever tailgating", "forever tailgates", "forever tailgated", "has forever tailgated"], correct: 0, explain: "Phàn nàn hành vi bám đuôi xe nguy hiểm với 'forever' -> 'is forever tailgating'." },
+            { q: "That driver ______ (forever / tailgate) cars on the highway!", options: ["is forever tailgating", "forever tailgates", "forever tailgated", "has forever tailgated"], correct: 0, explain: "Phàn nàn hành vi bám đuôi xe nguy hiểm với 'forever' -> 'is forever tailgating'." },
             { q: "The doctor ______ (feel) the patient's spine for vertebral misalignments.", options: ["is feeling", "feels", "felt", "has felt"], correct: 0, explain: "Bác sĩ dùng tay sờ nắn nắn chỉnh cột sống (thao tác khám) -> 'is feeling'." },
             { q: "I ______ (have) breakfast on the sunlit terrace with my family.", options: ["am having", "have", "had", "was having"], correct: 0, explain: "'Have breakfast' là hành động ăn sáng -> chia tiếp diễn -> 'am having'." },
             { q: "The brewmaster ______ (taste) the newly fermented stout.", options: ["is tasting", "tastes", "tasted", "has tasted"], correct: 0, explain: "Chuyên gia đang nếm thử bia lên men -> 'is tasting'." },
@@ -1170,7 +1170,7 @@ Ví dụ:<br/>
             { q: "Mr. Brown isn't in his office. He ______ (go) to Tokyo for a conference.", options: ["has gone", "has been", "went", "goes"], correct: 0, explain: "Đã đi Tokyo công tác và hiện tại vắng mặt ở văn phòng -> 'has gone'." },
             { q: "I ______ (be) to New York three times, and I love Broadway shows.", options: ["have been", "have gone", "went", "am"], correct: 0, explain: "Đã từng đến New York 3 lần trong đời (hiện đang ở đây kể lại) -> 'have been'." },
             { q: "The ministry ______ (recently / revise) its international travel guidelines.", options: ["has recently revised", "have recently revised", "recently revised", "revises"], correct: 0, explain: "'recently' + chủ ngữ số ít 'The ministry' -> 'has recently revised'." },
-            { q: "Up to this moment, none of the participants ______ (failed) the physical test.", options: ["has failed", "have failed", "failed", "fails"], correct: 0, explain: "Trong văn phong chuẩn, 'none of + plural noun' đi với 'has failed'." },
+            { q: "Up to this moment, none of the participants ______ (fail) the physical test.", options: ["has failed", "have failed", "failed", "fails"], correct: 0, explain: "Trong văn phong chuẩn, 'none of + plural noun' đi với 'has failed'." },
             { q: "Have the factory inspectors completed their report ______?", options: ["yet", "already", "since", "just"], correct: 0, explain: "'yet' đứng cuối câu hỏi khảo sát sự hoàn thành." },
             { q: "The author ______ (publish) four historical novels so far.", options: ["has published", "have published", "published", "publishes"], correct: 0, explain: "'so far' nhấn mạnh số lượng tác phẩm đã xuất bản -> 'has published'." },
             { q: "How many foreign languages ______ she ______ (master) throughout her career?", options: ["has / mastered", "have / mastered", "did / master", "does / master"], correct: 0, explain: "Hỏi số lượng tích lũy tính đến nay với ngôi 'she' -> 'has she mastered'." },
@@ -1612,7 +1612,7 @@ Ví dụ:<br/>
             { q: "How long ______ you ______ (smoke)?", options: ["have / been smoking", "have / smoked", "do / smoke", "are / smoking"], correct: 0, explain: "Hỏi KHOẢNG THỜI GIAN KÉO DÀI ('How long...') -> dùng Hiện tại hoàn thành tiếp diễn: 'have you been smoking'." },
             { q: "I ______ (clean) the house all morning. I ______ (clean) three rooms so far.", options: ["have been cleaning / have cleaned", "have cleaned / have been cleaning", "cleaned / cleaned", "am cleaning / have cleaned"], correct: 0, explain: "Vế 1 quá trình cả buổi sáng ('has been cleaning'). Vế 2 số lượng phòng đã dọn ('have cleaned')." },
             { q: "We ______ (belong) to this badminton club for six months.", options: ["have belonged", "have been belonging", "belong", "belonged"], correct: 0, explain: "'Belong' là Stative verb không chia tiếp diễn -> 'have belonged'." },
-            { q: "She is exhausted because she ______ (tennis) non-stop.", options: ["has been playing", "has played", "played", "is playing"], correct: 0, explain: "Nhấn mạnh sự kiệt sức do quá trình chơi thể thao liên tục -> 'has been playing'." },
+            { q: "She is exhausted because she ______ (play tennis) non-stop.", options: ["has been playing", "has played", "played", "is playing"], correct: 0, explain: "Nhấn mạnh sự kiệt sức do quá trình chơi thể thao liên tục -> 'has been playing'." },
             { q: "He ______ (lose) his passport. He cannot board the plane.", options: ["has lost", "has been losing", "lost", "is losing"], correct: 0, explain: "Mất hộ chiếu là kết quả hoàn tất -> 'has lost'." },
             { q: "I ______ (wait) here since 8 AM, but the delivery truck ______ (not arrive) yet.", options: ["have been waiting / hasn't arrived", "have waited / isn't arriving", "waited / didn't arrive", "am waiting / hasn't arrived"], correct: 0, explain: "Vế 1 chờ đợi liên tục ('have been waiting'). Vế 2 kết quả chưa đến ('hasn't arrived')." },
             { q: "The kids ______ (watch) television since noon. Turn it off!", options: ["have been watching", "have watched", "watched", "are watching"], correct: 0, explain: "Nhấn mạnh hành vi xem TV dán mắt liên tục từ trưa -> 'have been watching'." },
