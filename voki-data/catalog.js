@@ -15,7 +15,7 @@ window.VOKI_CATALOG = [
     title: "Nhóm Thì Quá Khứ",
     desc: "Quá khứ đơn, Quá khứ tiếp diễn, Quá khứ hoàn thành...",
     file: "thi-qua-khu.js",
-    unlocked: false,
+    unlocked: true,
     totalExams: 15
   },
   {
