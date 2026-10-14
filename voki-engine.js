@@ -135,10 +135,7 @@
               1. Chọn Loại Thì Luyện Tập:
             </div>
             <div id="voki-tense-button-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-              <button class="voki-nav-btn active" id="btn-tense-ht_don" onclick="window.switchVokiTense('ht_don')">Hiện Tại Đơn</button>
-              <button class="voki-nav-btn" id="btn-tense-ht_tiepdien" onclick="window.switchVokiTense('ht_tiepdien')">Hiện Tại Tiếp Diễn</button>
-              <button class="voki-nav-btn" id="btn-tense-ht_hoanthanh" onclick="window.switchVokiTense('ht_hoanthanh')">Hiện Tại Hoàn Thành</button>
-              <button class="voki-nav-btn" id="btn-tense-ht_hoanthanh_td" onclick="window.switchVokiTense('ht_hoanthanh_td')">HT Hoàn Thành TD</button>
+              <div class="voki-sub-tabs-container" id="vokiSubTabsList"></div>
             </div>
           </div>
 
@@ -656,6 +653,49 @@
 
     container.innerHTML = html;
   }
+  // 👉 ĐẶT HÀM renderDynamicSubTabs NGAY SAU ĐÂY:
+function renderDynamicSubTabs() {
+  // ID container chứa các nút chọn thì (hãy đảm bảo ID này khớp với thẻ div chứa tab trong HTML của bạn)
+  const container = document.getElementById("vokiSubTabsList") || document.querySelector(".sub-tabs-container");
+  
+  if (!container || !window.CURRENT_VOKI_MODULE || !window.CURRENT_VOKI_MODULE.matrix) {
+    return;
+  }
+
+  const matrixKeys = Object.keys(window.CURRENT_VOKI_MODULE.matrix);
+
+  // Sinh các nút bấm tự động dựa trên key (qk_don, qk_tiepdien,...) và thuộc tính name tương ứng
+  container.innerHTML = matrixKeys.map((key, index) => {
+    const subData = window.CURRENT_VOKI_MODULE.matrix[key];
+    const isActive = index === 0 ? "active" : "";
+    return `<button type="button" class="tab-btn ${isActive}" data-sub="${key}">${subData.name}</button>`;
+  }).join("");
+
+  // Tự động gán tab mặc định là tab đầu tiên
+  if (matrixKeys.length > 0) {
+    window.currentSelectedSub = matrixKeys[0];
+    // Gọi hàm render danh sách đề thi của bạn
+    if (typeof renderExamsListUI === "function") {
+      renderExamsListUI();
+    }
+  }
+
+  // Gán sự kiện click để chuyển đổi giữa các thì
+  container.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      container.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+
+      // Cập nhật key thì đang chọn (ví dụ: "qk_don", "qk_tiepdien",...)
+      window.currentSelectedSub = this.getAttribute("data-sub");
+
+      // Tải lại danh sách đề thi ứng với thì vừa click
+      if (typeof renderExamsListUI === "function") {
+        renderExamsListUI();
+      }
+    });
+  });
+}
 
   // 5. BẮT ĐẦU VÀO LÀM QUIZ
   window.startVokiQuiz = function (examKey) {
