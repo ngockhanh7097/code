@@ -564,7 +564,7 @@
     renderExamsListUI();
   };
 
-  function renderExamsListUI() {
+function renderExamsListUI() {
     const container = document.getElementById("voki-exams-list-container");
     const headerLbl = document.getElementById("lbl-voki-exams-header");
     if (!container) return;
@@ -590,11 +590,13 @@
     let tracking = stats.vokiDailyTracking || {};
     if (tracking.lastDate !== todayStr) tracking = { lastDate: todayStr, counts: {} };
     const counts = tracking.counts || {};
+    const bestScores = stats.vokiBestScores || {};
 
     let html = "";
     examKeys.forEach((eKey, idx) => {
       let trackKey = `${currentTenseKey}_${currentLevelKey}_${eKey}`;
       let doneTimes = counts[trackKey] || 0;
+      let recordScore = bestScores[trackKey] !== undefined ? bestScores[trackKey] : 0;
 
       let badgeText = "Lần 1 (100% quà)";
       let badgeCol = "#2ecc71";
@@ -606,13 +608,21 @@
         badgeCol = "#888";
       }
 
+      // Màu sắc hiển thị kỷ lục (Đạt 20/20 phát sáng vàng kim)
+      let recordCol = recordScore === 20 ? "#ffcc00" : (recordScore > 0 ? "#00ffcc" : "#777");
+
       html += `
-        <div onclick="window.startVokiQuiz('${eKey}')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,204,0,0.3); border-radius: 6px; padding: 10px 12px; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.background='rgba(255,204,0,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <div onclick="window.startVokiQuiz('${eKey}')" style="background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,204,0,0.3); border-radius: 8px; padding: 10px 12px; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,204,0,0.12)'; this.style.borderColor='#ffcc00';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,204,0,0.3)';">
           <div>
-            <b style="color: #fff; font-size: 13px;">Đề ${idx + 1} (20 Câu)</b>
-            <div style="font-size: 10.5px; color: ${badgeCol}; margin-top: 3px;">${badgeText}</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <b style="color: #fff; font-size: 13.5px;">Đề ${idx + 1} (20 Câu)</b>
+              <span style="font-size: 10.5px; background: rgba(0,0,0,0.5); border: 1px solid ${recordCol}; color: ${recordCol}; padding: 1px 6px; border-radius: 4px; font-weight: bold;">
+                🏆 ${recordScore}/20
+              </span>
+            </div>
+            <div style="font-size: 10.5px; color: ${badgeCol}; margin-top: 4px;">${badgeText}</div>
           </div>
-          <button style="background: #008080; color: #fff; border: none; padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: bold;">
+          <button style="background: #008080; color: #fff; border: none; padding: 6px 14px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap;">
             Khảo Thí
           </button>
         </div>
