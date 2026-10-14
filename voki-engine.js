@@ -701,7 +701,7 @@ function renderDynamicSubTabs() {
     renderCurrentQuizQuestion();
   };
 
-  function renderCurrentQuizQuestion() {
+function renderCurrentQuizQuestion() {
     isAnswerLocked = false;
     currentQHintUsed = false;
 
@@ -733,13 +733,29 @@ function renderDynamicSubTabs() {
     const optContainer = document.getElementById("voki-options-container");
     optContainer.innerHTML = "";
 
+    // 1. Gắn kèm originalIndex vào từng lựa chọn trước khi xáo trộn
+    const shuffledOptions = (qData.options || []).map((text, originalIndex) => ({
+      text: text,
+      originalIndex: originalIndex
+    }));
+
+    // 2. Thuật toán Fisher-Yates để xáo trộn ngẫu nhiên vị trí các đáp án
+    for (let i = shuffledOptions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+    }
+
+    // 3. Render các nút đáp án ra giao diện
     const labels = ["A", "B", "C", "D"];
-    (qData.options || []).forEach((opt, idx) => {
+    shuffledOptions.forEach((item, displayIdx) => {
       const btn = document.createElement("button");
-      btn.id = `voki-opt-btn-${idx}`;
+      // ID giữ nguyên theo originalIndex để triggerVokiHint() highlight chính xác
+      btn.id = `voki-opt-btn-${item.originalIndex}`;
       btn.style.cssText = "width: 100%; text-align: left; padding: 10px 14px; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.15s; outline: none;";
-      btn.innerHTML = `<b style="color: #ffcc00; margin-right: 6px;">${labels[idx]}.</b> ${opt}`;
-      btn.onclick = () => handleSelectOption(idx);
+      btn.innerHTML = `<b style="color: #ffcc00; margin-right: 6px;">${labels[displayIdx]}.</b> ${item.text}`;
+      
+      // Truyền originalIndex vào hàm chọn đáp án để so sánh chuẩn với qData.correct
+      btn.onclick = () => handleSelectOption(item.originalIndex);
       optContainer.appendChild(btn);
     });
   }
