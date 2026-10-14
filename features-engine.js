@@ -62,10 +62,10 @@ window.triggerSubFeature = function(featureName) {
             window.openSocialModal();
         }
     } else if (featureName === 'voki') {
-    if (typeof window.openVokiMainModal === "function") {
-        window.openVokiMainModal();
+        if (typeof window.openVokiMainModal === "function") {
+            window.openVokiMainModal();
+        }
     }
-}
 };
 
 window.setMasterFeatureNotification = function(hasNotification) {
@@ -877,7 +877,7 @@ window.loadMasterQuestData = async function() {
         if (!user || !stats) return;
         if (!stats.achievements) stats.achievements = {};
         if (!stats.inventory) stats.inventory = {};
-        if (!stats.claimedDailyQuests) stats.claimedDailyQuests = {};
+        if (!stats.claimedMasterDailyQuests) stats.claimedMasterDailyQuests = {};
 
         let todayStr = getSafeCurrentDate();
 
@@ -887,7 +887,7 @@ window.loadMasterQuestData = async function() {
             stats.dailySpeakingCount = 0;
             stats.dailyAlchemyCount = 0;
             stats.dailyMarketPostCount = 0;
-            stats.claimedDailyQuests = {};
+            stats.claimedMasterDailyQuests = {};
             stats.lastDailyQuestDate = todayStr;
         }
 
@@ -967,7 +967,7 @@ window.loadMasterQuestData = async function() {
                 rankTextDesc = `Hạng hiện tại: ${myInvestRank > 0 ? 'Top ' + myInvestRank : 'Chưa xếp hạng'} (Cần lọt vào Top 1-10)`;
             }
 
-            let qClaims = stats.claimedDailyQuests || {};
+            let qClaims = stats.claimedMasterDailyQuests || {};
             let isClaimMine = qClaims.mine === true;
             let isClaimInvest = qClaims.topInvest === true;
             let isClaimFarm = qClaims.farm === true;
@@ -1200,47 +1200,47 @@ window.claimNewDailyQuest = function(type) {
     const stats = window.userStats;
     if (!user || !stats) return;
     if (!stats.inventory) stats.inventory = {};
-    if (!stats.claimedDailyQuests) stats.claimedDailyQuests = {};
+    if (!stats.claimedMasterDailyQuests) stats.claimedMasterDailyQuests = {};
 
     let msg = "";
 
     if (type === 'mine') {
-        if (stats.claimedDailyQuests.mine) return alert("Đã nhận thưởng mốc này hôm nay!");
+        if (stats.claimedMasterDailyQuests.mine) return alert("Đã nhận thưởng mốc này hôm nay!");
         if ((stats.dailyMinedCoin || 0) < 100) return alert("Chưa đạt đủ 100 Linh thạch đào được!");
         stats.coin = (stats.coin || 0) + 100;
-        stats.claimedDailyQuests.mine = true;
+        stats.claimedMasterDailyQuests.mine = true;
         msg = "+100 Linh Thạch";
     } 
     else if (type === 'farm') {
-        if (stats.claimedDailyQuests.farm) return alert("Đã nhận thưởng mốc này hôm nay!");
+        if (stats.claimedMasterDailyQuests.farm) return alert("Đã nhận thưởng mốc này hôm nay!");
         if ((stats.dailyFarmActions || 0) < 3) return alert("Chưa đủ 3 lần thu hoạch hoặc trộm cây!");
         stats.inventory.kiemkhi = (stats.inventory.kiemkhi || 0) + 30;
         stats.linhdich = (stats.linhdich || 0) + 30;
-        stats.claimedDailyQuests.farm = true;
+        stats.claimedMasterDailyQuests.farm = true;
         msg = "+30 Kiếm Khí & +30 Linh Dịch";
     } 
     else if (type === 'speaking') {
-        if (stats.claimedDailyQuests.speaking) return alert("Đã nhận thưởng mốc này hôm nay!");
+        if (stats.claimedMasterDailyQuests.speaking) return alert("Đã nhận thưởng mốc này hôm nay!");
         if ((stats.dailySpeakingCount || 0) < 3) return alert("Chưa hoàn thành đủ 3 bài Speaking!");
         stats.coin = (stats.coin || 0) + 90;
-        stats.claimedDailyQuests.speaking = true;
+        stats.claimedMasterDailyQuests.speaking = true;
         msg = "+90 Linh Thạch";
     } 
     else if (type === 'alchemy') {
-        if (stats.claimedDailyQuests.alchemy) return alert("Đã nhận thưởng mốc này hôm nay!");
+        if (stats.claimedMasterDailyQuests.alchemy) return alert("Đã nhận thưởng mốc này hôm nay!");
         if ((stats.dailyAlchemyCount || 0) < 1) return alert("Hôm nay bạn chưa luyện đan lần nào!");
         stats.coin = (stats.coin || 0) + 20;
         stats.inventory.thaoduoc = (stats.inventory.thaoduoc || 0) + 2;
-        stats.claimedDailyQuests.alchemy = true;
+        stats.claimedMasterDailyQuests.alchemy = true;
         msg = "+20 Linh Thạch & +2 Thảo Dược";
     } 
     else if (type === 'market') {
-        if (stats.claimedDailyQuests.market) return alert("Đã nhận thưởng mốc này hôm nay!");
+        if (stats.claimedMasterDailyQuests.market) return alert("Đã nhận thưởng mốc này hôm nay!");
         if ((stats.dailyMarketPostCount || 0) < 1) return alert("Hôm nay bạn chưa treo sạp ở Chợ Đen!");
         stats.coin = (stats.coin || 0) + 10;
         stats.inventory.kiemkhi = (stats.inventory.kiemkhi || 0) + 10;
         stats.linhdich = (stats.linhdich || 0) + 10;
-        stats.claimedDailyQuests.market = true;
+        stats.claimedMasterDailyQuests.market = true;
         msg = "+10 Linh Thạch, +10 Kiếm Khí & +10 Linh Dịch";
     }
 
@@ -1256,12 +1256,12 @@ window.claimTopInvestQuest = function(rewardCoin, rank) {
     const user = window.currentUser;
     const stats = window.userStats;
     if (!user || !stats) return;
-    if (!stats.claimedDailyQuests) stats.claimedDailyQuests = {};
+    if (!stats.claimedMasterDailyQuests) stats.claimedMasterDailyQuests = {};
 
     let todayStr = getSafeCurrentDate();
 
     // 1. Kiểm tra ngày và trạng thái đã nhận
-    if (stats.lastDailyQuestDate === todayStr && stats.claimedDailyQuests.topInvest === true) {
+    if (stats.lastDailyQuestDate === todayStr && stats.claimedMasterDailyQuests.topInvest === true) {
         return alert("⚠️ Đạo hữu đã nhận thưởng chia cổ tức đầu tư hôm nay rồi! Hãy quay lại vào ngày mai.");
     }
 
@@ -1271,7 +1271,7 @@ window.claimTopInvestQuest = function(rewardCoin, rank) {
 
     // 2. Cập nhật dữ liệu
     stats.coin = (stats.coin || 0) + rewardCoin;
-    stats.claimedDailyQuests.topInvest = true;
+    stats.claimedMasterDailyQuests.topInvest = true;
     stats.lastDailyQuestDate = todayStr; // Cố định ngày nhận
 
     const db = window.database || firebase.database();
@@ -1279,13 +1279,13 @@ window.claimTopInvestQuest = function(rewardCoin, rank) {
     // 3. Đẩy đồng bộ lên cả payload bảo mật lẫn node raw trên Firebase
     window.pushSecureUserData(user, {
         coin: stats.coin,
-        claimedDailyQuests: stats.claimedDailyQuests,
+        claimedMasterDailyQuests: stats.claimedMasterDailyQuests,
         lastDailyQuestDate: todayStr
     }).then(() => {
         // Ghi thêm 1 bản dự phòng trực tiếp vào node user để khi F5 không bao giờ bị mất
         db.ref('users/' + user).update({
             lastDailyQuestDate: todayStr,
-            'claimedDailyQuests/topInvest': true
+            'claimedMasterDailyQuests/topInvest': true
         });
 
         window.refreshUIFields();
@@ -1389,11 +1389,11 @@ window.checkQuestNotification = function() {
         stats.dailySpeakingCount = 0;
         stats.dailyAlchemyCount = 0;
         stats.dailyMarketPostCount = 0;
-        stats.claimedDailyQuests = {};
+        stats.claimedMasterDailyQuests = {};
         stats.lastDailyQuestDate = todayStr;
     }
 
-    let qClaims = stats.claimedDailyQuests || {};
+    let qClaims = stats.claimedMasterDailyQuests || {};
 
     let canClaimMine = (!qClaims.mine) && ((stats.dailyMinedCoin || 0) >= 100);
     let canClaimFarm = (!qClaims.farm) && ((stats.dailyFarmActions || 0) >= 3);
