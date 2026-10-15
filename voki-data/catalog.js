@@ -23,7 +23,7 @@ window.VOKI_CATALOG = [
     title: "Nhóm Thì Tương Lai",
     desc: "Tương lai đơn, Tương lai gần, Tương lai hoàn thành...",
     file: "thi-tuong-lai.js",
-    unlocked: false,
+    unlocked: true,
     totalExams: 15
   },
   {
