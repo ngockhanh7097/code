@@ -27,11 +27,11 @@ window.VOKI_CATALOG = [
     totalExams: 15
   },
   {
-    id: "menh_de_thoi_gian",
-    title: "Mệnh Đề Thời Gian",
-    desc: "When, While, As soon as, By the time, Until...",
-    file: null,
-    unlocked: false,
-    totalExams: 0
+    id: "menh_de_cau_truc",
+    title: "Mệnh Đề & Cấu Trúc Trọng Yếu",
+    desc: "MĐ Thời Gian, MĐ Quan Hệ, Câu Điều Kiện, Câu Bị Động...",
+    file: "menh-de-cau-truc.js",
+    unlocked: true,
+    totalExams: 18
   }
 ];
