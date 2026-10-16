@@ -8,7 +8,9 @@
 (function () {
   // Sử dụng githack trực tiếp có timestamp để không bao giờ bị dính cache file cũ khi cập nhật đề
   const BASE_CDN_PATH = "https://raw.githack.com/ngockhanh7097/code/main/voki-data/";
-
+  // Thêm biến này để lưu các module đã tải về máy, lần sau bấm không cần tải lại
+  const loadedVokiModules = {};
+  
   let currentTopic = null;
   let currentTenseKey = "ht_don";  // Mặc định: Hiện Tại Đơn
   let currentLevelKey = "lv1";     // Mặc định: Tầng 1 (Dễ)
@@ -303,21 +305,24 @@
     if (el) el.classList.remove("popup-active");
   };
 
-  window.openVokiExamSelectModal = function (topicId) {
-    window.closeVokiMainModal();
-    injectVokiModals();
-
+  window.openVokiExamSelectModal = function (topicId, cardElement) {
     const topicItem = (window.VOKI_CATALOG || []).find(t => t.id === topicId);
     if (!topicItem || !topicItem.unlocked || !topicItem.file) {
       return alert("Chuyên đề này đang trong quá trình bế quan tu luyện (Sắp ra mắt)!");
     }
 
     currentTopic = topicItem;
-    document.getElementById("voki-selected-topic-title").innerText = topicItem.title;
 
-    // ĐỔI THÀNH:
-    loadTopicDataScript(topicItem.file, () => {
-      renderDynamicSubTabs(); // 👉 Tự động sinh 4 nút theo module vừa load
+    // Lấy đúng nút "Vào Học" của thẻ đang bấm
+    const btnTarget = cardElement ? cardElement.querySelector("button") : document.getElementById(`btn-enter-${topicId}`);
+
+    // Gọi hàm nạp dữ liệu có Spinner
+    loadTopicDataScript(topicItem.file, topicItem.id, btnTarget, () => {
+      window.closeVokiMainModal();
+      injectVokiModals();
+
+      document.getElementById("voki-selected-topic-title").innerText = topicItem.title;
+      renderDynamicSubTabs();
       window.switchVokiLevel("lv1");
       document.getElementById("voki-exam-select-modal-layer").classList.add("popup-active");
     });
@@ -483,19 +488,70 @@
     });
   }
 
-  function loadTopicDataScript(fileName, callback) {
-    if (window.CURRENT_VOKI_MODULE && window.CURRENT_VOKI_MODULE.id === currentTopic.id) {
+  function loadTopicDataScript(fileName, topicId, btnElement, callback) {
+    // 1. Kiểm tra Cache: Nếu file đề của chuyên đề này đã từng tải về máy rồi thì mở ngay
+    if (loadedVokiModules[topicId]) {
+      window.CURRENT_VOKI_MODULE = loadedVokiModules[topicId];
       if (typeof callback === "function") callback();
       return;
     }
+
+    // 2. Hiển thị Spinner xoay tròn trên nút "Vào Học" và khóa bấm
+    let originalBtnHtml = "";
+    if (btnElement) {
+      originalBtnHtml = btnElement.innerHTML;
+      btnElement.disabled = true;
+      btnElement.style.opacity = "0.7";
+      btnElement.style.cursor = "not-allowed";
+      btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang tải...`;
+    }
+
+    // Hàm khôi phục lại trạng thái ban đầu của nút bấm
+    function resetBtn() {
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.style.opacity = "1";
+        btnElement.style.cursor = "pointer";
+        btnElement.innerHTML = originalBtnHtml || "Vào Học";
+      }
+    }
+
+    // 3. Bộ đếm thời gian cứu hộ: Sau 8 giây nếu mạng lag không tải xong thì hủy và báo lỗi
+    let isFinished = false;
+    const timeoutId = setTimeout(() => {
+      if (!isFinished) {
+        isFinished = true;
+        resetBtn();
+        alert("⚠️ Kết nối mạng tải dữ liệu Võ Kĩ quá lâu! Vui lòng kiểm tra lại đường truyền.");
+      }
+    }, 8000);
+
+    // 4. Tạo thẻ script nạp file ngầm
     const script = document.createElement("script");
     script.src = BASE_CDN_PATH + fileName + "?t=" + Date.now();
+    
     script.onload = () => {
+      if (isFinished) return;
+      isFinished = true;
+      clearTimeout(timeoutId);
+      resetBtn();
+
+      // Lưu module vừa tải vào cache
+      if (window.CURRENT_VOKI_MODULE) {
+        loadedVokiModules[topicId] = window.CURRENT_VOKI_MODULE;
+      }
+
       if (typeof callback === "function") callback();
     };
+
     script.onerror = () => {
-      alert("Không thể tải cuốn đề từ máy chủ! Vui lòng kiểm tra kết nối mạng.");
+      if (isFinished) return;
+      isFinished = true;
+      clearTimeout(timeoutId);
+      resetBtn();
+      alert("❌ Không thể tải dữ liệu đề thi từ máy chủ! Vui lòng thử lại sau.");
     };
+
     document.head.appendChild(script);
   }
 
@@ -509,13 +565,13 @@
     list.forEach(item => {
       if (item.unlocked) {
         html += `
-          <div onclick="window.openVokiExamSelectModal('${item.id}')" style="background: rgba(255,255,255,0.05); border: 1.5px solid #00ffcc; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <div onclick="window.openVokiExamSelectModal('${item.id}', this)" style="background: rgba(255,255,255,0.05); border: 1.5px solid #00ffcc; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
             <div style="text-align: left;">
               <b style="color: #ffcc00; font-size: 14px;">${item.title}</b>
               <div style="font-size: 11.5px; color: #ccc; margin-top: 3px;">${item.desc}</div>
               <div style="font-size: 11px; color: #00ffcc; margin-top: 2px;">⚡ Phân 4 Thì × 3 Tầng độ khó (+2 đến +4 Thạch / câu)</div>
             </div>
-            <button style="background: #27ae60; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px;">
+            <button id="btn-enter-${item.id}" style="background: #27ae60; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; min-width: 75px; text-align: center;">
               Vào Học
             </button>
           </div>
