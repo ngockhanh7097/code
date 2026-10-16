@@ -126,9 +126,16 @@
           <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <span id="voki-selected-topic-title">Nhóm Thì Hiện Tại</span>
             
-            <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
-              📘 Xem Công Thức Chi Tiết
-            </button>
+            <!-- CỤM NÚT BÊN PHẢI: BỔ SUNG NÚT BXH ĐỨNG TRƯỚC CÔNG THỨC -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(243,156,18,0.4);" title="Bảng Phong Thần Võ Kĩ">
+                🏆 BXH Võ Kĩ
+              </button>
+
+              <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
+                📘 Xem Công Thức Chi Tiết
+              </button>
+            </div>
           </div>
 
           <!-- CỤM NÚT 1: 4 NÚT CHỌN THÌ -->
@@ -331,7 +338,10 @@
   window.closeVokiExamSelectModal = function () {
     const el = document.getElementById("voki-exam-select-modal-layer");
     if (el) el.classList.remove("popup-active");
-  };
+
+    // Mở lại khung danh sách chuyên đề chính thay vì tắt hết ra ngoài
+    window.openVokiMainModal();
+  };;
 
   window.openVokiTheoryModal = function () {
     const mod = window.CURRENT_VOKI_MODULE;
@@ -912,7 +922,16 @@ function renderCurrentQuizQuestion() {
 
   window.confirmExitVokiQuiz = function () {
     if (confirm("⚠️ BẠN CÓ CHẮC MUỐN DỪNG CUỘC THI?\nToàn bộ tiến độ câu hỏi và số Linh Thạch của đề này sẽ không được tính!")) {
-      document.getElementById("voki-quiz-modal-layer").classList.remove("popup-active");
+      // 1. Tắt modal làm bài tập
+      const quizModal = document.getElementById("voki-quiz-modal-layer");
+      if (quizModal) quizModal.classList.remove("popup-active");
+
+      // 2. Mở lại khung chọn đề của chuyên đề đang làm
+      const examModal = document.getElementById("voki-exam-select-modal-layer");
+      if (examModal) {
+        examModal.classList.add("popup-active");
+        renderExamsListUI();
+      }
     }
   };
 
