@@ -155,7 +155,7 @@
             </div>
             <div style="display: flex; gap: 8px;">
               <button id="btn-voki-lv1" onclick="window.switchVokiLevel('lv1')" style="flex:1; padding:9px 4px; background:#27ae60; color:#fff; border:1.5px solid #2ecc71; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;">
-                🟢 Tầng 1: Dễ (+2 LThạch,1 cống hiến/câu đúng)
+                🟢 Tầng 1: Dễ (+2 LThạch, 1 cống hiến/câu đúng)
               </button>
               <button id="btn-voki-lv2" onclick="window.switchVokiLevel('lv2')" style="flex:1; padding:9px 4px; background:rgba(255,255,255,0.08); color:#aaa; border:1.5px solid #444; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;">
                 🟡 Tầng 2: Trung Bình (+3 LThạch, 1 cống hiến/câu đúng)
@@ -274,7 +274,7 @@
          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 15px; line-height: 1.8; font-size: 13.5px;">
             <div>Số câu tự giải đúng: <b id="lbl-voki-res-correct" style="color: #2ecc71; font-size: 16px;">0 / 20</b></div>
             <div>Kinh nghiệm tích lũy: <b id="lbl-voki-res-exp-diff" style="color: #ffaa00; font-size: 15px;">+0 EXP</b></div>
-            <div>Cống hiến tông phái: <b id="lbl-voki-res-sect-point" style="color: #9b59b6; font-size: 15px;">+0 Điểm</b></div>
+            <div>Cống hiến tông phái: <b id="lbl-voki-res-sect-point" style="color: #00ffcc; font-size: 15px;">+0 Điểm</b></div>
             <div>Linh thạch cơ sở: <b id="lbl-voki-res-base-coin" style="color: #00ffcc;">+0</b></div>
             <div>Tỉ lệ thưởng hôm nay: <b id="lbl-voki-res-rate" style="color: #ffaa00;">100%</b></div>
             <div>Dùng Đèn Khai Sáng: <b id="lbl-voki-res-hints" style="color: #ff4d4d;">0 lần (-0 Thạch)</b></div>
@@ -971,7 +971,7 @@ function renderCurrentQuizQuestion() {
     let hintFeeTotal = hintUsedCount * 5;
     let netFinalCoin = baseEarned - hintFeeTotal;
 
-    // TÍNH ĐIỂM CỐNG HIẾN: 1 câu đúng = 1 điểm theo rate thưởng
+    // 🌟 MỖI CÂU ĐÚNG = 1 ĐIỂM CỐNG HIẾN CHO MỌI ĐỘ KHÓ
     let earnedSectPoint = Math.floor(userScore * 1 * rateMult);
 
     let oldBest = stats.vokiBestScores[trackKey] || 0;
@@ -986,7 +986,6 @@ function renderCurrentQuizQuestion() {
     document.getElementById("lbl-voki-res-base-coin").innerText = `+${userScore * coinPerQ} Linh Thạch`;
     document.getElementById("lbl-voki-res-rate").innerText = rateText;
 
-    // Cập nhật nhãn điểm cống hiến
     const lblSectPoint = document.getElementById("lbl-voki-res-sect-point");
     if (lblSectPoint) {
       lblSectPoint.innerText = `+${earnedSectPoint} Điểm`;
@@ -1023,7 +1022,7 @@ function renderCurrentQuizQuestion() {
       trackKey: trackKey,
       netFinalCoin: netFinalCoin,
       expDiff: expDiff,
-      earnedSectPoint: earnedSectPoint, // Thêm biến này vào kết quả
+      earnedSectPoint: earnedSectPoint,
       newBest: Math.max(oldBest, userScore)
     };
 
@@ -1057,7 +1056,7 @@ function renderCurrentQuizQuestion() {
     const db = window.database || (typeof firebase !== "undefined" ? firebase.database() : null);
 
     // =========================================================================
-    // 🔥 CỘNG VÀO CỐNG HIẾN GIA TỘC & NHIỆM VỤ NGÀY CỦA TÔNG MÔN
+    // 🏛️ ĐỒNG BỘ TRỰC TIẾP VÀO TÔNG PHÁI & NHIỆM VỤ NGÀY
     // =========================================================================
     const clanName = window.myTongPhaiName || "";
     const pointsToAdd = res.earnedSectPoint || 0;
@@ -1066,7 +1065,7 @@ function renderCurrentQuizQuestion() {
       const mKeyLower = user.toLowerCase();
       const memberBase = 'tongphai/' + clanName + '/members/' + mKeyLower;
 
-      // 1. Tăng linh khí tông môn và điểm cống hiến tuần/tháng/tổng
+      // 1. Tăng linh khí tông môn và điểm cống hiến Tuần / Tháng / Tổng
       db.ref('tongphai/' + clanName + '/exp').transaction(curr => (curr || 0) + pointsToAdd);
       db.ref(memberBase + '/contribWeek').transaction(curr => (curr || 0) + pointsToAdd);
       db.ref(memberBase + '/contribMonth').transaction(curr => (curr || 0) + pointsToAdd);
@@ -1089,7 +1088,7 @@ function renderCurrentQuizQuestion() {
     }
 
     // =========================================================================
-    // 💾 LƯU DỮ LIỆU TÀI SẢN VÕ KĨ & LINH THẠCH CÁ NHÂN
+    // 💾 LƯU THÔNG SỐ CÁ NHÂN (LINH THẠCH & VÕ KĨ EXP)
     // =========================================================================
     if (typeof window.pushSecureUserData === "function") {
       window.pushSecureUserData(user, {
