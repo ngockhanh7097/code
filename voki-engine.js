@@ -1030,7 +1030,7 @@ function renderCurrentQuizQuestion() {
     document.getElementById("voki-result-modal-layer").classList.add("popup-active");
   }
 
-  // 9. XÁC NHẬN ĐỒNG BỘ LÊN FIREBASE
+  // 9. XÁC NHẬN ĐỒNG BỘ LÊN FIREBASE & CỐNG HIẾN GIA TỘC
   window.confirmVokiResultReward = function () {
     const res = window._lastVokiResult;
     if (!res) return;
@@ -1039,7 +1039,9 @@ function renderCurrentQuizQuestion() {
     const stats = window.userStats;
     if (!stats) return;
 
-    if (!stats.vokiDailyTracking) stats.vokiDailyTracking = { lastDate: getTodayStr(), counts: {} };
+    const todayStr = getTodayStr();
+
+    if (!stats.vokiDailyTracking) stats.vokiDailyTracking = { lastDate: todayStr, counts: {} };
     if (!stats.vokiDailyTracking.counts) stats.vokiDailyTracking.counts = {};
     if (!stats.vokiBestScores) stats.vokiBestScores = {};
 
@@ -1050,37 +1052,78 @@ function renderCurrentQuizQuestion() {
       stats.vokiExp = (stats.vokiExp || 0) + res.expDiff;
     }
 
-    // Cộng điểm cống hiến tông phái
-    if (res.earnedSectPoint > 0) {
-      stats.sectPoint = (stats.sectPoint || 0) + res.earnedSectPoint;
-    }
-
     stats.coin = Math.max(0, (stats.coin || 0) + res.netFinalCoin);
 
-    const db = window.database || firebase.database();
+    const db = window.database || (typeof firebase !== "undefined" ? firebase.database() : null);
 
+    // =========================================================================
+    // 🔥 CỘNG VÀO CỐNG HIẾN GIA TỘC & NHIỆM VỤ NGÀY CỦA TÔNG MÔN
+    // =========================================================================
+    const clanName = window.myTongPhaiName || "";
+    const pointsToAdd = res.earnedSectPoint || 0;
+
+    if (db && clanName && pointsToAdd > 0) {
+      const mKeyLower = user.toLowerCase();
+      const memberBase = 'tongphai/' + clanName + '/members/' + mKeyLower;
+
+      // 1. Tăng linh khí tông môn và điểm cống hiến tuần/tháng/tổng
+      db.ref('tongphai/' + clanName + '/exp').transaction(curr => (curr || 0) + pointsToAdd);
+      db.ref(memberBase + '/contribWeek').transaction(curr => (curr || 0) + pointsToAdd);
+      db.ref(memberBase + '/contribMonth').transaction(curr => (curr || 0) + pointsToAdd);
+      db.ref(memberBase + '/contribTotal').transaction(curr => (curr || 0) + pointsToAdd);
+
+      // 2. Tăng điểm cống hiến ngày cho bảng Nhiệm vụ Tông Môn (Daily Quest)
+      db.ref(memberBase).once('value').then(snapM => {
+        let mData = snapM.val() || {};
+        let isToday = (mData.lastDailyDate === todayStr);
+        let currentDaily = isToday ? (parseInt(mData.contribDaily) || 0) : 0;
+        let newDaily = currentDaily + pointsToAdd;
+        let claims = isToday ? (mData.claimedDaily || {}) : {};
+
+        db.ref(memberBase).update({
+          contribDaily: newDaily,
+          claimedDaily: claims,
+          lastDailyDate: todayStr
+        });
+      });
+    }
+
+    // =========================================================================
+    // 💾 LƯU DỮ LIỆU TÀI SẢN VÕ KĨ & LINH THẠCH CÁ NHÂN
+    // =========================================================================
     if (typeof window.pushSecureUserData === "function") {
       window.pushSecureUserData(user, {
         coin: stats.coin,
-        sectPoint: stats.sectPoint || 0, // Đưa sectPoint vào hàm mã hóa/lưu an toàn
         vokiExp: stats.vokiExp || 0,
         vokiBestScores: stats.vokiBestScores,
         vokiDailyTracking: stats.vokiDailyTracking
       }).then(() => {
-        db.ref('users/' + user).update({
-          vokiExp: stats.vokiExp || 0,
-          sectPoint: stats.sectPoint || 0 // Cập nhật công khai nếu có
-        });
+        if (db) {
+          db.ref('users/' + user).update({
+            vokiExp: stats.vokiExp || 0
+          });
+        }
 
         if (typeof window.refreshUIFields === "function") window.refreshUIFields();
         document.getElementById("voki-result-modal-layer").classList.remove("popup-active");
-        
+
         let expNotice = res.expDiff > 0 ? `\n⭐ Kinh nghiệm võ kĩ tăng: +${res.expDiff} EXP!` : "";
-        let sectNotice = res.earnedSectPoint > 0 ? `\n🚩 Cống hiến tông phái: +${res.earnedSectPoint} điểm!` : "";
+        let sectNotice = pointsToAdd > 0 ? `\n🚩 Cống hiến tông phái: +${pointsToAdd} điểm!` : "";
         alert(`🎉 ĐÃ ĐỒNG BỘ THẦN THỨC!${expNotice}${sectNotice}\nTài sản hiện tại: ${stats.coin.toLocaleString()} Linh Thạch.`);
       }).catch(err => {
         console.error("Lỗi khi lưu dữ liệu Võ Kĩ:", err);
         document.getElementById("voki-result-modal-layer").classList.remove("popup-active");
+      });
+    } else if (db) {
+      db.ref('users/' + user).update({
+        coin: stats.coin,
+        vokiExp: stats.vokiExp || 0,
+        vokiBestScores: stats.vokiBestScores,
+        vokiDailyTracking: stats.vokiDailyTracking
+      }).then(() => {
+        if (typeof window.refreshUIFields === "function") window.refreshUIFields();
+        document.getElementById("voki-result-modal-layer").classList.remove("popup-active");
+        alert(`🎉 ĐÃ ĐỒNG BỘ THẦN THỨC!\nTài sản hiện tại: ${stats.coin.toLocaleString()} Linh Thạch.`);
       });
     }
   };
