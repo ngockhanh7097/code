@@ -25,6 +25,7 @@
   // Bổ sung các trường Võ Kĩ vào USER_SCHEMA_DEFAULT nếu chưa có để không bị lỗi băm Token
   if (typeof window.USER_SCHEMA_DEFAULT !== "undefined") {
     if (window.USER_SCHEMA_DEFAULT.vokiExp === undefined) window.USER_SCHEMA_DEFAULT.vokiExp = 0;
+    if (window.USER_SCHEMA_DEFAULT.sectPoint === undefined) window.USER_SCHEMA_DEFAULT.sectPoint = 0; // Thêm dòng này
     if (window.USER_SCHEMA_DEFAULT.vokiBestScores === undefined) window.USER_SCHEMA_DEFAULT.vokiBestScores = {};
     if (window.USER_SCHEMA_DEFAULT.vokiDailyTracking === undefined) window.USER_SCHEMA_DEFAULT.vokiDailyTracking = {};
   }
@@ -153,14 +154,14 @@
               2. Chọn Tầng Độ Khó:
             </div>
             <div style="display: flex; gap: 8px;">
-              <button id="btn-voki-lv1" onclick="window.switchVokiLevel('lv1')" style="flex:1; padding:9px 4px; background:#27ae60; color:#fff; border:1.5px solid #2ecc71; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
-                🟢 Tầng 1: Dễ (+2 Thạch)
+              <button id="btn-voki-lv1" onclick="window.switchVokiLevel('lv1')" style="flex:1; padding:9px 4px; background:#27ae60; color:#fff; border:1.5px solid #2ecc71; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;">
+                🟢 Tầng 1: Dễ (+2 LThạch,1 cống hiến/câu đúng)
               </button>
-              <button id="btn-voki-lv2" onclick="window.switchVokiLevel('lv2')" style="flex:1; padding:9px 4px; background:rgba(255,255,255,0.08); color:#aaa; border:1.5px solid #444; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
-                🟡 Tầng 2: Trung Bình (+3 Thạch)
+              <button id="btn-voki-lv2" onclick="window.switchVokiLevel('lv2')" style="flex:1; padding:9px 4px; background:rgba(255,255,255,0.08); color:#aaa; border:1.5px solid #444; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;">
+                🟡 Tầng 2: Trung Bình (+3 LThạch, 1 cống hiến/câu đúng)
               </button>
-              <button id="btn-voki-lv3" onclick="window.switchVokiLevel('lv3')" style="flex:1; padding:9px 4px; background:rgba(255,255,255,0.08); color:#aaa; border:1.5px solid #444; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
-                🔴 Tầng 3: Khó (+4 Thạch)
+              <button id="btn-voki-lv3" onclick="window.switchVokiLevel('lv3')" style="flex:1; padding:9px 4px; background:rgba(255,255,255,0.08); color:#aaa; border:1.5px solid #444; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;">
+                🔴 Tầng 3: Khó (+4 LThạch, 1 cống hiến/câu đúng)
               </button>
             </div>
           </div>
@@ -270,9 +271,10 @@
             🏆 KẾT TOÁN KHẢO THÍ
           </div>
 
-          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 15px; line-height: 1.8; font-size: 13.5px;">
+         <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; margin-bottom: 15px; line-height: 1.8; font-size: 13.5px;">
             <div>Số câu tự giải đúng: <b id="lbl-voki-res-correct" style="color: #2ecc71; font-size: 16px;">0 / 20</b></div>
             <div>Kinh nghiệm tích lũy: <b id="lbl-voki-res-exp-diff" style="color: #ffaa00; font-size: 15px;">+0 EXP</b></div>
+            <div>Cống hiến tông phái: <b id="lbl-voki-res-sect-point" style="color: #9b59b6; font-size: 15px;">+0 Điểm</b></div>
             <div>Linh thạch cơ sở: <b id="lbl-voki-res-base-coin" style="color: #00ffcc;">+0</b></div>
             <div>Tỉ lệ thưởng hôm nay: <b id="lbl-voki-res-rate" style="color: #ffaa00;">100%</b></div>
             <div>Dùng Đèn Khai Sáng: <b id="lbl-voki-res-hints" style="color: #ff4d4d;">0 lần (-0 Thạch)</b></div>
@@ -969,6 +971,9 @@ function renderCurrentQuizQuestion() {
     let hintFeeTotal = hintUsedCount * 5;
     let netFinalCoin = baseEarned - hintFeeTotal;
 
+    // TÍNH ĐIỂM CỐNG HIẾN: 1 câu đúng = 1 điểm theo rate thưởng
+    let earnedSectPoint = Math.floor(userScore * 1 * rateMult);
+
     let oldBest = stats.vokiBestScores[trackKey] || 0;
     let expDiff = 0;
     if (userScore > oldBest) {
@@ -980,6 +985,12 @@ function renderCurrentQuizQuestion() {
     document.getElementById("lbl-voki-res-correct").innerText = `${userScore} / ${totalQuestionsCount}`;
     document.getElementById("lbl-voki-res-base-coin").innerText = `+${userScore * coinPerQ} Linh Thạch`;
     document.getElementById("lbl-voki-res-rate").innerText = rateText;
+
+    // Cập nhật nhãn điểm cống hiến
+    const lblSectPoint = document.getElementById("lbl-voki-res-sect-point");
+    if (lblSectPoint) {
+      lblSectPoint.innerText = `+${earnedSectPoint} Điểm`;
+    }
 
     const lblExpDiff = document.getElementById("lbl-voki-res-exp-diff");
     if (lblExpDiff) {
@@ -1012,6 +1023,7 @@ function renderCurrentQuizQuestion() {
       trackKey: trackKey,
       netFinalCoin: netFinalCoin,
       expDiff: expDiff,
+      earnedSectPoint: earnedSectPoint, // Thêm biến này vào kết quả
       newBest: Math.max(oldBest, userScore)
     };
 
@@ -1038,6 +1050,11 @@ function renderCurrentQuizQuestion() {
       stats.vokiExp = (stats.vokiExp || 0) + res.expDiff;
     }
 
+    // Cộng điểm cống hiến tông phái
+    if (res.earnedSectPoint > 0) {
+      stats.sectPoint = (stats.sectPoint || 0) + res.earnedSectPoint;
+    }
+
     stats.coin = Math.max(0, (stats.coin || 0) + res.netFinalCoin);
 
     const db = window.database || firebase.database();
@@ -1045,19 +1062,22 @@ function renderCurrentQuizQuestion() {
     if (typeof window.pushSecureUserData === "function") {
       window.pushSecureUserData(user, {
         coin: stats.coin,
+        sectPoint: stats.sectPoint || 0, // Đưa sectPoint vào hàm mã hóa/lưu an toàn
         vokiExp: stats.vokiExp || 0,
         vokiBestScores: stats.vokiBestScores,
         vokiDailyTracking: stats.vokiDailyTracking
       }).then(() => {
         db.ref('users/' + user).update({
-          vokiExp: stats.vokiExp || 0
+          vokiExp: stats.vokiExp || 0,
+          sectPoint: stats.sectPoint || 0 // Cập nhật công khai nếu có
         });
 
         if (typeof window.refreshUIFields === "function") window.refreshUIFields();
         document.getElementById("voki-result-modal-layer").classList.remove("popup-active");
         
         let expNotice = res.expDiff > 0 ? `\n⭐ Kinh nghiệm võ kĩ tăng: +${res.expDiff} EXP!` : "";
-        alert(`🎉 ĐÃ ĐỒNG BỘ THẦN THỨC!${expNotice}\nTài sản hiện tại: ${stats.coin.toLocaleString()} Linh Thạch.`);
+        let sectNotice = res.earnedSectPoint > 0 ? `\n🚩 Cống hiến tông phái: +${res.earnedSectPoint} điểm!` : "";
+        alert(`🎉 ĐÃ ĐỒNG BỘ THẦN THỨC!${expNotice}${sectNotice}\nTài sản hiện tại: ${stats.coin.toLocaleString()} Linh Thạch.`);
       }).catch(err => {
         console.error("Lỗi khi lưu dữ liệu Võ Kĩ:", err);
         document.getElementById("voki-result-modal-layer").classList.remove("popup-active");
