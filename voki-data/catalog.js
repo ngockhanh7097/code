@@ -39,7 +39,7 @@ window.VOKI_CATALOG = [
     title: "Hệ Động Từ & Dạng Thức",
     desc: "Hòa hợp S-V, Gerund & To-Infinitive (Động từ đổi nghĩa), Modal Verbs, Cấu trúc Sai khiến",
     file: "he-dong-tu.js",
-    unlocked: false,
+    unlocked: true,
     totalExams: 84 // 4 chủ điểm × 3 tầng × 7 đề (V-ing/To V & S-V Agreement xuất hiện dày đặc)
   },
 
