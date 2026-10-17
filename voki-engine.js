@@ -1,11 +1,13 @@
 /**
  * =========================================================================
- * 📜 JOOARIS VÕ KĨ ENGINE (Ma Trận Ôn Tập + Đề Tổng Hợp Chuyên Đề + Giải Đề)
- * Phiên bản mở rộng:
- * - Thêm nút "Đề Tổng Hợp" ở cả bên ngoài thẻ và bên trong giao diện Vào Học.
- * - Đề Tổng Hợp trích ngẫu nhiên 20 câu (trộn độ khó) chỉ trong riêng chuyên đề đó.
- * - Giới hạn 10 phút, thưởng +4 Thạch, +1 Cống Hiến/câu, đạt 20/20 tặng +1 EXP.
- * - Bổ sung chú thích thể thức đầy đủ trong nút dấu hỏi (?).
+ * 📜 JOOARIS VÕ KĨ ENGINE (Ma Trận Ôn Tập + Giải Đề + TTS Phát Âm Thông Minh)
+ * Bản cập nhật hoàn chỉnh:
+ * - Tách 2 Tab: Ôn Dạng Bài & Giải Đề (Kèm icon ? hướng dẫn).
+ * - Nút "Đề Tổng Hợp" bên ngoài và bên trong từng chuyên đề (10 phút, random 20 câu).
+ * - Hệ thống TTS: Tự đọc câu mới (thay chỗ trống thành 'blank'), tự đọc câu hoàn chỉnh sau khi giải.
+ * - Hỗ trợ các câu có 2 hoặc nhiều chỗ trống phân tách bằng dấu '/'.
+ * - 2 Nút trong bài thi: Nghe lại & Bật/Tắt Loa (lưu trạng thái vào localStorage).
+ * - Bổ sung Modal Cài Đặt Âm Thanh (Icon bánh răng ⚙️): Chỉnh âm lượng, chọn giọng đọc đồng bộ App chính.
  * =========================================================================
  */
 
@@ -29,6 +31,58 @@
   let isExamMode = false;
   let examTimerInterval = null;
   let examTimeRemaining = 600; // 10 phút = 600 giây
+
+  // =========================================================================
+  // 🔊 CẤU HÌNH HỆ THỐNG PHÁT ÂM (TTS)
+  // =========================================================================
+  let isTTSAutoEnabled = localStorage.getItem("voki_tts_enabled") !== "false"; // Mặc định bật
+  let ttsVolume = parseFloat(localStorage.getItem("voki_tts_volume") || "1.0");
+
+  function getActiveVoice() {
+    if (typeof speechSynthesis === "undefined") return null;
+    let voices = speechSynthesis.getVoices();
+    let savedVoiceURI = localStorage.getItem("jooaris_selected_voice");
+    if (savedVoiceURI) {
+      let found = voices.find(v => v.voiceURI === savedVoiceURI);
+      if (found) return found;
+    }
+    return voices.find(v => v.lang.startsWith("en") && v.localService) ||
+           voices.find(v => v.lang.startsWith("en")) ||
+           voices[0] || null;
+  }
+
+  function speakVokiText(textToSpeak, speedRate = 0.9) {
+    if (!textToSpeak || typeof speechSynthesis === "undefined") return;
+    try {
+      window.speechSynthesis.cancel(); // Ngắt câu cũ
+      let utter = new SpeechSynthesisUtterance(textToSpeak);
+      let v = getActiveVoice();
+      if (v) utter.voice = v;
+      utter.lang = "en-US";
+      utter.rate = speedRate;
+      utter.volume = ttsVolume;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      console.warn("TTS Error:", e);
+    }
+  }
+
+  // Tạo chuỗi đọc khi chưa giải (chỗ trống đổi thành "blank")
+  function generateBlankSentence(questionText) {
+    if (!questionText) return "";
+    return questionText.replace(/_{2,}\s*(\([^)]*\))?/g, "blank");
+  }
+
+  // Tạo chuỗi đọc hoàn chỉnh sau khi giải (ghép chuẩn từng vế, hỗ trợ 2 hoặc nhiều chỗ trống)
+  function generateFullSentence(questionText, answerOptionText) {
+    if (!questionText || !answerOptionText) return questionText || "";
+    let parts = answerOptionText.split("/").map(s => s.trim());
+    let partIdx = 0;
+    return questionText.replace(/_{2,}\s*(\([^)]*\))?/g, () => {
+      let replacement = parts[partIdx++] || "";
+      return replacement;
+    });
+  }
 
   if (typeof window.USER_SCHEMA_DEFAULT !== "undefined") {
     if (window.USER_SCHEMA_DEFAULT.vokiExp === undefined) window.USER_SCHEMA_DEFAULT.vokiExp = 0;
@@ -135,7 +189,13 @@
           <span class="modal-close" onclick="window.closeVokiMainModal()">×</span>
           
           <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
-            <span><i class="fas fa-book-open"></i> Võ Kĩ Ngữ Pháp</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span><i class="fas fa-book-open"></i> Võ Kĩ Ngữ Pháp</span>
+              <!-- NÚT BÁNH RĂNG CÀI ĐẶT ÂM THANH -->
+              <button onclick="window.openVokiAudioSettingsModal()" style="background: rgba(255,255,255,0.08); border: 1px solid #00ffcc; color: #00ffcc; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer;" title="Cài đặt âm lượng & giọng đọc">
+                ⚙️
+              </button>
+            </div>
             
             <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(243,156,18,0.4);" title="Bảng Phong Thần Võ Kĩ">
               🏆 BXH Võ Kĩ
@@ -160,6 +220,48 @@
         </div>
       </div>
 
+      <!-- MODAL 1.5: CÀI ĐẶT ÂM THANH VÕ KĨ (ĐỒNG BỘ APP CHÍNH) -->
+      <div class="modal-layer" id="voki-audio-settings-modal-layer" style="z-index: 13950;">
+        <div class="modal-box" style="max-width: 380px; width: 90%; background: #0c0d14; color: #fff; border: 2px solid #00ffcc; box-shadow: 0 0 25px rgba(0, 255, 204, 0.4); padding: 18px; border-radius: 12px;">
+          <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 15px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fas fa-volume-up"></i> Cài Đặt Giọng Đọc Võ Kĩ</span>
+            <span class="modal-close" onclick="window.closeVokiAudioSettingsModal()" style="position: static; font-size: 20px;">×</span>
+          </div>
+
+          <div style="margin-bottom: 14px; text-align: left;">
+            <label style="font-size: 12px; color: #ccc; font-weight: bold; display: block; margin-bottom: 6px;">
+              🔊 Âm lượng giọng nói: <span id="lbl-voki-vol-val" style="color:#ffcc00;">100%</span>
+            </label>
+            <input type="range" id="rng-voki-volume" min="0" max="1" step="0.05" value="1" oninput="window.changeVokiVolume(this.value)" style="width: 100%; accent-color: #00ffcc; cursor: pointer;">
+          </div>
+
+          <div style="margin-bottom: 14px; text-align: left;">
+            <label style="font-size: 12px; color: #ccc; font-weight: bold; display: block; margin-bottom: 6px;">
+              🎙️ Chọn Giọng Đọc Tiếng Anh:
+            </label>
+            <div style="display: flex; gap: 6px;">
+              <select id="sel-voki-voice" onchange="window.changeVokiVoice(this.value)" style="flex: 1; padding: 7px; background: #161824; color: #fff; border: 1px solid #444; border-radius: 6px; font-size: 11.5px; outline: none;">
+                <option value="">Đang nạp danh sách giọng...</option>
+              </select>
+              <button onclick="window.testVokiSpeechVoice()" style="background: #27ae60; color: #fff; border: none; padding: 0 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; white-space: nowrap;">
+                🔊 Thử
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px; text-align: left; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px;">
+            <span style="font-size: 12px; color: #eee; font-weight: bold;">Tự động đọc câu hỏi:</span>
+            <button id="btn-voki-toggle-auto-tts" onclick="window.toggleVokiAutoTTSSetting()" style="background: #008080; color: #fff; border: 1px solid #00ffcc; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+              BẬT
+            </button>
+          </div>
+
+          <button onclick="window.closeVokiAudioSettingsModal()" style="width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">
+            HOÀN TẤT
+          </button>
+        </div>
+      </div>
+
       <!-- MODAL 2: GIAO DIỆN CHỌN ĐỀ ÔN TẬP BÊN TRONG -->
       <div class="modal-layer" id="voki-exam-select-modal-layer" style="z-index: 13650;">
         <div class="modal-box voki-fixed-box">
@@ -168,7 +270,6 @@
           <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <span id="voki-selected-topic-title">Nhóm Thì Hiện Tại</span>
             
-            <!-- CỤM NÚT TRÊN CÙNG: BXH, ĐỀ TỔNG HỢP, CÔNG THỨC -->
             <div style="display: flex; align-items: center; gap: 6px;">
               <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Bảng Phong Thần Võ Kĩ">
                 🏆 BXH
@@ -271,16 +372,16 @@
         </div>
       </div>
 
-      <!-- MODAL 3: GIAO DIỆN LÀM BÀI KHẢO THÍ (QUIZ) -->
+      <!-- MODAL 3: GIAO DIỆN LÀM BÀI KHẢO THÍ (QUIZ) CÓ CỤM LOA ĐỌC -->
       <div class="modal-layer" id="voki-quiz-modal-layer" style="z-index: 13700;">
         <div class="modal-box voki-fixed-box" style="max-width: 680px !important;">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 10px;">
             <button onclick="window.confirmExitVokiQuiz()" style="background: #d93025; color: #fff; border: none; padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer;">
               ✕ Rút Lui
             </button>
 
             <!-- CỤM HIỂN THỊ TIẾN ĐỘ & ĐỒNG HỒ 10 PHÚT -->
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
               <span id="voki-quiz-progress" style="font-size: 13.5px; font-weight: bold; color: #ffcc00;">Câu 1 / 20</span>
               <span id="voki-exam-timer-badge" style="display: none; background: rgba(0,0,0,0.6); border: 1.5px solid #00ffcc; color: #00ffcc; padding: 3px 10px; border-radius: 20px; font-weight: bold; font-size: 13px; letter-spacing: 1px;">
                 ⏱️ 10:00
@@ -289,6 +390,18 @@
             
             <button id="btn-voki-hint" onclick="window.triggerVokiHint()" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: #fff; border: 1px solid #ffcc00; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(243,156,18,0.5);">
               💡 Khai Sáng (-5 💰)
+            </button>
+          </div>
+
+          <!-- THANH ĐIỀU KHIỂN ÂM THANH TRONG BÀI THI -->
+          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <!-- Nút 1: Đọc lại câu hiện tại -->
+            <button onclick="window.replayCurrentQuizSpeech()" style="background: rgba(0,255,204,0.12); border: 1px solid #00ffcc; color: #00ffcc; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Nghe lại câu này">
+              🔊 Nghe lại
+            </button>
+            <!-- Nút 2: Bật / Tắt Loa -->
+            <button id="btn-voki-toggle-speaker" onclick="window.toggleVokiSpeakerInQuiz()" style="background: rgba(255,255,255,0.08); border: 1px solid #666; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              🔊 Đang Bật
             </button>
           </div>
 
@@ -346,6 +459,7 @@
       if (e.target === document.getElementById('voki-exam-select-modal-layer')) window.closeVokiExamSelectModal();
       if (e.target === document.getElementById('voki-theory-modal-layer')) window.closeVokiTheoryModal();
       if (e.target === document.getElementById('voki-leaderboard-modal-layer')) window.closeVokiLeaderboardModal();
+      if (e.target === document.getElementById('voki-audio-settings-modal-layer')) window.closeVokiAudioSettingsModal();
     });
   }
 
@@ -410,7 +524,7 @@
     }
   };
 
-  // 3. RENDER TAB 1: ÔN DẠNG BÀI (CÓ THÊM NÚT ĐỀ TỔNG HỢP)
+  // 3. RENDER TAB 1: ÔN DẠNG BÀI (CÓ NÚT ĐỀ TỔNG HỢP)
   function renderCatalogUI() {
     const container = document.getElementById("voki-catalog-container");
     if (!container) return;
@@ -516,20 +630,17 @@
     });
   }
 
-  // Bốc ngẫu nhiên từ 1 mảng câu hỏi
   function setupAndLaunchQuiz(questionPool) {
     if (!questionPool || questionPool.length === 0) {
       return alert("⚠️ Kho đề thi chưa có câu hỏi nào!");
     }
 
-    // Xáo trộn Fisher-Yates toàn kho câu hỏi và lấy đúng 20 câu
     for (let i = questionPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [questionPool[i], questionPool[j]] = [questionPool[j], questionPool[i]];
     }
     const selected20 = questionPool.slice(0, 20);
 
-    // Kích hoạt chế độ Khảo thí
     isExamMode = true;
     currentQuestions = selected20;
     currentQIndex = 0;
@@ -544,7 +655,7 @@
     renderCurrentQuizQuestion();
   }
 
-  // A. ĐỀ TỔNG HỢP RIÊNG CỦA 1 CHUYÊN ĐỀ (GỌI TỪ NÚT NGOÀI HOẶC NÚT TRONG)
+  // A. ĐỀ TỔNG HỢP RIÊNG CỦA 1 CHUYÊN ĐỀ
   window.startTopicRandomExam = function (targetTopicId, btnElement) {
     let topicId = targetTopicId || (currentTopic ? currentTopic.id : null);
     if (!topicId) return alert("Chưa xác định chuyên đề!");
@@ -1089,7 +1200,52 @@
     renderCurrentQuizQuestion();
   };
 
-  // 8. RENDER CÂU HỎI & XỬ LÝ ĐÁP ÁN
+  // 8. RENDER CÂU HỎI & XỬ LÝ PHÁT ÂM (TTS)
+  function updateSpeakerButtonUI() {
+    const btn = document.getElementById("btn-voki-toggle-speaker");
+    if (!btn) return;
+    if (isTTSAutoEnabled) {
+      btn.innerHTML = `🔊 Đang Bật`;
+      btn.style.color = "#00ffcc";
+      btn.style.borderColor = "#00ffcc";
+      btn.style.background = "rgba(0, 255, 204, 0.12)";
+    } else {
+      btn.innerHTML = `🔇 Đang Tắt`;
+      btn.style.color = "#ff4d4d";
+      btn.style.borderColor = "#ff4d4d";
+      btn.style.background = "rgba(255, 77, 77, 0.12)";
+    }
+  }
+
+  window.toggleVokiSpeakerInQuiz = function () {
+    isTTSAutoEnabled = !isTTSAutoEnabled;
+    localStorage.setItem("voki_tts_enabled", isTTSAutoEnabled ? "true" : "false");
+    updateSpeakerButtonUI();
+
+    if (!isTTSAutoEnabled) {
+      if (typeof speechSynthesis !== "undefined") window.speechSynthesis.cancel();
+    } else {
+      // Khi bật lại -> Đọc ngay câu hiện tại
+      window.replayCurrentQuizSpeech();
+    }
+  };
+
+  window.replayCurrentQuizSpeech = function () {
+    const qData = currentQuestions[currentQIndex];
+    if (!qData) return;
+
+    if (!isAnswerLocked) {
+      // Chưa giải -> đọc có chữ blank
+      let blankText = generateBlankSentence(qData.q);
+      speakVokiText(blankText, 0.9);
+    } else {
+      // Đã giải -> đọc câu hoàn chỉnh kèm đáp án đúng
+      let correctOpt = qData.options[qData.correct];
+      let fullText = generateFullSentence(qData.q, correctOpt);
+      speakVokiText(fullText, 0.9);
+    }
+  };
+
   function renderCurrentQuizQuestion() {
     isAnswerLocked = false;
     currentQHintUsed = false;
@@ -1104,6 +1260,8 @@
       finishVokiQuiz();
       return;
     }
+
+    updateSpeakerButtonUI();
 
     document.getElementById("voki-quiz-progress").innerText = `Câu ${currentQIndex + 1} / ${currentQuestions.length}`;
     document.getElementById("voki-question-text").innerText = qData.q;
@@ -1141,6 +1299,12 @@
       btn.onclick = () => handleSelectOption(item.originalIndex);
       optContainer.appendChild(btn);
     });
+
+    // 🔊 TỰ ĐỘNG ĐỌC CÂU MỚI (CHỨA BLANK) NẾU LOA ĐANG BẬT
+    if (isTTSAutoEnabled) {
+      let blankSentence = generateBlankSentence(qData.q);
+      speakVokiText(blankSentence, 0.9);
+    }
   }
 
   function handleSelectOption(chosenIdx) {
@@ -1179,6 +1343,13 @@
     if (btnHint) btnHint.disabled = true;
 
     showExplainBox(qData.explain || "Chưa có lời giải chi tiết.");
+
+    // 🔊 TỰ ĐỘNG ĐỌC CÂU HOÀN CHỈNH KÈM ĐÁP ÁN ĐÚNG
+    if (isTTSAutoEnabled) {
+      let correctOpt = qData.options[qData.correct];
+      let fullSentence = generateFullSentence(qData.q, correctOpt);
+      speakVokiText(fullSentence, 0.9);
+    }
   }
 
   window.triggerVokiHint = function () {
@@ -1215,6 +1386,13 @@
     }
 
     showExplainBox(`💡 [Khai Sáng Chi Thuật]: ${qData.explain || "Đáp án chính xác được hiển thị."}`);
+
+    // 🔊 TỰ ĐỘNG ĐỌC CÂU HOÀN CHỈNH KHI KHAI SÁNG
+    if (isTTSAutoEnabled) {
+      let correctOpt = qData.options[qData.correct];
+      let fullSentence = generateFullSentence(qData.q, correctOpt);
+      speakVokiText(fullSentence, 0.9);
+    }
   };
 
   function showExplainBox(explainText) {
@@ -1229,12 +1407,14 @@
   }
 
   window.nextVokiQuestion = function () {
+    if (typeof speechSynthesis !== "undefined") window.speechSynthesis.cancel();
     currentQIndex++;
     renderCurrentQuizQuestion();
   };
 
   window.confirmExitVokiQuiz = function () {
     if (confirm("⚠️ BẠN CÓ CHẮC MUỐN DỪNG CUỘC THI?\nToàn bộ tiến độ và phần thưởng của bài này sẽ bị hủy!")) {
+      if (typeof speechSynthesis !== "undefined") window.speechSynthesis.cancel();
       stopExamCountdownTimer();
       const quizModal = document.getElementById("voki-quiz-modal-layer");
       if (quizModal) quizModal.classList.remove("popup-active");
@@ -1253,6 +1433,7 @@
 
   // 9. KẾT TOÁN TRẬN ĐẤU & PHÂN NHÁNH ÔN BÀI / GIẢI ĐỀ
   function finishVokiQuiz() {
+    if (typeof speechSynthesis !== "undefined") window.speechSynthesis.cancel();
     stopExamCountdownTimer();
     document.getElementById("voki-quiz-modal-layer").classList.remove("popup-active");
 
@@ -1274,23 +1455,19 @@
     let newBest = userScore;
 
     if (isExamMode) {
-      // =====================================================================
-      // 🎯 QUY TẮC PHẦN THƯỞNG CHO GIẢI ĐỀ & ĐỀ TỔNG HỢP
-      // =====================================================================
-      baseEarned = userScore * 4; // 4 Linh Thạch / câu đúng
-      earnedSectPoint = userScore * 1; // 1 Điểm cống hiến / câu đúng
+      // 🎯 GIẢI ĐỀ & ĐỀ TỔNG HỢP: 4 Thạch/câu, 1 Cống Hiến/câu, 20/20 được +1 EXP
+      baseEarned = userScore * 4;
+      earnedSectPoint = userScore * 1;
 
       if (userScore >= totalQuestionsCount && totalQuestionsCount === 20) {
-        expDiff = 1; // 20/20 câu: +1 EXP vĩnh viễn
+        expDiff = 1;
       } else {
         expDiff = 0;
       }
 
       document.getElementById("row-voki-res-rate").style.display = "none";
     } else {
-      // =====================================================================
-      // 📖 QUY TẮC PHẦN THƯỞNG CHO ÔN DẠNG BÀI (THEO TẦNG ĐỘ KHÓ)
-      // =====================================================================
+      // 📖 ÔN DẠNG BÀI: Theo tầng độ khó
       document.getElementById("row-voki-res-rate").style.display = "block";
       trackKey = `${currentTenseKey}_${currentLevelKey}_${currentExamKey}`;
       const doneTimes = stats.vokiDailyTracking.counts[trackKey] || 0;
@@ -1391,18 +1568,15 @@
     if (!stats.vokiDailyTracking.counts) stats.vokiDailyTracking.counts = {};
     if (!stats.vokiBestScores) stats.vokiBestScores = {};
 
-    // Cập nhật lượt làm bài & kỷ lục nếu ở chế độ ôn tập
     if (!res.isExamMode && res.trackKey) {
       stats.vokiDailyTracking.counts[res.trackKey] = (stats.vokiDailyTracking.counts[res.trackKey] || 0) + 1;
       stats.vokiBestScores[res.trackKey] = res.newBest;
     }
 
-    // Cộng EXP
     if (res.expDiff > 0) {
       stats.vokiExp = (stats.vokiExp || 0) + res.expDiff;
     }
 
-    // Cộng Linh Thạch
     stats.coin = Math.max(0, (stats.coin || 0) + res.netFinalCoin);
 
     const db = window.database || (typeof firebase !== "undefined" ? firebase.database() : null);
@@ -1417,13 +1591,11 @@
       const mKeyLower = user.toLowerCase();
       const memberBase = 'tongphai/' + clanName + '/members/' + mKeyLower;
 
-      // 1. Tăng linh khí tông môn và điểm cống hiến Tuần / Tháng / Tổng
       db.ref('tongphai/' + clanName + '/exp').transaction(curr => (curr || 0) + pointsToAdd);
       db.ref(memberBase + '/contribWeek').transaction(curr => (curr || 0) + pointsToAdd);
       db.ref(memberBase + '/contribMonth').transaction(curr => (curr || 0) + pointsToAdd);
       db.ref(memberBase + '/contribTotal').transaction(curr => (curr || 0) + pointsToAdd);
 
-      // 2. Tăng điểm cống hiến ngày cho bảng Nhiệm vụ Tông Môn (Daily Quest)
       db.ref(memberBase).once('value').then(snapM => {
         let mData = snapM.val() || {};
         let isToday = (mData.lastDailyDate === todayStr);
@@ -1479,7 +1651,90 @@
     }
   };
 
-  // 11. TÍCH HỢP NÚT TỪ MENU MASTER
+  // 11. ĐIỀU KHIỂN CÀI ĐẶT ÂM THANH (BÁNH RĂNG ⚙️)
+  window.openVokiAudioSettingsModal = function () {
+    injectVokiModals();
+    populateVokiVoicesDropdown();
+
+    const rngVol = document.getElementById("rng-voki-volume");
+    const lblVol = document.getElementById("lbl-voki-vol-val");
+    if (rngVol && lblVol) {
+      rngVol.value = ttsVolume;
+      lblVol.innerText = Math.round(ttsVolume * 100) + "%";
+    }
+
+    const btnAuto = document.getElementById("btn-voki-toggle-auto-tts");
+    if (btnAuto) {
+      btnAuto.innerText = isTTSAutoEnabled ? "BẬT" : "TẮT";
+      btnAuto.style.background = isTTSAutoEnabled ? "#008080" : "#555";
+      btnAuto.style.borderColor = isTTSAutoEnabled ? "#00ffcc" : "#888";
+    }
+
+    document.getElementById("voki-audio-settings-modal-layer").classList.add("popup-active");
+  };
+
+  window.closeVokiAudioSettingsModal = function () {
+    const el = document.getElementById("voki-audio-settings-modal-layer");
+    if (el) el.classList.remove("popup-active");
+  };
+
+  function populateVokiVoicesDropdown() {
+    const sel = document.getElementById("sel-voki-voice");
+    if (!sel || typeof speechSynthesis === "undefined") return;
+
+    let voices = speechSynthesis.getVoices();
+    let enVoices = voices.filter(v => v.lang.startsWith("en"));
+    if (enVoices.length === 0) {
+      sel.innerHTML = `<option value="">Giọng mặc định thiết bị</option>`;
+      return;
+    }
+
+    let savedVoiceURI = localStorage.getItem("jooaris_selected_voice") || "";
+    let html = "";
+    enVoices.forEach(v => {
+      let isSel = (v.voiceURI === savedVoiceURI) ? "selected" : "";
+      let speedTag = v.localService ? "⚡ Nhanh" : "☁️ Cloud";
+      html += `<option value="${v.voiceURI}" ${isSel}>[${speedTag}] ${v.name} (${v.lang})</option>`;
+    });
+    sel.innerHTML = html;
+  }
+
+  window.changeVokiVolume = function (val) {
+    ttsVolume = parseFloat(val);
+    localStorage.setItem("voki_tts_volume", ttsVolume);
+    const lbl = document.getElementById("lbl-voki-vol-val");
+    if (lbl) lbl.innerText = Math.round(ttsVolume * 100) + "%";
+  };
+
+  window.changeVokiVoice = function (voiceURI) {
+    localStorage.setItem("jooaris_selected_voice", voiceURI);
+    // Đồng bộ ngược lại cho App chính nếu có phần tử sel-voice-language
+    const mainAppVoiceSelect = document.getElementById("sel-voice-language");
+    if (mainAppVoiceSelect) {
+      mainAppVoiceSelect.value = voiceURI;
+    }
+  };
+
+  window.testVokiSpeechVoice = function () {
+    speakVokiText("Welcome to Jooaris English Grammar. Testing audio volume.", 0.9);
+  };
+
+  window.toggleVokiAutoTTSSetting = function () {
+    isTTSAutoEnabled = !isTTSAutoEnabled;
+    localStorage.setItem("voki_tts_enabled", isTTSAutoEnabled ? "true" : "false");
+    const btnAuto = document.getElementById("btn-voki-toggle-auto-tts");
+    if (btnAuto) {
+      btnAuto.innerText = isTTSAutoEnabled ? "BẬT" : "TẮT";
+      btnAuto.style.background = isTTSAutoEnabled ? "#008080" : "#555";
+      btnAuto.style.borderColor = isTTSAutoEnabled ? "#00ffcc" : "#888";
+    }
+  };
+
+  if (typeof speechSynthesis !== "undefined" && speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = populateVokiVoicesDropdown;
+  }
+
+  // 12. TÍCH HỢP NÚT TỪ MENU MASTER
   window.triggerVokiFromMaster = function () {
     if (typeof window.closeFeatureMasterModal === "function") {
       window.closeFeatureMasterModal();
