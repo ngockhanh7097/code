@@ -1,13 +1,11 @@
 /**
  * =========================================================================
- * 📜 JOOARIS VÕ KĨ ENGINE (Ma Trận Ôn Tập + Đại Hội Giải Đề 10 Phút + BXH Tổng)
- * Bản cập nhật: 
- * - Tách 2 Tab: Ôn Dạng Bài & Giải Đề (Kèm icon ? hướng dẫn luật & thưởng).
- * - Giải Đề 1: Bài tập 12 Thì (Random từ Hiện tại, Quá khứ, Tương lai).
- * - Giải Đề 2: Mệnh đề & Cấu trúc trọng yếu (Random toàn bộ chuyên đề).
- * - Bộ đếm ngược 10 phút (Tự động nộp bài khi hết giờ).
- * - Thưởng Giải Đề: +4 LThạch/câu, +1 Cống Hiến/câu, Đạt 20/20 tặng +1 EXP vĩnh viễn.
- * - Giữ nguyên toàn bộ logic đồng bộ Firebase & Tông Môn theo chuẩn hệ thống.
+ * 📜 JOOARIS VÕ KĨ ENGINE (Ma Trận Ôn Tập + Đề Tổng Hợp Chuyên Đề + Giải Đề)
+ * Phiên bản mở rộng:
+ * - Thêm nút "Đề Tổng Hợp" ở cả bên ngoài thẻ và bên trong giao diện Vào Học.
+ * - Đề Tổng Hợp trích ngẫu nhiên 20 câu (trộn độ khó) chỉ trong riêng chuyên đề đó.
+ * - Giới hạn 10 phút, thưởng +4 Thạch, +1 Cống Hiến/câu, đạt 20/20 tặng +1 EXP.
+ * - Bổ sung chú thích thể thức đầy đủ trong nút dấu hỏi (?).
  * =========================================================================
  */
 
@@ -27,7 +25,7 @@
   let currentQHintUsed = false;
   let isAnswerLocked = false;
 
-  // Cấu hình chế độ Giải Đề
+  // Cấu hình chế độ thi có đếm giờ (Giải Đề & Đề Tổng Hợp)
   let isExamMode = false;
   let examTimerInterval = null;
   let examTimeRemaining = 600; // 10 phút = 600 giây
@@ -131,9 +129,9 @@
         }
       </style>
 
-      <!-- MODAL 1: MỤC LỤC CHÍNH (ÔN BÀI & GIẢI ĐỀ) -->
+      <!-- MODAL 1: MỤC LỤC CHÍNH -->
       <div class="modal-layer" id="voki-main-modal-layer" style="z-index: 13600;">
-        <div class="modal-box voki-fixed-box" style="max-width: 600px !important; max-height: 560px !important;">
+        <div class="modal-box voki-fixed-box" style="max-width: 630px !important; max-height: 560px !important;">
           <span class="modal-close" onclick="window.closeVokiMainModal()">×</span>
           
           <div class="modal-title" style="color: #00ffcc; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
@@ -170,13 +168,18 @@
           <div class="modal-title" style="color: #ffcc00; border-bottom: 1px dashed rgba(255,255,255,0.2); font-size: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding-right: 25px;">
             <span id="voki-selected-topic-title">Nhóm Thì Hiện Tại</span>
             
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(243,156,18,0.4);" title="Bảng Phong Thần Võ Kĩ">
-                🏆 BXH Võ Kĩ
+            <!-- CỤM NÚT TRÊN CÙNG: BXH, ĐỀ TỔNG HỢP, CÔNG THỨC -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button onclick="window.openVokiLeaderboardModal()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Bảng Phong Thần Võ Kĩ">
+                🏆 BXH
               </button>
 
-              <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,255,204,0.4);">
-                📘 Xem Công Thức Chi Tiết
+              <button id="btn-topic-random-inside" onclick="window.startTopicRandomExam(null, this)" style="background: linear-gradient(135deg, #e67e22, #d35400); color: #fff; border: none; padding: 6px 11px; border-radius: 6px; font-weight: bold; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 0 10px rgba(230,126,34,0.4);" title="Khảo thí 20 câu ngẫu nhiên trong chuyên đề này">
+                ⚡ Đề Tổng Hợp
+              </button>
+
+              <button onclick="window.openVokiTheoryModal()" style="background: linear-gradient(135deg, #008080 0%, #00ffcc 100%); color: #000; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                📘 Công Thức
               </button>
             </div>
           </div>
@@ -379,15 +382,26 @@
   window.showVokiTabInfo = function (tabKey) {
     if (tabKey === "on_bai") {
       alert(`📖 THỂ THỨC: ÔN DẠNG BÀI
+
+1. VÀO HỌC (ÔN THEO TẦNG):
 - Luyện tập ngữ pháp chia theo từng Chuyên đề, từng Thì và 3 Tầng độ khó riêng biệt.
 - Mỗi câu đúng:
   + Tầng 1: +2 Linh Thạch, +1 Cống Hiến
   + Tầng 2: +3 Linh Thạch, +1 Cống Hiến
   + Tầng 3: +4 Linh Thạch, +1 Cống Hiến
-- Kinh nghiệm (EXP) tính theo điểm kỷ lục cao nhất của từng đề.`);
+- Kinh nghiệm (EXP) tính theo điểm kỷ lục cao nhất của từng đề.
+
+2. ĐỀ TỔNG HỢP (TRONG TỪNG CHUYÊN ĐỀ):
+- Bấm nút [⚡ Đề Tổng Hợp] ở ngoài thẻ hoặc bên trong trang học.
+- Đề gồm 20 câu ngẫu nhiên trích từ TẤT CẢ các thì & độ khó của RIÊNG chuyên đề đó.
+- Thời gian làm bài: Tối đa 10 PHÚT.
+- Phần thưởng:
+  + Mỗi câu đúng: +4 Linh Thạch.
+  + Mỗi câu đúng: +1 Cống Hiến Tông Môn.
+  + ĐẠT TUYỆT ĐỐI 20/20 CÂU: Thưởng vĩnh viễn +1 KINH NGHIỆM VÕ KĨ (EXP)!`);
     } else {
       alert(`🎯 THỂ THỨC: GIẢI ĐỀ TỔNG HỢP
-- Đề thi khảo thí gồm 20 câu trích ngẫu nhiên từ kho câu hỏi.
+- Đề thi khảo thí gồm 20 câu trích ngẫu nhiên từ kho câu hỏi liên chuyên đề lớn (Ví dụ: 12 Thì tổng hợp).
 - Thời gian làm bài tối đa: 10 PHÚT.
 - Phần thưởng:
   + Mỗi câu đúng: +4 Linh Thạch.
@@ -396,7 +410,7 @@
     }
   };
 
-  // 3. RENDER TAB 1: ÔN DẠNG BÀI
+  // 3. RENDER TAB 1: ÔN DẠNG BÀI (CÓ THÊM NÚT ĐỀ TỔNG HỢP)
   function renderCatalogUI() {
     const container = document.getElementById("voki-catalog-container");
     if (!container) return;
@@ -406,15 +420,24 @@
     list.forEach(item => {
       if (item.unlocked) {
         html += `
-          <div onclick="window.openVokiExamSelectModal('${item.id}', this)" style="background: rgba(255,255,255,0.05); border: 1.5px solid #00ffcc; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="text-align: left;">
+          <div style="background: rgba(255,255,255,0.05); border: 1.5px solid #00ffcc; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+            <div style="text-align: left; flex: 1; cursor: pointer; padding-right: 10px;" onclick="window.openVokiExamSelectModal('${item.id}')">
               <b style="color: #ffcc00; font-size: 14px;">${item.title}</b>
               <div style="font-size: 11.5px; color: #ccc; margin-top: 3px;">${item.desc}</div>
               <div style="font-size: 11px; color: #00ffcc; margin-top: 2px;">⚡ Phân 4 Thì × 3 Tầng độ khó (+2 đến +4 Thạch / câu)</div>
             </div>
-            <button id="btn-enter-${item.id}" style="background: #27ae60; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; min-width: 75px; text-align: center;">
-              Vào Học
-            </button>
+            
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <!-- NÚT ĐỀ TỔNG HỢP (BÊN NGOÀI) -->
+              <button id="btn-rand-${item.id}" onclick="window.startTopicRandomExam('${item.id}', this)" style="background: linear-gradient(135deg, #e67e22, #d35400); color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; white-space: nowrap; box-shadow: 0 0 8px rgba(230,126,34,0.4);" title="Thi thử 20 câu ngẫu nhiên trong chuyên đề này (10 Phút)">
+                ⚡ Đề Tổng Hợp
+              </button>
+
+              <!-- NÚT VÀO HỌC -->
+              <button id="btn-enter-${item.id}" onclick="window.openVokiExamSelectModal('${item.id}', this)" style="background: #27ae60; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; min-width: 70px; text-align: center; cursor: pointer;">
+                Vào Học
+              </button>
+            </div>
           </div>
         `;
       } else {
@@ -434,7 +457,7 @@
     container.innerHTML = html;
   }
 
-  // 4. RENDER TAB 2: GIẢI ĐỀ (2 BỘ ĐỀ TỔNG HỢP)
+  // 4. RENDER TAB 2: GIẢI ĐỀ (2 BỘ ĐỀ TỔNG HỢP LIÊN CHUYÊN ĐỀ)
   function renderGiaiDeCatalogUI() {
     const container = document.getElementById("voki-catalog-container");
     if (!container) return;
@@ -472,7 +495,7 @@
     `;
   }
 
-  // 5. NẠP DỮ LIỆU ĐA MODULE & TẠO ĐỀ THI RANDOM
+  // 5. NẠP DỮ LIỆU ĐA MODULE & KHỞI CHẠY BÀI THI RANDOM
   function loadSingleScript(fileName, topicId) {
     return new Promise((resolve, reject) => {
       if (loadedVokiModules[topicId]) {
@@ -493,12 +516,93 @@
     });
   }
 
+  // Bốc ngẫu nhiên từ 1 mảng câu hỏi
+  function setupAndLaunchQuiz(questionPool) {
+    if (!questionPool || questionPool.length === 0) {
+      return alert("⚠️ Kho đề thi chưa có câu hỏi nào!");
+    }
+
+    // Xáo trộn Fisher-Yates toàn kho câu hỏi và lấy đúng 20 câu
+    for (let i = questionPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [questionPool[i], questionPool[j]] = [questionPool[j], questionPool[i]];
+    }
+    const selected20 = questionPool.slice(0, 20);
+
+    // Kích hoạt chế độ Khảo thí
+    isExamMode = true;
+    currentQuestions = selected20;
+    currentQIndex = 0;
+    userScore = 0;
+    hintUsedCount = 0;
+
+    window.closeVokiMainModal();
+    window.closeVokiExamSelectModal();
+    document.getElementById("voki-quiz-modal-layer").classList.add("popup-active");
+
+    startExamCountdownTimer();
+    renderCurrentQuizQuestion();
+  }
+
+  // A. ĐỀ TỔNG HỢP RIÊNG CỦA 1 CHUYÊN ĐỀ (GỌI TỪ NÚT NGOÀI HOẶC NÚT TRONG)
+  window.startTopicRandomExam = function (targetTopicId, btnElement) {
+    let topicId = targetTopicId || (currentTopic ? currentTopic.id : null);
+    if (!topicId) return alert("Chưa xác định chuyên đề!");
+
+    const topicItem = (window.VOKI_CATALOG || []).find(t => t.id === topicId);
+    if (!topicItem || !topicItem.unlocked || !topicItem.file) {
+      return alert("Chuyên đề này đang bế quan tu luyện (Sắp ra mắt)!");
+    }
+
+    let originalHtml = "";
+    if (btnElement) {
+      originalHtml = btnElement.innerHTML;
+      btnElement.disabled = true;
+      btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang nạp...`;
+    }
+
+    function resetBtn() {
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.innerHTML = originalHtml || "⚡ Đề Tổng Hợp";
+      }
+    }
+
+    loadSingleScript(topicItem.file, topicItem.id)
+      .then(mod => {
+        resetBtn();
+        if (!mod || !mod.matrix) return alert("Chưa có dữ liệu bài tập!");
+
+        let pool = [];
+        Object.keys(mod.matrix).forEach(tKey => {
+          const tData = mod.matrix[tKey];
+          ["lv1", "lv2", "lv3"].forEach(lKey => {
+            const lvData = tData[lKey];
+            if (lvData && lvData.exams) {
+              Object.keys(lvData.exams).forEach(eKey => {
+                const arr = lvData.exams[eKey];
+                if (Array.isArray(arr)) pool.push(...arr);
+              });
+            }
+          });
+        });
+
+        setupAndLaunchQuiz(pool);
+      })
+      .catch(err => {
+        resetBtn();
+        console.error(err);
+        alert("❌ Lỗi khi tải dữ liệu đề thi! Vui lòng thử lại sau.");
+      });
+  };
+
+  // B. GIẢI ĐỀ LIÊN CHUYÊN ĐỀ (TAB 2)
   window.startRandomExam = function (examType, btnElement) {
     let originalHtml = "";
     if (btnElement) {
       originalHtml = btnElement.innerHTML;
       btnElement.disabled = true;
-      btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang nạp đề...`;
+      btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Đang nạp...`;
     }
 
     function resetBtn() {
@@ -535,47 +639,23 @@
               if (lvData && lvData.exams) {
                 Object.keys(lvData.exams).forEach(eKey => {
                   const arr = lvData.exams[eKey];
-                  if (Array.isArray(arr)) {
-                    pool.push(...arr);
-                  }
+                  if (Array.isArray(arr)) pool.push(...arr);
                 });
               }
             });
           });
         });
 
-        if (pool.length === 0) {
-          return alert("⚠️ Kho đề thi chưa có câu hỏi nào!");
-        }
-
-        // Xáo trộn Fisher-Yates toàn kho câu hỏi và lấy 20 câu
-        for (let i = pool.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-        const selected20 = pool.slice(0, 20);
-
-        // Kích hoạt chế độ Giải Đề
-        isExamMode = true;
-        currentQuestions = selected20;
-        currentQIndex = 0;
-        userScore = 0;
-        hintUsedCount = 0;
-
-        window.closeVokiMainModal();
-        document.getElementById("voki-quiz-modal-layer").classList.add("popup-active");
-
-        startExamCountdownTimer();
-        renderCurrentQuizQuestion();
+        setupAndLaunchQuiz(pool);
       })
       .catch(err => {
         resetBtn();
         console.error(err);
-        alert("❌ Lỗi khi tải dữ liệu đề thi! Vui lòng kiểm tra lại kết nối mạng.");
+        alert("❌ Lỗi khi tải dữ liệu đề thi! Vui lòng thử lại sau.");
       });
   };
 
-  // 6. BỘ ĐẾM GIỜ 10 PHÚT CHO GIẢI ĐỀ
+  // 6. BỘ ĐẾM GIỜ 10 PHÚT
   function startExamCountdownTimer() {
     stopExamCountdownTimer();
     const timerBadge = document.getElementById("voki-exam-timer-badge");
@@ -624,7 +704,7 @@
     }
   }
 
-  // 7. CÁC HÀM ÔN TẬP CHUYÊN ĐỀ (CŨ)
+  // 7. ÔN TẬP CHUYÊN ĐỀ TỪNG THÌ
   window.openVokiExamSelectModal = function (topicId, cardElement) {
     const topicItem = (window.VOKI_CATALOG || []).find(t => t.id === topicId);
     if (!topicItem || !topicItem.unlocked || !topicItem.file) {
@@ -632,7 +712,7 @@
     }
 
     currentTopic = topicItem;
-    const btnTarget = cardElement ? cardElement.querySelector("button") : document.getElementById(`btn-enter-${topicId}`);
+    const btnTarget = cardElement ? (cardElement.tagName === "BUTTON" ? cardElement : cardElement.querySelector("button")) : document.getElementById(`btn-enter-${topicId}`);
 
     loadTopicDataScript(topicItem.file, topicItem.id, btnTarget, () => {
       window.closeVokiMainModal();
@@ -725,7 +805,7 @@
 - Mỗi câu tự giải đúng: +1 EXP.
 - Điểm BXH là TỔNG ĐIỂM KỶ LỤC CAO NHẤT của TẤT CẢ CÁC ĐỀ BÀI cộng lại.
 
-2. GIẢI ĐỀ TỔNG HỢP (10 PHÚT):
+2. GIẢI ĐỀ & ĐỀ TỔNG HỢP (10 PHÚT):
 - Khi hoàn thành bài thi đạt TUYỆT ĐỐI 20/20 câu: Thưởng vĩnh viễn +1 EXP!`;
     alert(rules);
   };
@@ -1195,17 +1275,13 @@
 
     if (isExamMode) {
       // =====================================================================
-      // 🎯 QUY TẮC PHẦN THƯỞNG CHO TAB GIẢI ĐỀ
+      // 🎯 QUY TẮC PHẦN THƯỞNG CHO GIẢI ĐỀ & ĐỀ TỔNG HỢP
       // =====================================================================
-      // 1. Thưởng Linh Thạch: 4 Linh Thạch / câu đúng
-      baseEarned = userScore * 4;
-      
-      // 2. Thưởng Cống Hiến: 1 điểm / câu đúng
-      earnedSectPoint = userScore * 1;
+      baseEarned = userScore * 4; // 4 Linh Thạch / câu đúng
+      earnedSectPoint = userScore * 1; // 1 Điểm cống hiến / câu đúng
 
-      // 3. EXP: Nếu đúng tuyệt đối 20/20 câu: Cộng vĩnh viễn +1 EXP
       if (userScore >= totalQuestionsCount && totalQuestionsCount === 20) {
-        expDiff = 1;
+        expDiff = 1; // 20/20 câu: +1 EXP vĩnh viễn
       } else {
         expDiff = 0;
       }
@@ -1213,7 +1289,7 @@
       document.getElementById("row-voki-res-rate").style.display = "none";
     } else {
       // =====================================================================
-      // 📖 QUY TẮC PHẦN THƯỞNG CHO TAB ÔN DẠNG BÀI (THEO TẦNG ĐỘ KHÓ)
+      // 📖 QUY TẮC PHẦN THƯỞNG CHO ÔN DẠNG BÀI (THEO TẦNG ĐỘ KHÓ)
       // =====================================================================
       document.getElementById("row-voki-res-rate").style.display = "block";
       trackKey = `${currentTenseKey}_${currentLevelKey}_${currentExamKey}`;
